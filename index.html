@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ENURMIA — Entrar</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%236E0F1F'/><path d='M12 55h16l7-18 10 34 8-22 6 12h29' stroke='white' stroke-width='7' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+
+<main class="acceso">
+
+  <section class="acceso__arte">
+    <div class="marca">
+      <span class="marca__sello">✚</span>
+      ENURM<span style="opacity:.55;font-weight:600">IA</span>
+    </div>
+
+    <div class="acceso__lema">
+      <p class="eyebrow" style="color:rgba(255,255,255,.5)">Preparación para la residencia médica</p>
+      <h1>No estudies para recordar respuestas. Entrena para <em>decidir</em>.</h1>
+      <p>Cada pregunta te devuelve el dato clave, por qué fallaron las otras opciones y de qué fuente sale la conducta correcta.</p>
+
+      <div class="acceso__trazo">
+        <svg class="ecg" viewBox="0 0 600 60" preserveAspectRatio="none" style="--dash:900">
+          <path d="M0 30 H80 L92 30 L100 12 L110 48 L120 30 H180 L192 30 L200 10 L212 50 L222 30 H300 L312 30 L320 12 L330 48 L340 30 H420 L432 30 L440 10 L452 50 L462 30 H600"/>
+        </svg>
+      </div>
+
+      <div class="acceso__pilares">
+        <span>Aprender</span><span>Razonar</span><span>Decidir</span><span>Medir</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="acceso__panel">
+    <div class="forma">
+
+      <div class="pestanas" role="tablist">
+        <button id="tabEntrar" class="on" role="tab">Entrar</button>
+        <button id="tabCrear" role="tab">Crear cuenta</button>
+      </div>
+
+      <!-- ENTRAR -->
+      <form id="formEntrar" autocomplete="on">
+        <h2>Bienvenido de vuelta</h2>
+        <p>Retoma donde lo dejaste. Tu progreso te está esperando.</p>
+
+        <div class="campo">
+          <label for="u1">Usuario</label>
+          <input id="u1" name="username" type="text" placeholder="tu usuario" autocomplete="username" required>
+        </div>
+        <div class="campo">
+          <label for="p1">Contraseña</label>
+          <input id="p1" name="password" type="password" placeholder="••••••••" autocomplete="current-password" required>
+        </div>
+
+        <button class="btn btn--lg btn--ancho" type="submit">Entrar y continuar</button>
+        <div id="avisoEntrar"></div>
+      </form>
+
+      <!-- CREAR -->
+      <form id="formCrear" class="hidden" autocomplete="on">
+        <h2>Crea tu cuenta</h2>
+        <p>Se guarda en este navegador. Sin correos, sin esperas.</p>
+
+        <div class="campo">
+          <label for="n2">Nombre</label>
+          <input id="n2" type="text" placeholder="Como quieres que te salude" autocomplete="name" required>
+        </div>
+        <div class="campo">
+          <label for="u2">Usuario</label>
+          <input id="u2" name="username" type="text" placeholder="mínimo 3 caracteres" autocomplete="username" required>
+        </div>
+        <div class="campo">
+          <label for="p2">Contraseña</label>
+          <input id="p2" name="password" type="password" placeholder="mínimo 4 caracteres" autocomplete="new-password" required>
+        </div>
+        <div class="campo">
+          <label for="p3">Repite la contraseña</label>
+          <input id="p3" type="password" placeholder="otra vez" autocomplete="new-password" required>
+        </div>
+
+        <button class="btn btn--lg btn--ancho btn--vivo" type="submit">Crear cuenta y empezar</button>
+        <div id="avisoCrear"></div>
+      </form>
+
+      <p class="nota-privacidad">
+        Tus cuentas y tu progreso viven solo en este navegador (localStorage). Nada sale de tu computadora.
+        Por eso mismo: no uses una contraseña que uses en otro sitio, y si borras los datos del navegador,
+        borras tu progreso. Desde <b>Ajustes</b> puedes exportar una copia de seguridad.
+      </p>
+
+    </div>
+  </section>
+</main>
+
+<div class="tostadas" id="tostadas"></div>
+
+<script src="assets/js/almacen.js"></script>
+<script>
+(function(){
+  const $ = s => document.querySelector(s);
+  const fEntrar = $('#formEntrar'), fCrear = $('#formCrear');
+  const tEntrar = $('#tabEntrar'), tCrear = $('#tabCrear');
+
+  function pestana(cual){
+    const entrar = cual === 'entrar';
+    tEntrar.classList.toggle('on', entrar);
+    tCrear.classList.toggle('on', !entrar);
+    fEntrar.classList.toggle('hidden', !entrar);
+    fCrear.classList.toggle('hidden', entrar);
+  }
+  tEntrar.onclick = () => pestana('entrar');
+  tCrear.onclick  = () => pestana('crear');
+
+  function aviso(donde, texto, ok){
+    donde.innerHTML = '<div class="aviso' + (ok ? ' aviso--ok' : '') + '">' + texto + '</div>';
+  }
+
+  // si no hay ninguna cuenta todavia, abrir en "crear cuenta"
+  if (Almacen.usuarios().length === 0) pestana('crear');
+
+  fCrear.onsubmit = e => {
+    e.preventDefault();
+    const nombre = $('#n2').value.trim();
+    const usuario = $('#u2').value.trim().toLowerCase();
+    const clave = $('#p2').value, clave2 = $('#p3').value;
+
+    if (usuario.length < 3)  return aviso($('#avisoCrear'), 'El usuario necesita al menos 3 caracteres.');
+    if (clave.length < 4)    return aviso($('#avisoCrear'), 'La contraseña necesita al menos 4 caracteres.');
+    if (clave !== clave2)    return aviso($('#avisoCrear'), 'Las dos contraseñas no coinciden.');
+
+    const r = Almacen.registrar({ nombre, usuario, clave });
+    if (!r.ok) return aviso($('#avisoCrear'), r.error);
+
+    aviso($('#avisoCrear'), 'Cuenta creada. Entrando…', true);
+    setTimeout(() => location.href = 'app.html', 550);
+  };
+
+  fEntrar.onsubmit = e => {
+    e.preventDefault();
+    const r = Almacen.entrar($('#u1').value.trim().toLowerCase(), $('#p1').value);
+    if (!r.ok) return aviso($('#avisoEntrar'), r.error);
+    aviso($('#avisoEntrar'), 'Listo. Abriendo tu panel…', true);
+    setTimeout(() => location.href = 'app.html', 400);
+  };
+
+  // si ya hay sesion abierta, pasar directo
+  if (Almacen.sesion()) location.replace('app.html');
+})();
+</script>
+</body>
+</html>

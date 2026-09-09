@@ -1,0 +1,859 @@
+================================================================================
+ENURMIA - DOCUMENTO MAESTRO DE PRODUCTO
+Plataforma de entrenamiento de razonamiento clinico para el ENURM
+Version 1.0  ·  Ultima actualizacion: 08 / 09 / 2026
+================================================================================
+
+PROPUESTA DE VALOR
+------------------
+"No estudies para recordar respuestas. Entrena para tomar decisiones clinicas."
+
+No se vende como "100,000 preguntas para el ENURM".
+Se vende como "la plataforma que entrena tu razonamiento clinico para el ENURM".
+
+Cuatro pilares:
+    APRENDER  ->  RAZONAR  ->  DECIDIR  ->  MEDIR
+
+Experiencia central (el bucle que lo sostiene todo):
+    Pregunta -> Pensamiento -> Decision -> Explicacion -> Analisis del error
+             -> Repeticion -> Progreso
+
+
+================================================================================
+PARTE I - LAS 20 FUNCIONALIDADES, PRIORIZADAS POR VALOR EDUCATIVO
+================================================================================
+
+--------------------------------------------------------------------------------
+BLOQUE A · RAZONAMIENTO Y DISCERNIMIENTO
+--------------------------------------------------------------------------------
+
+01. DIAGNOSTICO MAS PROBABLE
+    Caso clinico con datos progresivos. El usuario identifica que informacion es
+    realmente relevante. Al final se explica por que las otras opciones son
+    menos probables.
+    Estado: IMPLEMENTADO (modo Aprender + diferenciales en cada pregunta)
+
+02. "QUE DATO CAMBIA TU DECISION"
+    Se muestra un caso; luego se agrega un dato (edad, laboratorio, sintoma,
+    signo). El estudiante decide si cambia o no el diagnostico.
+    Ensena a jerarquizar informacion.
+    Estado: IMPLEMENTADO (motor de casos con giros de datos)
+
+03. DIAGNOSTICOS DIFERENCIALES INTERACTIVOS
+    Dolor toracico -> IAM, diseccion aortica, TEP, pericarditis, ERGE.
+    El usuario selecciona los posibles y la plataforma muestra que datos
+    favorecen o descartan cada uno.
+    Estado: IMPLEMENTADO (paso 2 de Entrenar tu razonamiento)
+
+04. PREGUNTAS CON TRAMPA
+    Casos disenados sobre errores frecuentes: un dato llamativo pero
+    irrelevante que empuja al diagnostico equivocado.
+    Cierre: "Caiste en esta trampa porque..."
+    Estado: IMPLEMENTADO (campo "trampa" en cada pregunta del banco)
+
+05. ELIGE EL SIGUIENTE PASO
+    Paciente -> el usuario decide: examen fisico, laboratorio, imagen,
+    tratamiento, referencia u observacion. La historia continua segun la
+    decision tomada.
+    Estado: IMPLEMENTADO (modo Clinica, arbol de decisiones ramificado)
+
+06. RAZONAMIENTO INVERSO
+    Se muestra el diagnostico y algunos hallazgos. Pregunta: "cual de estos
+    hallazgos esperaria encontrar". Refuerza fisiopatologia.
+    Estado: IMPLEMENTADO (tipo de item "inverso" en el banco)
+
+--------------------------------------------------------------------------------
+BLOQUE B · APRENDER MIENTRAS RESPONDES
+--------------------------------------------------------------------------------
+
+07. EXPLICACION INTELIGENTE DE CADA RESPUESTA
+    Nunca "Respuesta correcta: C". Siempre:
+        - por que C es correcta
+        - por que A / B / D son incorrectas (una a una)
+        - cual es el dato clave
+        - que concepto debes recordar
+        - cual es el error tipico
+        - bibliografia de respaldo
+    Estado: IMPLEMENTADO (seis campos obligatorios por pregunta)
+
+08. MODO ENSENANZA VS MODO EXAMEN
+    Ensenanza: pistas, analisis del caso, explicacion inmediata, sin reloj.
+    Examen: cero ayudas, tiempo limitado, puntuacion, revision al final.
+    Estado: IMPLEMENTADO
+
+09. REPASO AUTOMATICO DE ERRORES
+    La plataforma reune lo que fallaste y te lo devuelve. Si vuelves a
+    fallarlo, aumenta su frecuencia.
+    Estado: IMPLEMENTADO (cola de errores + prioridad dinamica)
+
+10. REPETICION ESPACIADA
+    Lo que dominas aparece menos; lo que fallas aparece mas. Un Anki
+    integrado al simulador (algoritmo SM-2 adaptado).
+    Estado: IMPLEMENTADO (intervalos 0/1/3/7/16/35 dias + factor de facilidad)
+
+--------------------------------------------------------------------------------
+BLOQUE C · PREPARACION ESPECIFICA PARA EL ENURM
+--------------------------------------------------------------------------------
+
+11. SIMULACRO ENURM COMPLETO
+    Reproduce cantidad de preguntas, distribucion tematica, dificultad,
+    presion de tiempo y puntuacion del examen real.
+    Estado: IMPLEMENTADO (100 preguntas / 120 minutos, configurable)
+
+12. BANCO POR ESPECIALIDAD
+    Medicina Interna · Pediatria · Ginecologia y Obstetricia · Cirugia ·
+    Psiquiatria · Emergencias · Medicina Familiar · Epidemiologia ·
+    Bioetica · Salud Publica · Farmacologia · Ciencias Basicas
+    Estado: IMPLEMENTADO
+    Nota: Farmacologia y Ciencias Basicas (fisiologia, bioquimica,
+    anatomia, patologia, genetica) se anadieron tras verificar que el
+    ENURM las evalua de forma sistematica. Ver PARTE V, calibracion.
+
+13. BANCO POR TEMA Y SUBTEMA
+    Cardiologia -> IAM, insuficiencia cardiaca, arritmias, valvulopatias,
+    hipertension. Permite atacar exactamente el area debil.
+    Estado: IMPLEMENTADO (tres niveles: especialidad / tema / subtema)
+
+14. MODO ALTO RENDIMIENTO
+    Preguntas dificiles, casos largos, diferenciales complejos, items donde
+    dos respuestas parecen correctas. Para quien ya domina lo basico.
+    Estado: IMPLEMENTADO (filtro de dificultad 4-5 en Desafio)
+
+--------------------------------------------------------------------------------
+BLOQUE D · INTELIGENCIA SOBRE EL ESTUDIANTE
+--------------------------------------------------------------------------------
+
+15. PERFIL DE RENDIMIENTO
+    Dominio por area (Cardiologia 82%, Pediatria 74%, ...) y ademas el
+    porque del fallo, no solo el que.
+    Estado: IMPLEMENTADO
+
+16. ANALISIS DEL TIPO DE ERROR   <-- el diferenciador real
+    Clasificacion de cada fallo:
+        ROJO     No sabia el concepto
+        NARANJA  Confundi dos diagnosticos
+        AMARILLO No identifique el dato clave
+        AZUL     Lei mal la pregunta
+        MORADO   Cambie una respuesta correcta
+        VERDE    Error de calculo
+    Asi no solo sabes QUE fallaste, sino COMO estas fallando.
+    Estado: IMPLEMENTADO (autoclasificacion + confirmacion del usuario)
+
+17. MAPA DE DEBILIDADES
+    Ruta visual: Usuario -> Cardiologia -> Arritmias -> Fibrilacion auricular
+    -> anticoagulacion. Detecta exactamente donde esta el problema.
+    Estado: IMPLEMENTADO (mapa de conocimiento navegable por nodos)
+
+--------------------------------------------------------------------------------
+BLOQUE E · LO QUE HACE LA WEB REALMENTE DIFERENTE
+--------------------------------------------------------------------------------
+
+18. DEFIENDE TU RESPUESTA
+    Antes de revelar el resultado: "por que elegiste esta opcion". El usuario
+    escribe su razonamiento y recibe analisis del argumento, no solo del
+    resultado. Ejemplo de devolucion:
+    "Tu diagnostico es correcto, pero tu argumento se apoya en un dato que no
+    es determinante."
+    Estado: IMPLEMENTADO (analisis por conceptos clave; se potencia con IA)
+
+19. BATALLAS CLINICAS CONTRA RELOJ
+    Hombre de 56 anos con dolor toracico. 60 segundos. Que haces:
+    ECG / Troponina / Radiografia / TAC / Analgesia.
+    El caso evoluciona segun la decision. Practicamente un videojuego clinico.
+    Estado: IMPLEMENTADO (modo Desafio con vidas, racha y multiplicador)
+
+20. PACIENTE VIRTUAL CON IA   <-- la funcion estrella
+    En lugar de leer "paciente masculino de 45 anos", el estudiante interroga:
+        "desde cuando tiene el dolor"
+        "el dolor se irradia"
+        "tiene antecedentes"
+        "quiero auscultar los pulmones"
+    El sistema responde segun el caso. Al cierre entrega:
+        Diagnostico · Diferenciales · Errores cometidos · Preguntas que
+        debiste hacer · Estudios innecesarios · Tratamiento inicial ·
+        Nivel de razonamiento clinico (0-100)
+    Estado: IMPLEMENTADO en version guionizada (funciona sin conexion).
+    Pendiente: conexion opcional a modelo de lenguaje para dialogo libre.
+
+
+================================================================================
+PARTE II - LOS SEIS MODOS DE LA PLATAFORMA
+================================================================================
+
+1. SIMULACRO      Examen estilo ENURM, cronometrado y puntuado.
+2. APRENDE        Preguntas + explicacion + fisiopatologia + bibliografia.
+3. CLINICA        Casos interactivos donde debes tomar decisiones.
+4. DESAFIO        Casos dificiles contra reloj, con rachas y niveles.
+5. MI PROGRESO    Rendimiento, tipos de error, mapa de conocimiento, evolucion.
+6. ENTRENA TU RAZONAMIENTO
+
+   La plataforma presenta un caso y NO pregunta de inmediato el diagnostico.
+   Primero:
+       1. Cual es el problema principal
+       2. Cuales son tus 3 diagnosticos diferenciales
+       3. Que dato apoya mas tu primera opcion
+       4. Que dato contradice tu diagnostico
+       5. Que estudio pedirias y por que
+       6. Cual es el diagnostico mas probable
+   Solo al final aparece la pregunta de opcion multiple.
+
+
+================================================================================
+PARTE III - ANATOMIA DE LA INTERFAZ
+================================================================================
+
+ESTRUCTURA GENERAL
+
++--------------------------------------------------------------+
+| LOGO        Buscar...              (!)   racha 24    Ismael   |
++--------------+-----------------------------------------------+
+| Inicio       |    Buenas noches, Ismael                      |
+| Simulacro    |    Tu progreso esta semana                    |
+| Entrenar     |    [ 78% Dominio ] [ 642 Preg ] [ 83% Prec ]  |
+| Clinica      |                                               |
+| Biblioteca   |    Continuar entrenamiento                    |
+| Progreso     |    +-------------------------------------+    |
+| Desafios     |    | Cardiologia   ############----  78% |    |
+| Paciente IA  |    | 12 preguntas pendientes             |    |
+| Ajustes      |    +-------------------------------------+    |
+|              |    Areas que necesitas reforzar               |
+|              |    Epidemiologia / Cirugia / Pediatria        |
++--------------+-----------------------------------------------+
+
+EL DASHBOARD RESPONDE TRES PREGUNTAS, EN ESTE ORDEN
+    1. Donde estoy
+    2. Que tan preparado estoy
+    3. Que debo estudiar AHORA
+
+TU PROXIMA MEJOR ACCION
+    En vez de mostrar estadisticas sueltas:
+    "Te recomendamos estudiar Pediatria - Neonatologia. Has respondido 43
+     preguntas con 61% de precision.  [ Entrenar ahora -> ]"
+
+CONFIANZA VS CONOCIMIENTO
+    Ademas del acierto se registra cuanta seguridad declaraste. Acertar con
+    baja confianza indica conocimiento fragil: la plataforma lo trata como
+    una debilidad aunque la respuesta haya sido correcta.
+
+PANTALLA DE PREGUNTA
+    CARDIOLOGIA                              Pregunta 17/50
+    ---------------------------------------------------------
+    Hombre de 64 anos, dolor toracico opresivo de 40 minutos...
+                          01:24
+    Cual es la conducta mas apropiada
+      A. Radiografia de torax
+      B. Nitroglicerina
+      C. ECG inmediato
+      D. Ecocardiograma
+                                          [ CONFIRMAR ]
+    En modo Aprender: Pista / Analizar caso / Marcar pregunta.
+    En modo Examen: esas ayudas desaparecen.
+
+DESPUES DE RESPONDER
+    Tu respuesta: B    Respuesta correcta: C
+    POR QUE      El ECG debe realizarse de inmediato porque identifica
+                 cambios compatibles con sindrome coronario agudo y orienta
+                 la conducta inicial.
+    DATO CLAVE   Dolor toracico isquemico de mas de 20 minutos.
+    POR QUE NO B La nitroglicerina puede usarse en pacientes seleccionados,
+                 pero no sustituye la evaluacion electrocardiografica.
+    BIBLIOGRAFIA Fuente verificada de cada afirmacion.
+
+ANALISIS DE ERROR (ejemplo de lo que ve el estudiante)
+    Pregunta 182
+    Error detectado: confusion entre dos diagnosticos clinicamente similares
+    Patron: 4 errores similares en los ultimos 10 dias
+    Tema: Insuficiencia cardiaca
+    Recomendacion: repasar fisiopatologia + criterios diagnosticos
+    Dominio estimado: 61%
+
+MAPA DE CONOCIMIENTO
+                        MEDICINA INTERNA
+                               |
+              +----------------+----------------+
+         CARDIOLOGIA      NEFROLOGIA       NEUMOLOGIA
+              |                |                |
+         +----+----+           |          +-----+-----+
+        IAM       FA          IRA        EPOC        TEP
+        92%       71%         58%        84%         63%
+    Cada nodo es navegable y abre entrenamiento de ese subtema.
+
+GAMIFICACION AL SERVICIO DEL APRENDIZAJE
+    Niveles:  Estudiante -> Interno (100) -> Clinico (300) ->
+              Razonador clinico (700) -> ENURM READY (1,500)
+    Medallas: 100 preguntas sin ayuda · 10 simulacros · 7 dias seguidos ·
+              90% en Medicina Interna
+    Limite autoimpuesto: el juego nunca sustituye al contenido.
+
+PANTALLA FINAL: ESTOY LISTO PARA EL ENURM
+    Indice de preparacion (0-100%), fortalezas, debilidades, recomendacion y
+    generacion de un plan de estudio de 7 dias:
+        Dia 1 Epidemiologia · Dia 2 Cirugia · Dia 3 Epidemiologia+simulacro
+        Dia 4 Ginecologia · Dia 5 Casos clinicos · Dia 6 Simulacro completo
+        Dia 7 Repaso de errores
+
+
+================================================================================
+PARTE IV - DISENO VISUAL
+================================================================================
+
+DIRECCION: instrumental medico, no folleto universitario.
+Rojo sangria como color de marca; el resto de la paleta sale de los materiales
+reales del quirofano (verde quirurgico, azul suero, ambar de yodo, hueso).
+
+    Sangria profundo   #6E0F1F   marca, titulos, barra lateral
+    Sangria vivo       #B31331   acento, estados activos, progreso
+    Hueso              #FAF6F2   fondo general
+    Carbon             #16100F   navegacion, contraste
+    Verde quirofano    #4E8C74   acierto
+    Ambar yodo         #C8873A   advertencia / marcado
+    Azul suero         #7FA8C4   informacion / neutro frio
+
+TIPOGRAFIA
+    Display   Bricolage Grotesque  (titulos, numeros grandes)
+    Texto     Manrope              (lectura de casos clinicos)
+    Datos     IBM Plex Mono        (cronometro, constantes vitales, puntajes)
+
+FIRMA VISUAL
+    El trazo de electrocardiograma recorre la aplicacion: dibuja la racha,
+    late con el cronometro y se aplana cuando el tiempo se agota.
+
+INTERACCION
+    Todo elemento presionable se hunde al tocarlo (borde inferior solido que
+    colapsa 3px). Cards con esquinas de 26px, sombras suaves, mucho aire.
+    Transiciones de 180-420ms con curva de salida. Se respeta
+    prefers-reduced-motion.
+
+RESPONSIVE
+    Mobile-first: muchos estudiantes responderan desde el telefono.
+    Barra inferior con cinco destinos en pantallas menores de 900px.
+
+
+================================================================================
+PARTE V - ARQUITECTURA
+================================================================================
+
+VERSION ACTUAL (la que ya esta funcionando)
+    HTML + CSS + JavaScript sin dependencias ni servidor.
+    Persistencia en localStorage del navegador.
+    Cuentas locales con usuario y contrasena (hash con salt).
+    Se abre con doble clic en index.html. Funciona sin internet.
+
+VERSION OBJETIVO (cuando haya usuarios reales)
+                       FRONTEND (Next.js / React)
+                                |
+                           API BACKEND
+                +---------------+---------------+
+            Usuarios        Preguntas          IA
+                +---------------+---------------+
+                                |
+                          PostgreSQL
+                +---------------+---------------+
+          Banco de preguntas          Analitica de usuario
+
+    Capa de IA:
+        Usuario -> Frontend -> Backend -> Orquestador de IA
+                -> [ modelo de lenguaje  |  base de conocimiento medico ]
+                -> Respuesta
+    Migracion prevista: exportar el JSON del banco actual e insertarlo en la
+    tabla de preguntas sin cambiar el esquema.
+
+ESQUEMA DE CADA PREGUNTA
+    id · especialidad · tema · subtema · dificultad · tipo
+    enunciado · opciones · respuesta_correcta · distractores
+    explicacion · dato_clave · por_que_no (una por distractor)
+    diagnostico_diferencial · trampa_frecuente · objetivo_de_aprendizaje
+    habilidad_cognitiva · etiquetas · bibliografia
+
+HABILIDAD COGNITIVA (para medir que tipo de pensamiento se entrena)
+    Memoria · Comprension · Aplicacion · Analisis · Diagnostico ·
+    Toma de decisiones
+
+DIFICULTAD DINAMICA
+    La dificultad declarada es solo el punto de partida. El sistema la
+    recalcula con el comportamiento real:
+        Pregunta 452 · dificultad 8.2/10
+        72% la responde incorrectamente
+        68% tarda mas de 90 segundos
+        54% confunde A con C
+
+SIMULACRO ADAPTATIVO
+    No 100 preguntas al azar. La seleccion pondera nivel actual, errores
+    recientes, especialidades debiles, dificultad, tiempo promedio y cuanto
+    hace que no ves esa pregunta.
+
+CALIBRACION AL EXAMEN REAL  (revisado el 08/09/2026)
+    Formato verificado del ENURM:
+        - 100 preguntas de seleccion multiple
+        - 120 minutos
+        - 1 punto por acierto, SIN penalizacion por error ni por dejar
+          en blanco  -> conviene responder todo
+        - organizado por la Universidad Autonoma de Santo Domingo
+        - primera parte de conocimientos generales; segunda parte
+          especifica de la especialidad a la que se aplica
+
+    Peso real de las areas (de mayor a menor):
+        Medicina Interna es el bloque dominante del examen.
+        Le siguen Ginecologia y Obstetricia, Pediatria, Enfermedades
+        Infecciosas y Cardiologia (estas dos ultimas viven dentro de
+        Medicina Interna en este banco).
+        Fisiologia y Farmacologia se evaluan de forma sistematica.
+        Cirugia pesa MENOS de lo que suele asumirse.
+        Urologia, genetica, dermatologia y otorrinolaringologia
+        aparecen poco, pero aparecen.
+
+    Distribucion implementada en el simulacro:
+        28% Medicina Interna    15% Pediatria
+        14% Ginecologia y Obst.  8% Cirugia
+         8% Farmacologia         7% Ciencias Basicas
+         5% Epidemiologia        5% Salud Publica
+         4% Emergencias          3% Psiquiatria
+         2% Bioetica             1% Medicina Familiar
+
+    Correccion aplicada: la primera version del banco no tenia NINGUNA
+    pregunta de farmacologia ni de ciencias basicas, y le daba a Cirugia
+    casi el doble del peso que tiene. Ambas cosas quedaron corregidas.
+
+
+================================================================================
+PARTE VI - POLITICA DEL BANCO DE PREGUNTAS
+================================================================================
+
+REGLA 1  Ninguna pregunta entra al banco sin bibliografia identificada.
+REGLA 2  Solo se afirma lo que sostiene una fuente estandar vigente:
+         Harrison · Nelson · Williams Obstetricia · Schwartz · DSM-5-TR ·
+         Guias ESC / AHA / ADA / GOLD / GINA / OMS-OPS · normativa nacional
+         del Ministerio de Salud Publica de Republica Dominicana.
+REGLA 3  Cada distractor necesita su propia explicacion. Un distractor sin
+         justificacion es un distractor mal construido.
+REGLA 4  Toda pregunta declara su trampa: el error frecuente que explota.
+REGLA 5  Cuando una guia cambia, la pregunta se marca para revision. Las
+         conductas que dependen de guias llevan el ano de la fuente.
+REGLA 6  Las preguntas importadas desde otros bancos se revisan una por una
+         antes de publicarse; las que contradicen la fuente se corrigen o se
+         retiran, nunca se dejan "por si acaso".
+
+REGLA 7  Las preguntas son de redaccion propia. No se copian bancos
+         comerciales ni material con derechos de autor (libros de
+         preparacion, simuladores de pago, recopilaciones vendidas).
+         De fuentes externas se toma la ESTRUCTURA del examen —areas,
+         peso, formato, estilo—, nunca el texto de las preguntas.
+
+ESTADO DEL BANCO — DOS CAPAS
+
+    CAPA 1 · BANCO CURADO  (118 preguntas)
+    Redaccion propia. Todas verificadas contra las fuentes de la
+    REGLA 2,
+    todas con bibliografia, dato clave, trampa y una explicacion propia
+    por cada distractor. Comprobado automaticamente: 0 items sin
+    bibliografia, 0 con respuesta fuera de rango, 0 con distractores
+    sin explicar.
+
+    Reparto:
+        Medicina Interna 27 · Pediatria 14 · Ginecologia y Obst. 12
+        Farmacologia 12 · Ciencias Basicas 12 · Epidemiologia 10
+        Emergencias 8 · Psiquiatria 7 · Cirugia 6 · Salud Publica 4
+        Bioetica 3 · Medicina Familiar 3
+
+    CAPA 2 · BANCO EXTENDIDO  (2,322 preguntas)  [08/09/2026]
+    Preguntas REALES de examen: MIR y FIR del Ministerio de Sanidad de
+    Espana, anos 2013 a 2022. Llegan via el dataset HEAD-QA v2
+    (huggingface: alesi12/head_qa_v2), publicado con licencia MIT, lo
+    que permite usarlas y redistribuirlas sin problema legal.
+
+    Traen la respuesta OFICIAL del examen, pero todavia NO tienen
+    explicacion propia. Van marcadas con verificado:false y la app se
+    lo dice al estudiante en cada una: "Sin explicacion verificada
+    todavia. La respuesta es fiable; el porque esta pendiente."
+    Se pueden apagar por completo desde Ajustes.
+
+    Reparto:
+        Medicina Interna 1,391 · Farmacologia 468 · Ginecologia 112
+        Pediatria 87 · Cirugia 78 · Epidemiologia 71 · Psiquiatria 54
+        Emergencias 45 · Salud Publica 10 · Bioetica 6
+
+    De esas, 872 son casos clinicos completos. Sumadas a las curadas
+    y a las de la capa 1: 2,440 preguntas y 963 casos clinicos.
+
+    QUE SE DESCARTO AL IMPORTAR, Y POR QUE
+        8,449  categorias que no sirven al ENURM (enfermeria,
+               psicologia, quimica, biologia pura)
+        1,544  farmacologia sin angulo clinico
+          299  preguntas que dependen de una imagen que no tenemos
+           99  farmacia no clinica del examen FIR: cromatografia,
+               tecnologia farmaceutica, legislacion espanola
+           37  enunciados demasiado cortos
+            1  respuesta fuera de rango
+
+    LIMITES QUE HAY QUE TENER PRESENTES
+        - Son preguntas del MIR espanol, no del ENURM dominicano. La
+          medicina clinica transfiere casi por completo; la
+          epidemiologia local no. El dengue, la leptospirosis, la
+          malaria y las normas del MSP dominicano solo estan en el
+          banco curado.
+        - La clasificacion por especialidad y tema es automatica, por
+          palabras clave. Acierta la mayoria de las veces, pero no
+          todas. Van marcadas para poder corregirlas.
+        - Reimportar: ejecutar herramientas_importar_headqa.py. Vuelve
+          a generar los archivos banco-mir-*.js desde cero.
+
+    Cuando llegue el banco externo prometido, se procesa asi:
+        1. importar en bruto
+        2. contrastar cada respuesta con la fuente
+        3. corregir enunciado, clave o explicacion segun corresponda
+        4. marcar como "corregida" y registrar que se cambio y por que
+        5. generar preguntas nuevas derivadas del mismo tema
+
+
+================================================================================
+PARTE VII - QUE SIGUE
+================================================================================
+
+CORTO PLAZO
+    [x] Integrar un banco grande de preguntas reales (2,322 del MIR)
+    [x] Montar la capa de enriquecimiento: datos/explicaciones-*.js se
+        fusiona por id sobre el banco importado al arrancar la app.
+        Los archivos banco-mir-*.js son autogenerados y no se tocan,
+        asi que reimportar NUNCA destruye las explicaciones escritas.
+    [~] Escribir la explicacion de las 2,322 importadas, por lotes.
+
+        LOTE 1 (explicaciones-mir-01.js): 60 casos clinicos de
+        neurologia, cardiologia, neumologia, nefrologia, infectologia,
+        reumatologia, oncologia, cirugia y ginecologia.
+
+        LOTE 2 (explicaciones-mir-02.js): 60 casos clinicos de las
+        areas que el lote 1 no toco: endocrinologia, digestivo,
+        urgencias, obstetricia, hematologia, dermatologia, pediatria,
+        oftalmologia y psiquiatria.
+
+        LOTE 3 (explicaciones-mir-03.js): 56 casos, reparto
+        proporcional entre las doce areas con mas casos pendientes.
+        Se leyeron 60: cuatro no se explicaron porque su respuesta
+        oficial es incorrecta (ver CUARENTENA, abajo).
+
+        Verificado por script en los tres lotes: los 176 ids existen
+        en el banco, ninguno esta duplicado, ninguno esta en
+        cuarentena y los indices de cada distractor coinciden con la
+        pregunta real (0 errores). Ninguna explica por error la
+        respuesta correcta como si fuera un distractor.
+
+        VAN 1,114 PREGUNTAS CON EXPLICACION.
+        Banco activo: 2,759 (2,942 cargadas menos 183 en cuarentena).
+        Flashcards: 2,381 (crecen solas con cada explicacion nueva).
+
+        LOTE 6 HECHO (09/09/2026): 40 casos clinicos de 2013 y 2014,
+        en datos/explicaciones-mir-06.js. Se leyo uno por uno y se
+        contrasto la respuesta oficial con la bibliografia: las 40
+        resultaron correctas, ninguna sospechosa. Reparte: 9 de
+        hematologia y oncologia, 6 de infecciosas, 7 de gineco y
+        obstetricia, 6 de pediatria, 5 de urgencias, 4 de
+        farmacologia y toxicologia, y 3 de psiquiatria.
+        El lote corrige ademas la especialidad y el tema de las 40,
+        porque el clasificador automatico habia colocado varias en
+        el sitio equivocado (un astrocitoma en Cirugia, una CIA de
+        adulto en Pediatria, un MEN 1 en Ginecologia, un
+        desprendimiento de placenta en Pediatria).
+
+        El lote 2 ademas corrige la taxonomia: la capa de fusion
+        sobrescribe cualquier campo, asi que tambien repara las
+        especialidades y temas que el clasificador automatico habia
+        asignado mal (p.ej. una insuficiencia cardiaca clasificada
+        como endocrinologia, o un caso de oftalmologia como medicina
+        general). Aprovechar esto en cada lote.
+
+        LOTE 4 (explicaciones-mir-04.js): 56 casos de 2016 y
+        2018-2021. Incluye varias correcciones de taxonomia.
+
+        LOTE 5 (explicaciones-mir-05.js): 34 casos de 2016 y
+        2018-2021.
+
+        Siguientes lotes: quedan unos 265 casos clinicos sin
+        explicar, excluido 2017. Despues, las preguntas directas,
+        priorizando los temas que mas falle el estudiante.
+
+        EFECTO SECUNDARIO UTIL: cada explicacion nueva genera dos
+        flashcards automaticas. El mazo paso de 737 a 849 tarjetas
+        solo por escribir el lote 4.
+
+    CUARENTENA DE COHORTE: EL MIR 2017 ESTA CORROMPIDO
+        Al preparar el lote 4 aparecieron SIETE respuestas oficiales
+        erroneas de golpe, todas del mismo ano. Sumadas a las cuatro
+        del lote 3: de unas 23 preguntas del MIR 2017 leidas con
+        atencion, la MITAD tiene la clave mal. En los mismos lotes se
+        leyeron 78 preguntas de 2015 y 61 de 2016 sin encontrar
+        NI UNA.
+
+        No es ruido: es un ano entero con la clave corrompida.
+
+        Ejemplos que no admiten discusion:
+          - M200 receta BETABLOQUEANTES para el glaucoma de un
+            paciente ASMATICO, donde estan contraindicados.
+          - M214 evalua SUPERVIVENCIA con regresion lineal en vez
+            de Kaplan-Meier.
+          - M93 enumera la triada de Fabry y responde amiloidosis.
+          - M131 da nefropatia IgA con C3 y C4 bajos, cuando la IgA
+            cursa con complemento normal.
+          - M71 dice que los antialdosteronicos no aportan beneficio
+            en insuficiencia cardiaca, cuando el inutil ahi es la
+            ivabradina (el paciente esta en fibrilacion auricular).
+
+        Medida tomada: las 195 preguntas de MIR-2017 medicina salen
+        del estudio, salvo las verificadas una a una al escribirles
+        la explicacion. Quedan 14 activas; 181 retiradas.
+        Verificado: 0 preguntas de cuarentena en una seleccion de
+        2,500. Banco activo: 2,259 de 2,440.
+
+        Se retiraron ademas dos que YA tenian explicacion escrita en
+        el lote 2 (M164 y M107): en ambas me habia salido otro
+        resultado y lo rodee en el texto en vez de detenerme. Con el
+        ano comprometido, se retiran.
+
+        Como levantar la cuarentena: contrastar el ano contra la
+        plantilla oficial de respuestas del Ministerio de Sanidad de
+        Espana y borrar la regla de revision-mir.js, o ir
+        verificando pregunta a pregunta.
+
+        LECCION: hay que auditar por ANO, no solo por pregunta.
+        Antes de dar por bueno un ano, leer una muestra.
+
+    CUARENTENA DE PREGUNTAS SUELTAS  (datos/revision-mir.js)
+        Hallazgo del lote 3: la clave de respuestas del dataset NO es
+        infalible. Cuatro preguntas del MIR 2017 tienen marcada como
+        correcta una opcion que contradice a la bibliografia. Se
+        comprobo que el fallo NO es del importador: en el dataset las
+        opciones vienen ordenadas, no hay opciones vacias y el mapeo
+        ok = ra - 1 es correcto. El error viene en el propio origen.
+
+        El caso mas claro es MIR-2017-M111: da como correcta una
+        "trombocitopenia inmune" en una paciente con 182.000
+        plaquetas, es decir, recuento normal.
+
+        Que se hizo: NO se corrigen ni se borran en silencio. Van a
+        cuarentena en revision-mir.js, con el motivo y la respuesta
+        que sostiene la bibliografia. Mientras esten ahi no se le
+        muestran al estudiante: `Motor.bancoActivo()` las excluye, y
+        tampoco aparecen en la Biblioteca ni en los contadores.
+        Verificado: 0 preguntas de cuarentena en una seleccion de
+        2,500.
+
+        Frecuencia observada: 4 de 180 casos leidos con atencion, un
+        2%. Solo se detectan leyendo cada pregunta, que es
+        exactamente lo que hace el proceso de enriquecimiento: cada
+        lote es tambien una auditoria.
+
+        Para reincorporar una pregunta: borrarla de revision-mir.js.
+        Si ademas hay que corregir la respuesta, anadir `ok:<indice>`
+        en su entrada de explicaciones-mir-*.js, que sobrescribe el
+        banco.
+    [x] SISTEMA DE FLASHCARDS  (08/09/2026)
+        Para los dias sin tiempo. Anverso, volteas, dices si lo
+        sabias. Tres toques por tarjeta.
+
+        737 tarjetas en dos capas:
+          - 153 escritas a mano. Criterio: lo que se olvida y se
+            pregunta. Cifras, umbrales, criterios, secuencias y
+            pares que se confunden. Nada de conceptos largos.
+          - 584 generadas del banco: cada pregunta con explicacion
+            aporta dos, su DATO CLAVE y su TRAMPA. Segun se
+            escriben mas explicaciones, el mazo crece solo.
+
+        Repeticion espaciada PROPIA, separada de la del banco: una
+        tarjeta se repasa mucho mas seguido que una pregunta.
+        Intervalos 0 / 1 / 3 / 7 / 15 / 30 / 60 dias.
+        Calificacion de 4 niveles: No (vuelve hoy) - Casi - Si -
+        Facil. La que fallas se reencola en la misma sesion.
+
+        Tres accesos rapidos: Relampago (10 tarjetas), Repaso de
+        hoy (lo vencido) y Solo mis fallos (tarjetas nacidas de las
+        preguntas que fallaste; ahi esta el valor real).
+
+        Teclado: espacio voltea, 1 a 4 califican.
+
+    [x] LOTE 4 de explicaciones  (56 casos, anos 2016 y 2018-2021)
+        Reextraido excluyendo el MIR 2017. Se leyeron los 56 y
+        NINGUNA respuesta oficial resulto sospechosa, lo que
+        respalda que el defecto estaba acotado a 2017.
+
+    [x] LOTE 5 de explicaciones  (34 casos, 2016 y 2018-2021)
+
+        Al validarlo aparecio un cabo suelto del lote 3: contenia 6
+        explicaciones de MIR-2017 escritas ANTES de descubrir que el
+        ano estaba corrompido, y por tener explicacion quedaban
+        exentas de la cuarentena de cohorte. Se revisaron una a una:
+        cuatro se sostienen sin dudas y siguen activas; dos
+        (M119 y M163) no, y se retiraron. En ambas habia forzado el
+        argumento al escribirlas.
+
+    [x] SECCION ESTUDIAR - LOS TEMAS EXPLICADOS  (09/09/2026)
+        Lo que faltaba: una seccion para LEER, no para consultar.
+        El Temario era un indice sobre las preguntas; esto es el
+        texto. 104 temas escritos, que cubren los 101 del programa
+        mas tres anadidos (crecimiento y desarrollo, hernias y
+        quemaduras).
+
+        Cada tema esta escrito como un capitulo corto y seguido,
+        organizado alrededor de una pregunta: que hago con este
+        paciente delante. La estructura no es un formulario: son
+        secciones con titulo propio segun el tema, y tres marcas
+        que siempre responden a lo mismo:
+          FOCO      lo que decide la conducta
+          ALARMA    lo que no se puede pasar por alto
+          RECORDAR  las cuatro o cinco lineas que hay que llevarse
+
+        Funciona asi:
+          - Menu por bloques, con filtro, tiempo de lectura y
+            marca de los ya leidos (se guarda por usuario).
+          - Vista de lectura con indice lateral fijo que marca la
+            seccion que se esta leyendo.
+          - Al final de cada tema: marcar como leido, practicar
+            las preguntas de ese tema, ver solo las explicadas, y
+            "siguiente tema". La cadena de "siguiente" recorre los
+            104 temas seguidos: se puede leer de corrido como un
+            libro.
+          - Desde la ficha de un tema del Temario hay un boton
+            "Leer el tema" que salta al texto.
+
+        Archivos: datos/apuntes-01..08-*.js
+        Vista: assets/js/vistas/apuntes.js
+        Ruta: #estudiar (tecla 2)
+
+    [x] SECCION TEMARIO  (08/09/2026)
+        Los cuatro bloques del programa con sus 101 temas:
+        Medicina Interna (41), Ginecologia y Obstetricia (21),
+        Pediatria (20) y Cirugia (19). Los temas salen de la lista
+        de estudio que aporto shael y se contrastaron con la
+        estructura del ENURM ya verificada.
+
+        Es el indice: cada tema se enlaza con el banco por palabras clave y
+        muestra cuantas preguntas tiene, cuantas llevan explicacion
+        y cual es tu dominio. Desde ahi se entra a entrenar el tema,
+        solo sus preguntas explicadas, o sus flashcards.
+        Archivo de datos: datos/temario.js
+        Vista: assets/js/vistas/temario.js
+
+    [x] 502 PREGUNTAS NUEVAS SOBRE EL TEMARIO  (09/09/2026)
+        Pedido cumplido: al menos 500, justificadas, sobre los 101
+        temas del programa. Van 502, escritas en 22 tandas (A a V),
+        en los archivos datos/banco-06-temario-a.js hasta
+        datos/banco-27-temario-v.js, con IDs TE-001 a TE-950.
+
+        Todas llevan el estandar completo: enunciado o caso, cuatro
+        opciones, dato clave, explicacion razonada, por que falla
+        CADA distractor, la trampa del examen, diferenciales,
+        objetivo de aprendizaje y bibliografia.
+
+        Como se repartieron:
+          Tandas A-E   Temas sin cobertura previa y los cuatro
+                       bloques del programa de arriba abajo.
+          Tandas F-I   Segunda vuelta por bloque: Medicina Interna,
+                       Gineco-Obstetricia, Pediatria y Cirugia.
+          Tandas J-P   Tercera vuelta y transversales completos:
+                       epidemiologia, salud publica, bioetica,
+                       farmacologia, ciencias basicas, psiquiatria
+                       y medicina familiar.
+          Tandas Q-V   Cuarta y quinta vuelta sobre los temas de
+                       mas peso, y casos integradores de cierre.
+
+        Verificado en el navegador: 502 cargadas, 0 malformadas,
+        0 IDs duplicados. De los 101 temas del programa, NINGUNO
+        se queda sin preguntas explicadas y solo uno queda por
+        debajo de cinco.
+
+        Criterio que se siguio: escribir para los temas con pocas
+        preguntas *con explicacion*, no para los que tenian pocas
+        en bruto. Una pregunta MIR sin explicar no ensena nada.
+
+    [x] LOTE 6 de explicaciones MIR  (09/09/2026)
+        40 casos clinicos de 2013 y 2014 explicados y verificados.
+        Archivo: datos/explicaciones-mir-06.js
+
+    [x] LOTE 7 de explicaciones MIR  (09/09/2026)
+        50 casos clinicos de 2013 a 2021, en
+        datos/explicaciones-mir-07.js. Se contrasto cada respuesta
+        oficial: las 50 correctas.
+        Una lleva advertencia dentro de su propia explicacion:
+        MIR-2014-M132, rechazo de transfusion en un menor. La
+        respuesta oficial (via judicial) vale cuando hay margen de
+        tiempo; ante riesgo vital INMEDIATO se transfunde y se
+        comunica despues. Se explica el matiz en vez de dar una
+        regla unica.
+
+    [x] LOTE 8 de explicaciones MIR  (09/09/2026)
+        48 casos clinicos de 2013 a 2022, en
+        datos/explicaciones-mir-08.js. Las 48 respuestas oficiales
+        verificadas y correctas. Dos llevan matiz dentro de su
+        explicacion porque el enunciado oficial es mas tajante de
+        lo que sostiene la evidencia: MIR-2018-M224 (la adrenalina
+        no es el primer farmaco en TODAS las paradas: en los
+        ritmos desfibrilables va tras la tercera descarga) y
+        MIR-2015-M107 (la leucoencefalopatia multifocal si puede
+        dar crisis, aunque sea la menos probable de las opciones).
+
+    [x] LOTE 9 de explicaciones MIR  (09/09/2026)
+        42 casos clinicos de 2013 a 2022, en
+        datos/explicaciones-mir-09.js. Las 42 respuestas oficiales
+        verificadas y correctas. Reparto: Emergencias 5,
+        Epidemiologia 4, Farmacologia 4, GinObs 6, Medicina
+        Interna 12, Pediatria 6, Psiquiatria 4, Salud Publica 1.
+        Casos con matiz explicado dentro de la propia respuesta:
+        MIR-2013-M172 (golpe de calor: la afectacion hepatica es
+        FRECUENTE, no rara, y los antitermicos no sirven porque el
+        punto de ajuste hipotalamico no esta elevado) y
+        MIR-2022-M182 (el consentimiento por representacion no
+        paraliza una cirugia con riesgo vital inmediato).
+
+    [x] LOTE 10 de explicaciones MIR  (09/09/2026)
+        52 casos clinicos de 2013 a 2022, en
+        datos/explicaciones-mir-10.js. Las 52 respuestas oficiales
+        verificadas y correctas. Se subio la cuota de Medicina
+        Interna en herramientas_seleccionar_lote.py de 12 a 34,
+        porque de los casos que quedan 326 son de esa especialidad
+        y la cuota antigua frenaba el lote en 30.
+        Este lote aprovecha ademas el overlay para CORREGIR la
+        especialidad que el clasificador habia asignado mal en 13
+        preguntas (p. ej. MIR-2022-M83 estaba en GinObs siendo
+        una invaginacion intestinal de Pediatria; MIR-2013-M219 y
+        M221 estaban en Medicina Interna siendo de Psiquiatria).
+        Casos con matiz escrito dentro de la propia explicacion:
+        MIR-2015-M191 (el NNT solo sale si el 20% se lee como
+        reduccion ABSOLUTA; si fuera relativa haria falta la
+        incidencia basal), MIR-2013-M229 (la PL confirma, pero la
+        RM va ANTES para descartar masa y trombosis de senos),
+        MIR-2013-M95 (hoy la ADA anade metformina desde el
+        diagnostico, junto a la dieta y no en su lugar),
+        MIR-2013-M97 (dejar de fumar tambien reduce mucho el
+        ictus; la pregunta obliga a elegir el de mayor magnitud) y
+        MIR-2013-M68 (en 2013 la respuesta era protesis
+        quirurgica; hoy el TAVI se ha extendido, pero sigue siendo
+        para mayor edad o alto riesgo).
+
+    [ ] LOTE 11 y siguientes: quedan 309 casos clinicos MIR sin
+        explicar fuera de cuarentena, casi todos de Medicina
+        Interna de 2013 y 2014 (los anos que entraron completos).
+        Herramientas para seguir:
+          herramientas_seleccionar_lote.py  saca el siguiente
+            grupo de casos sin explicar, con cuota por especialidad
+            y ya filtrando la cuarentena, a un .txt legible.
+          herramientas_validar_explicaciones.py  comprueba el lote
+            escrito contra el banco: campos completos, que el
+            bloque no:{} tenga ops-1 entradas, que no explique la
+            respuesta correcta y que no repita IDs de lotes previos.
+    [ ] Importar y auditar el banco externo que falta por entregar
+    [ ] Ampliar el banco a 500 items con la misma exigencia de bibliografia
+    [ ] Anadir mas casos de paciente virtual (meta: uno por especialidad)
+    [ ] Exportar resultados a PDF para revisar sin la computadora
+
+MEDIANO PLAZO
+    [ ] Conectar el tutor socratico y el paciente virtual a un modelo de
+        lenguaje, con la clave guardada por el propio usuario
+    [ ] Cuentas en la nube para estudiar desde el telefono y la laptop
+    [ ] Modo grupo de estudio: mismo simulacro, comparacion de resultados
+
+LARGO PLAZO
+    [ ] Calibracion real de dificultad con datos de muchos usuarios
+    [ ] Prediccion de rendimiento basada en resultados historicos reales
+    [ ] Contenido en video corto para los subtemas mas fallados
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================

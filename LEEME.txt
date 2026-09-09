@@ -1,0 +1,165 @@
+================================================================
+ENURMIA — como usarla
+================================================================
+
+PARA ABRIRLA
+------------
+Doble clic en:  ABRIR ENURM.bat
+
+Se abre el navegador solo. Deja abierta la ventana negra mientras
+estudias; al terminar, cierrala.
+
+Si prefieres, tambien puedes hacer doble clic en index.html, pero
+el .bat es la forma recomendada.
+
+
+LA PRIMERA VEZ
+--------------
+1. Crea tu cuenta: nombre, usuario y contrasena.
+2. Entra y toca "Empezar ahora" en el panel de inicio.
+
+Tu cuenta y tu progreso se guardan SOLO en este navegador, en esta
+computadora. No hay servidor, no sale nada a internet.
+
+Por eso:
+  - No uses una contrasena que uses en otro sitio.
+  - Si limpias los datos del navegador, se borra tu progreso.
+  - En Ajustes puedes exportar una copia de seguridad (.json) y
+    volver a importarla cuando quieras.
+
+
+LAS SEIS FORMAS DE ESTUDIAR
+---------------------------
+INICIO       Te dice que estudiar ahora y por que.
+ENTRENAR     Preguntas con explicacion completa. Sin reloj.
+             Incluye "Razonamiento guiado": seis pasos de
+             pensamiento antes de ver las opciones.
+ESTUDIAR     Los temas EXPLICADOS, para leer. 104 capitulos
+             cortos escritos para entender como se presenta el
+             paciente, como se confirma el diagnostico y que
+             decide la conducta. Cada uno lleva tres bloques:
+             el azul es lo que decide la conducta, el rojo lo que
+             no se puede pasar por alto, y el negro del final son
+             las cuatro lineas que hay que llevarse.
+             Puedes leerlos de corrido con "siguiente tema", o
+             entrar por el tema que te toque. Marca los leidos.
+             Si tienes 10 minutos: lee un tema y practica sus
+             preguntas con el boton del final.
+
+TEMARIO      Los 101 temas del programa, en cuatro bloques. Cada
+             uno te dice cuanto material tiene, cuanto llevas
+             dominado, y te deja entrar a estudiarlo directamente.
+             Es la mejor puerta de entrada si no sabes por donde
+             empezar.
+SIMULACRO    Con reloj, sin ayudas, puntuado. Como el examen.
+FLASHCARDS   Para los dias sin tiempo. 2,381 tarjetas. Volteas y
+             dices si lo sabias; la que fallas vuelve hoy mismo y
+             la que dominas no la ves en un mes. Tres accesos:
+             Relampago (10 tarjetas), Repaso de hoy y Solo mis
+             fallos. Espacio voltea, 1 a 4 califican.
+CLINICA      Casos donde cada decision cambia la historia, y
+             pacientes virtuales a los que interrogas tu mismo.
+DESAFIO      Casos dificiles, 60 segundos, tres vidas.
+PROGRESO     Dominio por area, tipos de error, mapa de
+             conocimiento y medallas.
+BIBLIOTECA   Todo el banco abierto como material de consulta.
+¿ESTOY LISTO? Indice de preparacion y plan de estudio de 7 dias.
+
+
+ATAJOS DE TECLADO
+-----------------
+1 a 8        cambian de seccion
+A B C D      eligen una opcion
+Enter        confirma / siguiente
+
+
+COMO SE USA DE VERDAD
+---------------------
+1. Responde. No importa si fallas.
+2. Cuando falles, elige el TIPO de error que cometiste. Ese es el
+   dato que despues te dice como estas fallando, no solo que.
+3. Deja que la repeticion espaciada haga su trabajo: entra cada
+   dia y haz "el repaso de hoy" antes de material nuevo.
+4. Activa en Ajustes "defender mi respuesta" cuando quieras
+   entrenar el argumento, no solo la respuesta.
+
+
+EL BANCO DE PREGUNTAS
+---------------------
+2,942 preguntas en la carpeta "datos", en TRES CAPAS.
+
+CAPA 1 - BANCO CURADO (118 preguntas)
+Redactadas aqui, con explicacion completa, dato clave, la trampa que
+explota cada una, diferenciales y bibliografia:
+  banco-01-medicina-interna.js
+  banco-02-pediatria-gineco.js
+  banco-03-cirugia-emergencias-psiquiatria.js
+  banco-04-salud-publica-bioetica.js
+  banco-05-farmacologia-basicas.js
+
+CAPA 2 - BANCO EXTENDIDO (2,322 preguntas)
+  banco-mir-01.js
+  banco-mir-02.js
+  banco-mir-03.js
+
+Son preguntas REALES de los examenes MIR de Espana (2013-2022),
+publicadas por su Ministerio de Sanidad. Van marcadas con una
+etiqueta "MIR" y el ano.
+
+CAPA 3 - BANCO DEL TEMARIO (502 preguntas)
+  banco-06-temario-a.js  hasta  banco-27-temario-v.js
+
+Escritas aqui, una por una, sobre los 101 temas de tus listas de
+estudio. Llevan el mismo estandar que el banco curado: dato clave,
+explicacion, por que falla cada opcion, la trampa del examen y la
+bibliografia. Sus codigos empiezan por TE.
+
+De los 101 temas del programa no queda ninguno sin preguntas
+explicadas.
+
+De esas, 262 ya tienen explicacion completa escrita a mano, con dato
+clave, por que falla cada distractor, la trampa y bibliografia: se
+ven exactamente igual que las del banco curado. Las demas traen la
+respuesta oficial y la app te avisa de que el porque esta pendiente.
+En "Entrenar" se ve la barra de progreso de cuantas llevan
+explicacion.
+
+Las explicaciones viven en datos/explicaciones-mir-01.js a -04.js
+y se fusionan por id al arrancar.
+
+Hay ademas un archivo datos/revision-mir.js con preguntas en
+CUARENTENA: son items cuya respuesta "oficial" contradice a la
+bibliografia. No se te muestran, para no ensenarte algo falso, y
+quedan documentadas con el motivo por si quieres revisarlas.
+
+IMPORTANTE: el MIR 2017 completo esta en cuarentena. Al revisarlo
+resulto que la mitad de sus respuestas oficiales estan mal en la
+fuente de la que vienen. Son 181 preguntas retiradas. El resto de
+anos (2013-2016, 2018-2022) no muestra ese problema. Es importante: los archivos
+banco-mir-*.js son autogenerados, asi que si algun dia se reimporta
+el banco, las explicaciones NO se pierden.
+
+En Ajustes puedes apagarlas si prefieres estudiar solo con las que
+tienen explicacion completa. En "Entrenar" puedes filtrar entre
+"Todo el banco", "Solo con explicacion" y "Solo examenes MIR".
+
+Ojo con una cosa: son del examen espanol. La medicina clinica sirve
+igual, pero el dengue, la leptospirosis y las normas dominicanas solo
+estan en el banco curado.
+
+Si agregas un archivo nuevo de preguntas, hay que enlazarlo en
+app.html junto a los demas, o la app no lo vera.
+
+Cada pregunta lleva: explicacion, dato clave, por que falla cada
+distractor, la trampa que explota, diferenciales, objetivo de
+aprendizaje y BIBLIOGRAFIA.
+
+Para agregar preguntas nuevas, copia el bloque de una existente y
+cambia el contenido. Lo unico delicado: "ok" es el numero de la
+respuesta correcta empezando en 0 (0=A, 1=B, 2=C, 3=D).
+
+Los casos clinicos y los pacientes virtuales estan en
+datos/casos.js.
+
+El documento de producto completo, con las 20 funcionalidades y
+lo que falta por hacer, esta en ROADMAP_ENURM.txt.
