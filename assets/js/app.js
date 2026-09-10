@@ -102,11 +102,67 @@ window.App = (function () {
     };
   }
 
+  /* La subida a la nube va con 4 segundos de retardo para no lanzar una
+     peticion por cada click. Eso deja una ventana pequena de perdida si
+     el estudiante cierra de golpe, asi que forzamos la subida cuando la
+     pestana deja de estar visible, que es el momento fiable para hacerlo
+     (beforeunload aborta las peticiones a medias en muchos navegadores). */
+  function vigilarSincronizacion(){
+    const s = Almacen.sesion();
+    if (!s || !s.nube) return;
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') Almacen.sincronizarYa();
+    });
+    window.addEventListener('online', () => Almacen.sincronizarYa());
+    Almacen.alSincronizar(estado => {
+      const p = document.getElementById('perfilTop');
+      if (!p) return;
+      p.dataset.sync = estado;
+      p.title = estado === 'ok'       ? 'Progreso guardado en la nube'
+              : estado === 'error'    ? 'No se pudo sincronizar. Se reintentará.'
+              : estado === 'subiendo' ? 'Sincronizando…'
+              : estado === 'pendiente'? 'Cambios sin subir todavía'
+              : '';
+    });
+  }
+
+  /* El rol se pregunta al servidor, no se deduce del navegador. Si la
+     respuesta es 'admin' se anade la ruta y se repinta el armazon para
+     que aparezca en el menu. Aunque alguien forzara la ruta a mano, el
+     panel no le devolveria nada: el RLS decide, no esta pantalla. */
+  async function comprobarRol(){
+    const s = Almacen.sesion();
+    if (!s || !s.nube || !window.Nube || !Nube.disponible()) return;
+    let p = null;
+    try { p = await Nube.perfil(); } catch (e) { return; }
+    if (!p || p.rol !== 'admin') return;
+    if (RUTAS.some(r => r.id === 'admin')) return;
+    RUTAS.push({ id:'admin', em:'🛡️', nombre:'Administración', ver: () => Admin.menu() });
+
+    /* Se inserta el boton en el menu sin repintar el armazon: repintarlo
+       borraria #vista y, si la respuesta del servidor llega tarde, podria
+       cortar una sesion de preguntas ya empezada. */
+    const rail = document.querySelector('.rail');
+    const pie = rail ? rail.querySelector('.rail__pie') : null;
+    if (rail && pie){
+      const b = document.createElement('button');
+      b.className = 'rail__link';
+      b.dataset.ruta = 'admin';
+      b.innerHTML = '<span class="em">🛡️</span>';
+      b.appendChild(document.createTextNode('Administración'));
+      b.onclick = () => ir('admin');
+      rail.insertBefore(b, pie);
+    }
+    marcar();
+  }
+
   function arrancar(){
     if (!Almacen.sesion()){ location.replace('index.html'); return; }
     Motor.aplicarExplicaciones();
     Almacen.tocarRacha();
     armazon();
+    vigilarSincronizacion();
+    comprobarRol();
     const hash = (location.hash || '').replace('#','');
     ir(RUTAS.some(r => r.id === hash) ? hash : 'inicio');
 

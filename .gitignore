@@ -1,0 +1,18 @@
+# Herramientas que solo tienen sentido en tu computadora.
+# OJO: el repositorio es PUBLICO y Cloudflare sirve su raiz tal cual,
+# asi que todo lo que este aqui dentro seria descargable desde la web.
+herramientas_*.py
+ABRIR ENURM.bat
+
+# Notas internas: describen el modelo de seguridad y el correo del
+# administrador. No tienen secretos, pero no pintan nada en publico.
+NUBE_SUPABASE.txt
+REVISION_FIR.txt
+
+# Carpetas de trabajo
+_PUBLICAR_WEB/
+graphify-out/
+lote_*.txt
+
+# Lanzadores locales (no deben acabar en la web publica)
+*.bat

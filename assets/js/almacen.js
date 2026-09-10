@@ -11,6 +11,13 @@ window.Almacen = (function () {
   const LLAVE_SESION   = 'enurm.sesion';
   const LLAVE_DATOS    = u => 'enurm.datos.' + u;
 
+  /* Una cuenta de la nube se refleja aqui como una cuenta local mas,
+     con usuario 'nube:<uid>'. Asi todo lo de abajo (datos, guardar,
+     exportar, racha) sigue funcionando sin enterarse de que hay
+     Supabase detras. La contrasena de esas cuentas NO vive aqui:
+     la guarda Supabase, por eso no tienen salt ni hash. */
+  const usuarioNube = uid => 'nube:' + uid;
+
   /* ---------- utilidades ---------- */
   function leer(llave, porDefecto) {
     try { const v = localStorage.getItem(llave); return v ? JSON.parse(v) : porDefecto; }
@@ -82,7 +89,63 @@ window.Almacen = (function () {
     return { ok: true };
   }
 
-  function salir() { localStorage.removeItem(LLAVE_SESION); }
+  function salir() {
+    const s = sesion();
+    localStorage.removeItem(LLAVE_SESION);
+    cache = null;
+    if (s && s.nube && window.Nube && Nube.disponible()) { try { Nube.salir(); } catch (e) {} }
+  }
+
+  /* ---------- cuentas de la nube ---------- */
+  /* Crea o actualiza el reflejo local de una cuenta de Supabase y
+     abre sesion con ella. Devuelve el usuario local equivalente. */
+  function abrirSesionNube(uid, nombre, correo) {
+    const u = usuarioNube(uid);
+    const lista = usuarios();
+    const ya = lista.find(x => x.usuario === u);
+    if (ya) { ya.nombre = nombre || ya.nombre; ya.correo = correo || ya.correo; }
+    else lista.push({ usuario: u, nombre: nombre || correo || 'Estudiante', correo: correo, nube: true, creado: Date.now() });
+    escribir(LLAVE_USUARIOS, lista);
+    if (!leer(LLAVE_DATOS(u), null)) escribir(LLAVE_DATOS(u), datosNuevos(nombre || correo || 'Estudiante'));
+    escribir(LLAVE_SESION, u);
+    cache = null;
+    return u;
+  }
+
+  /* Sustituye el progreso local del usuario en sesion por el que
+     viene de la nube. Se usa al entrar cuando la nube va por delante. */
+  function adoptar(datosNube) {
+    const s = sesion(); if (!s || !datosNube) return false;
+    const base = datosNuevos(s.nombre);
+    for (const k in base) if (!(k in datosNube)) datosNube[k] = base[k];
+    for (const k in base.ajustes) if (!(k in (datosNube.ajustes || {}))) datosNube.ajustes[k] = base.ajustes[k];
+    cache = datosNube; cache.__u = s.usuario;
+    guardar({ sinSubir: true });
+    return true;
+  }
+
+  /* La cuenta LOCAL (de las de antes, sin nube) con mas progreso
+     acumulado. Sirve para no perder lo estudiado cuando alguien que
+     ya usaba la app se crea su primera cuenta en la nube. */
+  function mejorLocal() {
+    let mejor = null;
+    usuarios().filter(u => !u.nube).forEach(u => {
+      const d = leer(LLAVE_DATOS(u.usuario), null);
+      const p = peso(d);
+      if (d && p > 0 && (!mejor || p > mejor.peso)) mejor = { usuario: u.usuario, nombre: u.nombre, datos: d, peso: p };
+    });
+    return mejor;
+  }
+
+  /* Cuanta actividad acumula un blob de progreso. Sirve para decidir,
+     al entrar, si manda lo local o lo de la nube. */
+  function peso(d) {
+    if (!d) return -1;
+    return (d.respuestas ? d.respuestas.length : 0) +
+           (d.simulacros ? d.simulacros.length : 0) +
+           (d.srs ? Object.keys(d.srs).length : 0) +
+           (d.srsTarjetas ? Object.keys(d.srsTarjetas).length : 0);
+  }
 
   function sesion() {
     const u = leer(LLAVE_SESION, null);
@@ -93,6 +156,7 @@ window.Almacen = (function () {
   function cambiarClave(actual, nueva) {
     const s = sesion();
     if (!s) return { ok: false, error: 'No hay sesión abierta.' };
+    if (s.nube) return { ok: false, error: 'Tu contraseña la guarda el servidor, no este navegador. Cámbiala desde el enlace de recuperación que se envía a tu correo.' };
     if (hash(actual, s.salt) !== s.hash) return { ok: false, error: 'La contraseña actual no coincide.' };
     const lista = usuarios();
     const u = lista.find(x => x.usuario === s.usuario);
@@ -118,13 +182,49 @@ window.Almacen = (function () {
     return d;
   }
 
-  function guardar() {
+  /* Guarda en local siempre y, si la cuenta es de la nube, programa
+     una subida. La subida va con retardo a proposito: guardar() se
+     llama en cada respuesta y no queremos una peticion por click. */
+  let temporizadorSubida = null;
+  let estadoSync = 'local';        // local | pendiente | subiendo | ok | error
+  let alCambiarSync = null;
+
+  function marcarSync(e) { estadoSync = e; if (alCambiarSync) { try { alCambiarSync(e); } catch (x) {} } }
+
+  function guardar(op) {
     const s = sesion();
     if (!s || !cache) return;
+    cache.guardadoEn = Date.now();
     const copia = Object.assign({}, cache);
     delete copia.__u;
     escribir(LLAVE_DATOS(s.usuario), copia);
+    if (!(op && op.sinSubir)) programarSubida(s, copia);
   }
+
+  function programarSubida(s, copia) {
+    if (!s.nube || !window.Nube || !Nube.disponible()) return;
+    marcarSync('pendiente');
+    if (temporizadorSubida) clearTimeout(temporizadorSubida);
+    temporizadorSubida = setTimeout(() => { subirAhora(s, copia); }, 4000);
+  }
+
+  function subirAhora(s, copia) {
+    marcarSync('subiendo');
+    Nube.subir(copia, s.nombre).then(r => {
+      marcarSync(r && r.ok ? 'ok' : 'error');
+    }).catch(() => marcarSync('error'));
+  }
+
+  /* Fuerza la subida inmediata: al cerrar sesion o al cerrar la pagina. */
+  function sincronizarYa() {
+    const s = sesion(); if (!s || !s.nube || !cache) return;
+    if (temporizadorSubida) { clearTimeout(temporizadorSubida); temporizadorSubida = null; }
+    const copia = Object.assign({}, cache); delete copia.__u;
+    subirAhora(s, copia);
+  }
+
+  function sync() { return estadoSync; }
+  function alSincronizar(fn) { alCambiarSync = fn; }
 
   function reiniciarProgreso() {
     const s = sesion();
@@ -167,6 +267,8 @@ window.Almacen = (function () {
   return {
     usuarios, registrar, entrar, salir, sesion, cambiarClave,
     datos, guardar, reiniciarProgreso, exportar, importar,
-    tocarRacha, hoyISO
+    tocarRacha, hoyISO,
+    // puente con la nube
+    abrirSesionNube, adoptar, peso, mejorLocal, sincronizarYa, sync, alSincronizar
   };
 })();

@@ -48,8 +48,8 @@
         <p>Retoma donde lo dejaste. Tu progreso te está esperando.</p>
 
         <div class="campo">
-          <label for="u1">Usuario</label>
-          <input id="u1" name="username" type="text" placeholder="tu usuario" autocomplete="username" required>
+          <label for="u1">Correo</label>
+          <input id="u1" name="username" type="email" placeholder="tucorreo@ejemplo.com" autocomplete="username" required>
         </div>
         <div class="campo">
           <label for="p1">Contraseña</label>
@@ -58,24 +58,28 @@
 
         <button class="btn btn--lg btn--ancho" type="submit">Entrar y continuar</button>
         <div id="avisoEntrar"></div>
+        <p class="nota-privacidad" style="margin-top:12px">
+          <a href="#" id="olvide">Olvidé mi contraseña</a>
+          <span id="zonaLocal" class="hidden"> · <a href="#" id="modoLocal">entrar sin conexión</a></span>
+        </p>
       </form>
 
       <!-- CREAR -->
       <form id="formCrear" class="hidden" autocomplete="on">
         <h2>Crea tu cuenta</h2>
-        <p>Se guarda en este navegador. Sin correos, sin esperas.</p>
+        <p>Tu progreso queda guardado en la nube: podrás seguir desde otra computadora.</p>
 
         <div class="campo">
           <label for="n2">Nombre</label>
           <input id="n2" type="text" placeholder="Como quieres que te salude" autocomplete="name" required>
         </div>
         <div class="campo">
-          <label for="u2">Usuario</label>
-          <input id="u2" name="username" type="text" placeholder="mínimo 3 caracteres" autocomplete="username" required>
+          <label for="u2">Correo</label>
+          <input id="u2" name="username" type="email" placeholder="tucorreo@ejemplo.com" autocomplete="username" required>
         </div>
         <div class="campo">
           <label for="p2">Contraseña</label>
-          <input id="p2" name="password" type="password" placeholder="mínimo 4 caracteres" autocomplete="new-password" required>
+          <input id="p2" name="password" type="password" placeholder="mínimo 6 caracteres" autocomplete="new-password" required>
         </div>
         <div class="campo">
           <label for="p3">Repite la contraseña</label>
@@ -87,9 +91,10 @@
       </form>
 
       <p class="nota-privacidad">
-        Tus cuentas y tu progreso viven solo en este navegador (localStorage). Nada sale de tu computadora.
-        Por eso mismo: no uses una contraseña que uses en otro sitio, y si borras los datos del navegador,
-        borras tu progreso. Desde <b>Ajustes</b> puedes exportar una copia de seguridad.
+        Tu cuenta la gestiona <b>Supabase</b> y tu progreso se guarda en la nube, cifrado en tránsito y
+        visible solo para ti: la base de datos tiene una regla que impide que nadie lea la fila de otro.
+        Mientras estudias todo sigue funcionando en este navegador, así que <b>puedes trabajar sin internet</b>;
+        lo pendiente se sube al recuperar la conexión. Desde <b>Ajustes</b> puedes exportar una copia local.
       </p>
 
     </div>
@@ -98,12 +103,16 @@
 
 <div class="tostadas" id="tostadas"></div>
 
+<!-- SDK de Supabase servido en local: sin CDN, sin riesgo de que cambie bajo los pies, y disponible sin internet -->
+<script src="assets/js/vendor/supabase.js"></script>
+<script src="assets/js/nube.js"></script>
 <script src="assets/js/almacen.js"></script>
 <script>
 (function(){
   const $ = s => document.querySelector(s);
   const fEntrar = $('#formEntrar'), fCrear = $('#formCrear');
   const tEntrar = $('#tabEntrar'), tCrear = $('#tabCrear');
+  const hayNube = !!(window.Nube && Nube.disponible());
 
   function pestana(cual){
     const entrar = cual === 'entrar';
@@ -118,33 +127,125 @@
   function aviso(donde, texto, ok){
     donde.innerHTML = '<div class="aviso' + (ok ? ' aviso--ok' : '') + '">' + texto + '</div>';
   }
+  function ocupado(form, si, texto){
+    const b = form.querySelector('button[type=submit]');
+    if (!b) return;
+    if (si){ b.dataset.txt = b.dataset.txt || b.textContent; b.textContent = texto || 'Un momento…'; b.disabled = true; }
+    else { b.textContent = b.dataset.txt || b.textContent; b.disabled = false; }
+  }
 
-  // si no hay ninguna cuenta todavia, abrir en "crear cuenta"
-  if (Almacen.usuarios().length === 0) pestana('crear');
+  // Las cuentas locales de antes siguen sirviendo para entrar sin conexion.
+  const locales = Almacen.usuarios().filter(u => !u.nube);
+  if (locales.length) $('#zonaLocal').classList.remove('hidden');
+  if (!Almacen.usuarios().length) pestana('crear');
 
-  fCrear.onsubmit = e => {
+  if (!hayNube){
+    aviso($('#avisoEntrar'), locales.length
+      ? 'Sin conexión con el servidor. Puedes entrar sin conexión con una cuenta de este navegador.'
+      : 'Sin conexión con el servidor. Necesitas conexión para crear tu cuenta la primera vez.');
+  }
+
+  /* Tras autenticar: decidir en que direccion va el progreso.
+     Regla: gana el lado con mas actividad acumulada, y si el estudiante
+     ya usaba la app con cuenta local, ese progreso se adopta y se sube. */
+  async function sincronizarAlEntrar(user, correo){
+    const nombre = (user.user_metadata && user.user_metadata.nombre) || (correo || '').split('@')[0];
+    Almacen.abrirSesionNube(user.id, nombre, correo);
+
+    const pesoAqui = Almacen.peso(Almacen.datos());
+    let r = null;
+    try { r = await Nube.bajar(); } catch (e) { r = null; }
+    const enNube = (r && r.ok && r.fila && r.fila.datos) ? r.fila.datos : null;
+    const pesoNube = Almacen.peso(enNube);
+
+    if (pesoNube > pesoAqui){
+      Almacen.adoptar(enNube);
+      return 'Progreso recuperado de la nube.';
+    }
+    if (pesoAqui > 0){
+      Almacen.sincronizarYa();
+      return 'Subiendo tu progreso de este navegador…';
+    }
+    // Cuenta de nube recien estrenada y vacia: rescatar la cuenta local previa
+    const viejo = Almacen.mejorLocal();
+    if (viejo){
+      Almacen.adoptar(JSON.parse(JSON.stringify(viejo.datos)));
+      Almacen.sincronizarYa();
+      return 'Encontramos tu progreso anterior en este navegador y lo estamos subiendo.';
+    }
+    return '';
+  }
+
+  function pasar(donde, texto){
+    aviso(donde, texto || 'Listo. Abriendo tu panel…', true);
+    setTimeout(() => location.href = 'app.html', 900);
+  }
+
+  /* ---------- crear cuenta ---------- */
+  fCrear.onsubmit = async e => {
     e.preventDefault();
     const nombre = $('#n2').value.trim();
-    const usuario = $('#u2').value.trim().toLowerCase();
+    const correo = $('#u2').value.trim().toLowerCase();
     const clave = $('#p2').value, clave2 = $('#p3').value;
 
-    if (usuario.length < 3)  return aviso($('#avisoCrear'), 'El usuario necesita al menos 3 caracteres.');
-    if (clave.length < 4)    return aviso($('#avisoCrear'), 'La contraseña necesita al menos 4 caracteres.');
-    if (clave !== clave2)    return aviso($('#avisoCrear'), 'Las dos contraseñas no coinciden.');
+    if (!/.+@.+\..+/.test(correo)) return aviso($('#avisoCrear'), 'Escribe un correo válido.');
+    if (clave.length < 6)  return aviso($('#avisoCrear'), 'La contraseña necesita al menos 6 caracteres.');
+    if (clave !== clave2)  return aviso($('#avisoCrear'), 'Las dos contraseñas no coinciden.');
+    if (!hayNube)          return aviso($('#avisoCrear'), 'No hay conexión con el servidor. Inténtalo cuando vuelvas a tener internet.');
 
-    const r = Almacen.registrar({ nombre, usuario, clave });
-    if (!r.ok) return aviso($('#avisoCrear'), r.error);
+    ocupado(fCrear, true, 'Creando tu cuenta…');
+    const r = await Nube.registrar(correo, clave, nombre);
+    if (!r.ok){ ocupado(fCrear, false); return aviso($('#avisoCrear'), r.error); }
 
-    aviso($('#avisoCrear'), 'Cuenta creada. Entrando…', true);
-    setTimeout(() => location.href = 'app.html', 550);
+    if (r.confirmar){
+      ocupado(fCrear, false);
+      return aviso($('#avisoCrear'),
+        'Cuenta creada. Te enviamos un correo a <b>' + correo + '</b>: abre el enlace para confirmarla y luego entra desde la pestaña <b>Entrar</b>.', true);
+    }
+    const msg = await sincronizarAlEntrar(r.usuario, correo);
+    ocupado(fCrear, false);
+    pasar($('#avisoCrear'), msg || 'Cuenta creada. Entrando…');
   };
 
-  fEntrar.onsubmit = e => {
+  /* ---------- entrar ---------- */
+  fEntrar.onsubmit = async e => {
     e.preventDefault();
-    const r = Almacen.entrar($('#u1').value.trim().toLowerCase(), $('#p1').value);
+    const correo = $('#u1').value.trim().toLowerCase();
+    const clave  = $('#p1').value;
+
+    if (!hayNube) return aviso($('#avisoEntrar'), 'Sin conexión. Usa “entrar sin conexión” si ya tienes cuenta en este navegador.');
+
+    ocupado(fEntrar, true, 'Entrando…');
+    const r = await Nube.entrar(correo, clave);
+    if (!r.ok){ ocupado(fEntrar, false); return aviso($('#avisoEntrar'), r.error); }
+
+    const msg = await sincronizarAlEntrar(r.usuario, correo);
+    ocupado(fEntrar, false);
+    pasar($('#avisoEntrar'), msg);
+  };
+
+  /* ---------- recuperar contrasena ---------- */
+  $('#olvide').onclick = async ev => {
+    ev.preventDefault();
+    const correo = $('#u1').value.trim().toLowerCase();
+    if (!/.+@.+\..+/.test(correo)) return aviso($('#avisoEntrar'), 'Escribe arriba tu correo y vuelve a pulsar.');
+    if (!hayNube) return aviso($('#avisoEntrar'), 'Necesitas conexión para recuperar la contraseña.');
+    const r = await Nube.recuperar(correo);
+    aviso($('#avisoEntrar'), r.ok
+      ? 'Te enviamos un enlace a <b>' + correo + '</b> para poner una contraseña nueva.'
+      : r.error, r.ok);
+  };
+
+  /* ---------- salida de emergencia: cuenta local sin conexion ---------- */
+  $('#modoLocal').onclick = ev => {
+    ev.preventDefault();
+    const u = prompt('Usuario local (los de antes de la nube):', locales[0] ? locales[0].usuario : '');
+    if (!u) return;
+    const c = prompt('Contraseña de esa cuenta local:');
+    if (c === null) return;
+    const r = Almacen.entrar(u.trim().toLowerCase(), c);
     if (!r.ok) return aviso($('#avisoEntrar'), r.error);
-    aviso($('#avisoEntrar'), 'Listo. Abriendo tu panel…', true);
-    setTimeout(() => location.href = 'app.html', 400);
+    pasar($('#avisoEntrar'), 'Entrando sin conexión. Lo que estudies se sincronizará cuando entres con tu cuenta de la nube.');
   };
 
   // si ya hay sesion abierta, pasar directo

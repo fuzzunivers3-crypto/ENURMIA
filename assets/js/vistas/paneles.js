@@ -615,11 +615,15 @@ window.Vistas = (function () {
         conmutador('pedirConfianza', 'Preguntar mi nivel de confianza', 'Antes de confirmar, declaras qué tan seguro estás. Acertar con poca seguridad se trata como conocimiento frágil.', a.pedirConfianza) +
         conmutador('defenderRespuesta', 'Pedirme que defienda mi respuesta', 'Escribes tu razonamiento antes de ver el resultado y recibes análisis del argumento, no solo del acierto.', a.defenderRespuesta) +
         conmutador('bancoExtendido', 'Incluir el banco extendido',
-          'Añade ' + Motor.resumen().extendidas + ' preguntas reales de exámenes MIR (España, 2013-2022) a las ' +
+          'Añade ' + Motor.resumen().extendidas + ' preguntas reales del MIR de medicina (España, 2013-2022) a las ' +
           Motor.resumen().curadas + ' redactadas aquí. ' + Motor.resumen().enriquecidas +
           ' ya tienen explicación completa; el resto trae la respuesta oficial pero todavía no el porqué. ' +
+          'No se incluye el bloque del examen FIR de farmacia, que quedó fuera por no ser materia del ENURM. ' +
           'Apágalo si prefieres estudiar solo con explicación completa.', a.bancoExtendido) +
       '</div>' +
+
+      '<div class="card" style="margin-bottom:16px" id="tarjetaSuscripcion"><span class="eyebrow">Tu suscripción</span>' +
+        '<p class="muted" style="margin-top:8px;font-size:13.5px">Consultando…</p></div>' +
 
       '<div class="card" style="margin-bottom:16px"><span class="eyebrow">Copia de seguridad</span>' +
         '<p class="muted" style="margin:8px 0 14px;font-size:13.5px">Tu progreso vive solo en este navegador. Si vas a formatear, cambiar de computadora o limpiar datos, exporta primero.</p>' +
@@ -637,6 +641,8 @@ window.Vistas = (function () {
         '</div>' +
       '</div>' +
     '</div>';
+
+    pintarSuscripcion();
 
     UI.$$('[data-ajuste]').forEach(b => b.onclick = () => {
       const k = b.dataset.ajuste;
@@ -693,6 +699,43 @@ window.Vistas = (function () {
       };
     };
     document.getElementById('btnSalirCuenta').onclick = () => { Almacen.salir(); location.href = 'index.html'; };
+  }
+
+  /* Estado de la suscripcion del propio estudiante. Se consulta al
+     servidor porque la fila la controla el administrador, no el
+     navegador: aqui solo se muestra lo que diga la base de datos. */
+  async function pintarSuscripcion(){
+    const caja = document.getElementById('tarjetaSuscripcion');
+    if (!caja) return;
+    const s = Almacen.sesion();
+    if (!s || !s.nube || !window.Nube || !Nube.disponible()){
+      caja.innerHTML = '<span class="eyebrow">Tu suscripción</span>' +
+        '<p class="muted" style="margin-top:8px;font-size:13.5px">Esta es una sesión local, sin cuenta en la nube.</p>';
+      return;
+    }
+    let sus = null;
+    try { sus = await Nube.miSuscripcion(); } catch (e) { sus = null; }
+    if (!sus){
+      caja.innerHTML = '<span class="eyebrow">Tu suscripción</span>' +
+        '<p class="muted" style="margin-top:8px;font-size:13.5px">No se pudo consultar ahora mismo.</p>';
+      return;
+    }
+    const dias = sus.vence ? Math.ceil((new Date(sus.vence).getTime() - Date.now()) / 86400000) : null;
+    const vencida = sus.estado !== 'activa' || (dias !== null && dias < 0);
+    const fecha = sus.vence ? UI.fecha(new Date(sus.vence).getTime()) : '—';
+
+    caja.innerHTML = '<span class="eyebrow">Tu suscripción</span>' +
+      '<div class="row" style="margin-top:12px;gap:14px;align-items:center">' +
+        '<div class="grow"><b style="font-size:16px;text-transform:capitalize">' + esc(sus.plan) + '</b>' +
+        '<p class="muted" style="font-size:13px;margin-top:3px">' +
+          (vencida ? 'Vencida o inactiva desde el ' + esc(fecha)
+                   : 'Activa hasta el ' + esc(fecha) + (dias !== null ? ' · quedan ' + dias + (dias === 1 ? ' día' : ' días') : '')) +
+        '</p></div>' +
+        '<span style="padding:4px 11px;border-radius:999px;font-size:12px;font-weight:700;color:#fff;background:' +
+          (vencida ? 'var(--mal, #b3261e)' : 'var(--ok, #1f8a4c)') + '">' +
+          (vencida ? 'inactiva' : 'activa') + '</span>' +
+      '</div>' +
+      (vencida ? '<p class="muted" style="font-size:12.5px;margin-top:10px">Escribe al administrador para renovarla.</p>' : '');
   }
 
   function conmutador(id, titulo, texto, on){
