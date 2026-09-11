@@ -663,6 +663,16 @@ window.Tarjetas = (function () {
     const n = op.n || 20;
     let fuente = mazo();
 
+    /* Filtro por lista explicita de tarjetas. Lo necesita la Ruta para
+       pasar las tarjetas de UN tema del temario: `op.tema` filtra por el
+       campo `tema` de la pregunta de origen, que no es lo mismo que el
+       nombre del tema del programa. */
+    if (op.ids && op.ids.length){
+      const permitidas = {};
+      op.ids.forEach(function (x) { permitidas[x] = 1; });
+      fuente = fuente.filter(function (t) { return permitidas[t.id]; });
+    }
+
     if (op.esp)  fuente = fuente.filter(t => t.esp === op.esp);
     if (op.tema) fuente = fuente.filter(t => t.tema === op.tema);
 

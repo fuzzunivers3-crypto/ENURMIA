@@ -743,3 +743,52 @@ button.chip.on{background:var(--carbon);color:#fff}
   .lectura__indice a.act{border-color:var(--sangria-vivo)}
   .texto h2{font-size:19px}
 }
+
+
+/* ---------- Arturo ---------- */
+.arturo{
+  display:flex; align-items:center; gap:14px;
+  background:var(--papel); border:1px solid var(--linea);
+  border-left:4px solid var(--sangria);
+  border-radius:var(--r-md); padding:16px 18px;
+}
+.arturo__sello{
+  flex:none; width:40px; height:40px; border-radius:50%;
+  background:var(--sangria); color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--display); font-size:20px; font-weight:700;
+}
+.arturo__texto{ flex:1; min-width:0 }
+.arturo__texto b{ display:block; font-size:12px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--tinta-40); margin-bottom:3px }
+.arturo__texto p{ margin:0; font-size:14.5px; line-height:1.5 }
+
+/* ---------- lista de temas de la tanda ---------- */
+.ruta__lista{ display:flex; flex-direction:column; gap:8px }
+.ruta__tema{
+  display:flex; align-items:center; gap:12px;
+  padding:10px 12px; border:1px solid var(--linea); border-radius:var(--r-xs);
+}
+.ruta__tema--ok{ border-color:var(--quirofano); background:var(--quirofano-luz) }
+.ruta__n{
+  flex:none; width:24px; height:24px; border-radius:50%;
+  background:var(--hueso-hondo); display:flex; align-items:center;
+  justify-content:center; font-size:12px; font-weight:600;
+}
+.ruta__paso{
+  flex:none; width:56px; padding:6px 4px; border:1px solid var(--linea);
+  border-radius:var(--r-xs); background:var(--papel); cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+  font-family:inherit; color:inherit;
+}
+.ruta__paso:hover{ border-color:var(--sangria) }
+.ruta__paso small{ font-size:10px; color:var(--tinta-40) }
+.ruta__paso--ok{ border-color:var(--quirofano); color:var(--quirofano) }
+.ruta__paso--ok small{ color:var(--quirofano) }
+
+@media (max-width:640px){
+  .ruta__tema{ flex-wrap:wrap }
+  .ruta__tema .grow{ flex-basis:100%; margin-bottom:6px }
+  .arturo{ flex-wrap:wrap }
+  .arturo .btn{ width:100% }
+}

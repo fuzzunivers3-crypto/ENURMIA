@@ -11,6 +11,7 @@ window.App = (function () {
      y malo para ellos. */
   const PANTALLAS = {
     inicio:      { em:'🏠', nombre:'Inicio',         ver: p => Vistas.inicio(p) },
+    ruta:        { em:'👨‍⚕️', nombre:'Arturo',         ver: p => VistaRuta.menu(p) },
     simulacro:   { em:'📝', nombre:'Simulacro',      ver: p => Vistas.simulacro(p) },
     estudiar:    { em:'📖', nombre:'Estudiar',       ver: p => Apuntes.menu(p) },
     temario:     { em:'🗂️', nombre:'Temario',        ver: p => Temario.menu(p) },
@@ -36,9 +37,9 @@ window.App = (function () {
      cuatrimestre 7 no tiene nada que hacer en un simulacro del ENURM. */
   const MENUS = {
     enurm: {
-      arriba: ['inicio','simulacro','estudiar','temario','entrenar','clinica','flashcards','desafio','ranking','biblioteca'],
+      arriba: ['inicio','ruta','simulacro','estudiar','temario','entrenar','clinica','flashcards','desafio','ranking','biblioteca'],
       abajo:  ['progreso','preparacion','ajustes'],
-      movil:  ['inicio','estudiar','flashcards','clinica','progreso']
+      movil:  ['inicio','ruta','estudiar','flashcards','progreso']
     },
     unirm: {
       arriba: ['inicio','estudiar','temario','flashcards','material','practicar','razonar','desafio','ranking'],

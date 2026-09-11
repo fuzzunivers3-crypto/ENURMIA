@@ -1,0 +1,322 @@
+/* ============================================================
+   LA PANTALLA DE ARTURO
+   Tres caras: la de antes de empezar (elegir el tamano de la
+   tanda), la del recorrido en marcha, y la del cierre cuando se
+   agota el temario.
+   ============================================================ */
+window.VistaRuta = (function () {
+
+  const esc = UI.esc;
+  function V(){ return document.getElementById('vista'); }
+
+  function menu(){
+    /* El ajuste del banco extendido cambia las preguntas de cada tema, y
+       ese cache solo se limpia desde aqui y desde el Temario. */
+    Ruta.invalidar();
+    const r = Ruta.activa();
+    if (!r) return arranque();
+    if (r.terminada) return cierre();
+    return recorrido();
+  }
+
+  /* ---------- 1. antes de empezar ---------- */
+  function arranque(){
+    const total = Ruta.temas().length;
+    const p = Arturo.paso();
+
+    V().innerHTML =
+    '<div class="escalona" style="max-width:900px">' +
+      '<div class="encabezado"><p class="eyebrow">Tu profesor</p>' +
+      '<h1>Arturo te lleva el estudio</h1>' +
+      '<p>' + esc(p.frase) + '</p></div>' +
+
+      '<div class="card card--sangria" style="margin-bottom:18px">' +
+        '<span class="eyebrow" style="color:rgba(255,255,255,.5)">Cómo funciona</span>' +
+        '<h3 style="font-size:23px;margin:8px 0 12px">Estudiar, medirse, avanzar</h3>' +
+        '<p style="color:rgba(255,255,255,.78);font-size:14.5px">De cada tema se leen sus apuntes, se hacen sus preguntas y se pasan sus tarjetas. Cuando la tanda entera está hecha, entra un examen de esos mismos temas con algo de lo anterior mezclado. Lo que salga flojo vuelve solo en los exámenes siguientes. Y así hasta agotar los ' + total + ' temas del programa.</p>' +
+      '</div>' +
+
+      '<div class="card">' +
+        '<span class="eyebrow">Cuántos temas quieres llevar a la vez</span>' +
+        '<p class="muted" style="margin:8px 0 14px;font-size:13.5px">Tandas cortas dan más exámenes y más sensación de avance. Tandas largas se parecen más al examen real. Se puede cambiar después rehaciendo el recorrido.</p>' +
+        '<div style="display:flex;flex-direction:column;gap:9px">' +
+          opcion(3, 'Tandas cortas', total) +
+          opcion(5, 'El ritmo recomendado', total) +
+          opcion(8, 'Tandas largas', total) +
+          opcion(10, 'Lo más parecido al examen', total) +
+        '</div>' +
+        '<div class="row" style="gap:9px;margin-top:16px;align-items:center">' +
+          '<span class="muted" style="font-size:13px">O a medida:</span>' +
+          '<input id="rutaTam" type="number" min="2" max="20" value="5" style="width:80px">' +
+          '<button class="btn btn--sm btn--fantasma" id="rutaMedida">Crear con ese tamaño</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+    UI.$$('[data-tam]').forEach(function (b) {
+      b.onclick = function () { empezar(+b.dataset.tam); };
+    });
+    document.getElementById('rutaMedida').onclick = function () {
+      empezar(+document.getElementById('rutaTam').value);
+    };
+  }
+
+  function opcion(tam, texto, total){
+    const tandas = Ruta._tandas(total, tam).length;
+    return '<button class="accion-clinica" data-tam="' + tam + '">' +
+      '<span class="em">📚</span>' +
+      '<span class="grow"><b>' + tam + ' temas por tanda</b>' +
+      '<small>' + esc(texto) + ' · ' + tandas + ' tandas hasta terminar</small></span>→</button>';
+  }
+
+  function empezar(tam){
+    Ruta.crear(tam);
+    UI.tostada('Recorrido creado. Arturo te espera.', 'ok');
+    menu();
+  }
+
+  /* ---------- 2. el recorrido en marcha ---------- */
+  function recorrido(){
+    const r = Ruta.activa();
+    const av = Ruta.avance();
+    const ta = Ruta.tandaActual();
+    const soloExamen = r.vuelta >= 2;
+
+    const filas = ta.temas.map(function (f, i) {
+      return '<div class="ruta__tema' + (f.completo ? ' ruta__tema--ok' : '') + '">' +
+        '<span class="ruta__n">' + (i + 1) + '</span>' +
+        '<span class="grow">' +
+          '<b style="display:block;font-size:14px">' + esc(f.tema) + '</b>' +
+          '<small class="muted">' + esc(f.em + ' ' + f.bloque) + '</small>' +
+        '</span>' +
+        (soloExamen ? '' :
+          casilla(f.tema, 'leer', '📖', f.leer.hecho, f.leer.sinTexto ? 'sin texto' : 'leer') +
+          casilla(f.tema, 'preg', '📝', f.preg.hecho, f.preg.hechas + '/' + f.preg.meta) +
+          casilla(f.tema, 'tarj', '⚡', f.tarj.hecho, f.tarj.hechas + '/' + f.tarj.meta)) +
+      '</div>';
+    }).join('');
+
+    const historial = r.historial.slice().reverse().map(function (h) {
+      return '<div class="item-lista"><span class="item-lista__n">Tanda ' + h.n + '</span>' +
+        '<span class="grow"><b style="display:block">' + h.pct + '% · ' + h.correctas + '/' + h.total + '</b>' +
+        '<small class="muted">' + esc(h.temas.slice(0, 3).join(', ')) +
+        (h.temas.length > 3 ? ' y ' + (h.temas.length - 3) + ' más' : '') + '</small></span>' +
+        '<span class="chip ' + (h.pct >= 70 ? 'chip--verde' : h.pct >= 50 ? 'chip--yodo' : 'chip--sangria') + '">' +
+        (h.flojos.length ? h.flojos.length + ' flojo' + (h.flojos.length === 1 ? '' : 's') : 'limpio') +
+        '</span></div>';
+    }).join('') || '<p class="muted">Todavía no has cerrado ninguna tanda.</p>';
+
+    const avisoRepaso = r.repaso.length
+      ? '<div class="card card--yodo" style="margin-bottom:18px">' +
+        '<span class="eyebrow">Pendiente de recuperar</span>' +
+        '<p style="margin:6px 0 12px">' + r.repaso.length + ' tema' + (r.repaso.length === 1 ? '' : 's') +
+        ' no llegaron al 60% en su examen: ' + esc(r.repaso.slice(0, 4).join(', ')) +
+        (r.repaso.length > 4 ? ' y ' + (r.repaso.length - 4) + ' más' : '') +
+        '. Vuelven solos en los próximos exámenes.</p>' +
+        '<button class="btn btn--sm" id="rutaRepasar">Entrenarlos ahora</button></div>'
+      : '';
+
+    const avisoPerdidos = ta.perdidos
+      ? '<p class="muted" style="margin-top:12px;font-size:12.5px">' + ta.perdidos +
+        ' tema(s) de tu recorrido ya no están en el temario y se saltan.</p>'
+      : '';
+
+    /* El temario puede crecer mientras alguien va por la tanda 7. Los
+       temas nuevos no se cuelan en medio (correrian el cursor): se
+       ofrecen para el final del recorrido. */
+    const nuevos = Ruta.temasNuevos();
+    const avisoNuevos = nuevos.length
+      ? '<div class="card card--suero" style="margin-bottom:18px">' +
+        '<span class="eyebrow">Temario ampliado</span>' +
+        '<p style="margin:6px 0 12px">Hay ' + nuevos.length + ' tema' +
+        (nuevos.length === 1 ? '' : 's') + ' nuevo' + (nuevos.length === 1 ? '' : 's') +
+        ' que no estaban cuando creaste el recorrido: ' + esc(nuevos.slice(0, 3).join(', ')) +
+        (nuevos.length > 3 ? ' y ' + (nuevos.length - 3) + ' más' : '') +
+        '. Puedo añadirlos al final sin tocar lo que llevas.</p>' +
+        '<button class="btn btn--sm" id="rutaAbsorber">Añadirlos al recorrido</button></div>'
+      : '';
+
+    V().innerHTML =
+    '<div class="escalona" style="max-width:1000px">' +
+      '<div class="encabezado"><p class="eyebrow">' +
+        (soloExamen ? 'Segunda vuelta' : 'Tu recorrido') + '</p>' +
+      '<h1>Tanda ' + av.tanda + ' de ' + av.tandas + '</h1>' +
+      '<p>Llevas ' + av.temasCerrados + ' de ' + av.total + ' temas cerrados.</p></div>' +
+
+      Arturo.barra() +
+
+      '<div class="card" style="margin:18px 0">' +
+        '<div class="row-b" style="margin-bottom:8px"><span class="eyebrow">Avance por el temario</span>' +
+        '<span class="mono">' + av.temasCerrados + ' / ' + av.total + '</span></div>' +
+        UI.barra(av.pct) +
+      '</div>' +
+
+      avisoRepaso +
+      avisoNuevos +
+
+      '<div class="card" style="margin-bottom:18px">' +
+        '<span class="eyebrow">Los temas de esta tanda</span>' +
+        (soloExamen
+          ? '<p class="muted" style="margin:8px 0 0;font-size:13.5px">En la segunda vuelta no se repiten los tres pasos: ya los hiciste. El examen está abierto desde ahora.</p>'
+          : '<p class="muted" style="margin:8px 0 0;font-size:13.5px">Cada tema se cierra con sus tres pasos. Toca cualquiera para ir.</p>') +
+        '<div class="ruta__lista" style="margin-top:14px">' + filas + '</div>' +
+        avisoPerdidos +
+      '</div>' +
+
+      '<div class="card' + (ta.completa ? ' card--sangria' : '') + '" style="margin-bottom:18px">' +
+        '<span class="eyebrow"' + (ta.completa ? ' style="color:rgba(255,255,255,.5)"' : '') + '>Examen de la tanda</span>' +
+        '<h3 style="font-size:22px;margin:8px 0 10px">' + Ruta.tamanoSimulacro() + ' preguntas · ' +
+          Ruta.minutosDeTanda() + ' minutos</h3>' +
+        '<p style="font-size:14px' + (ta.completa ? ';color:rgba(255,255,255,.75)' : '') + '">Siete de cada diez preguntas salen de los temas de esta tanda; el resto, de lo que ya cerraste. Con reloj y sin explicación hasta el final.</p>' +
+        (ta.completa
+          ? '<button class="btn btn--claro" style="margin-top:14px" id="rutaSim">Empezar el examen</button>'
+          : '<p class="muted" style="margin-top:12px;font-size:13px">Se abre cuando los ' + ta.temas.length + ' temas estén cerrados.</p>') +
+      '</div>' +
+
+      '<div class="card"><span class="eyebrow">Tandas cerradas</span>' +
+      '<div style="display:flex;flex-direction:column;gap:9px;margin-top:14px">' + historial + '</div></div>' +
+
+      '<div class="row" style="margin-top:18px">' +
+        '<button class="btn btn--fantasma btn--sm" id="rutaRehacer">Rehacer el recorrido</button>' +
+      '</div>' +
+    '</div>';
+
+    Arturo.enganchar();
+
+    UI.$$('[data-paso]').forEach(function (b) {
+      b.onclick = function () {
+        Ruta.abrirHilo(b.dataset.tema);
+        lanzarPaso(b.dataset.tema, b.dataset.paso);
+      };
+    });
+
+    const rep = document.getElementById('rutaRepasar');
+    if (rep) rep.onclick = function () {
+      const ids = {};
+      const qs = [];
+      r.repaso.forEach(function (t) {
+        Ruta.preguntasDe(t).forEach(function (q) {
+          if (!ids[q.id] && q.exp){ ids[q.id] = 1; qs.push(q); }
+        });
+      });
+      if (!qs.length) return UI.tostada('No hay preguntas explicadas de esos temas', 'mal');
+      Sesion.iniciar({ modo:'aprender', titulo:'Temas por recuperar',
+        preguntas: qs.sort(function () { return Math.random() - 0.5; }).slice(0, 20) });
+    };
+
+    const abs = document.getElementById('rutaAbsorber');
+    if (abs) abs.onclick = function () {
+      const n = Ruta.absorber();
+      UI.tostada(n + ' tema(s) añadidos al final del recorrido', 'ok');
+      menu();
+    };
+
+    const sim = document.getElementById('rutaSim');
+    if (sim) sim.onclick = empezarSimulacro;
+
+    document.getElementById('rutaRehacer').onclick = function () {
+      UI.modal('<h3 style="font-size:22px;margin-bottom:10px">¿Rehacer el recorrido?</h3>' +
+        '<p class="muted">Se borra el recorrido y su historial de tandas. Lo que has estudiado no se pierde: los temas que ya tengas hechos aparecerán cerrados desde el primer día.</p>' +
+        '<div class="row" style="margin-top:20px;gap:9px">' +
+        '<button class="btn btn--fantasma grow" onclick="this.closest(\'.velo\').remove()">Dejarlo como está</button>' +
+        '<button class="btn grow" id="rutaConfirmarRehacer">Rehacer</button></div>');
+      document.getElementById('rutaConfirmarRehacer').onclick = function () {
+        document.querySelector('.velo').remove();
+        Ruta.borrar();
+        menu();
+      };
+    };
+  }
+
+  function casilla(tema, paso, em, hecho, texto){
+    return '<button class="ruta__paso' + (hecho ? ' ruta__paso--ok' : '') + '" ' +
+      'data-tema="' + esc(tema) + '" data-paso="' + paso + '" title="' + esc(texto) + '">' +
+      '<span>' + (hecho ? '✓' : em) + '</span>' +
+      '<small>' + esc(texto) + '</small></button>';
+  }
+
+  function lanzarPaso(tema, paso){
+    if (paso === 'leer'){
+      const k = Ruta.claveApunte(tema);
+      if (!k) return UI.tostada('Este tema todavía no tiene texto escrito', 'mal');
+      App.ir('estudiar');
+      return Apuntes.abrir(k);
+    }
+    if (paso === 'preg'){
+      const qs = Ruta.preguntasDe(tema);
+      if (!qs.length) return UI.tostada('Este tema todavía no tiene preguntas', 'mal');
+      const orden = qs.slice().sort(function (a, b) { return (b.exp ? 1 : 0) - (a.exp ? 1 : 0); }).slice(0, 10);
+      return Sesion.iniciar({ modo:'aprender', titulo:tema,
+        preguntas: orden.sort(function () { return Math.random() - 0.5; }) });
+    }
+    const cs = Ruta.tarjetasDe(tema);
+    if (!cs.length) return UI.tostada('Este tema todavía no tiene flashcards', 'mal');
+    Flashcards.iniciar({ n:12, titulo:tema, ids: cs.map(function (c) { return c.id; }) });
+  }
+
+  function empezarSimulacro(){
+    const preguntas = Ruta.simulacroDeTanda();
+    if (!preguntas.length) return UI.tostada('No se pudo armar el examen', 'mal');
+    const min = Ruta.minutosDeTanda();
+    const tanda = Ruta.activa().tanda;
+
+    UI.modal('<h3 style="font-size:22px;margin-bottom:10px">' + preguntas.length +
+      ' preguntas · ' + min + ' minutos</h3>' +
+      '<p class="muted">' + esc(Arturo.frase('simulacro', { tanda: tanda })) + '</p>' +
+      '<div class="row" style="margin-top:20px;gap:9px">' +
+      '<button class="btn btn--fantasma grow" onclick="this.closest(\'.velo\').remove()">Todavía no</button>' +
+      '<button class="btn grow" id="rutaEmpezarSim">Empezar ahora</button></div>');
+
+    document.getElementById('rutaEmpezarSim').onclick = function () {
+      document.querySelector('.velo').remove();
+      Sesion.iniciar({
+        modo: 'examen',
+        titulo: 'Examen de la tanda ' + tanda,
+        preguntas: preguntas,
+        tiempoTotal: min * 60000,
+        etiqueta: 'Ruta · tanda ' + tanda,
+        alTerminar: function (res) { Ruta.cerrarTanda(res); }
+      });
+    };
+  }
+
+  /* ---------- 3. el cierre ---------- */
+  function cierre(){
+    const r = Ruta.activa();
+    const medias = r.historial.map(function (h) { return h.pct; });
+    const media = medias.length
+      ? Math.round(medias.reduce(function (a, c) { return a + c; }, 0) / medias.length) : 0;
+
+    V().innerHTML =
+    '<div class="escalona" style="max-width:900px">' +
+      '<div class="encabezado"><p class="eyebrow">Recorrido terminado</p>' +
+      '<h1>Cerraste el temario completo</h1>' +
+      '<p>' + esc(Arturo.frase('fin', {})) + '</p></div>' +
+
+      '<div class="rejilla rejilla--3" style="margin-bottom:18px">' +
+        '<div class="metrica"><b>' + r.orden.length + '</b><span>Temas recorridos</span></div>' +
+        '<div class="metrica"><b>' + r.historial.length + '</b><span>Tandas cerradas</span></div>' +
+        '<div class="metrica"><b>' + media + '%</b><span>Media de los exámenes</span></div>' +
+      '</div>' +
+
+      (r.repaso.length
+        ? '<div class="card card--yodo" style="margin-bottom:18px"><span class="eyebrow">Lo que quedó flojo</span>' +
+          '<p style="margin-top:6px">' + esc(r.repaso.join(', ')) + '</p></div>'
+        : '<div class="card card--verde" style="margin-bottom:18px"><b>Ningún tema quedó por debajo del 60%.</b></div>') +
+
+      '<div class="row wrap" style="gap:9px">' +
+        '<button class="btn" id="rutaVuelta">Segunda vuelta</button>' +
+        '<button class="btn btn--fantasma" id="rutaSimFinal">Simulacro completo de 100</button>' +
+      '</div>' +
+    '</div>';
+
+    document.getElementById('rutaVuelta').onclick = function () {
+      Ruta.segundaVuelta();
+      UI.tostada('Segunda vuelta: solo exámenes, empezando por lo flojo', 'ok');
+      menu();
+    };
+    document.getElementById('rutaSimFinal').onclick = function () { App.ir('simulacro'); };
+  }
+
+  return { menu: menu };
+})();

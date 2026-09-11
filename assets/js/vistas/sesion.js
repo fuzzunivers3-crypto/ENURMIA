@@ -483,6 +483,15 @@ window.Sesion = (function () {
 
     const nuevas = Motor.revisarMedallas();
 
+    /* El callback estaba previsto desde el principio pero no se llamaba
+       nunca. Lo usa la Ruta para cerrar la tanda con el resultado del
+       examen. Se llama antes de pintar para que la pantalla de resultado
+       ya vea el estado nuevo. */
+    if (S.alTerminar){
+      try { S.alTerminar({ respuestas: res, pct: pct, correctas: ok, total: res.length }); }
+      catch (e) { console.warn('alTerminar fallo:', e); }
+    }
+
     // desglose por especialidad
     const porEsp = {};
     res.forEach(r => {

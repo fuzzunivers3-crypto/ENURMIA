@@ -62,7 +62,8 @@ window.Almacen = (function () {
       desafios: { mejor: 0, mejorMes: 0, mes: null, partidas: 0 },
       material: [],             // apuntes que sube el propio estudiante
       medallas: [],
-      plan: null,               // plan de estudio de 7 dias
+      plan: null,               // plan de estudio de 7 dias (retirado de la interfaz)
+      ruta: null,               // el recorrido guiado del temario (ver assets/js/ruta.js)
       ajustes: { pedirConfianza: true, defenderRespuesta: false, animaciones: true, bancoExtendido: true }
     };
   }
