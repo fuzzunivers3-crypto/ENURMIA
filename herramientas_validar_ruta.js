@@ -176,4 +176,40 @@ Ruta.crear(5);
 Ruta.borrar();
 igual(Ruta.activa(), null, 'borrar() deja la ruta en null');
 
+/* ============================================================
+   4. El material de cada tema
+   ============================================================ */
+titulo('Material por tema');
+
+reiniciar();
+
+igual(Ruta.preguntasDe('Tema que no existe').length, 0, 'un tema inexistente no devuelve preguntas');
+ok(Ruta.preguntasDe('Hipertensión arterial').length > 0,
+   'el emparejamiento usa el nombre exacto del temario');
+
+let sinApunte = 0, pocasPreg = 0, pocasTarj = 0;
+const flacos = [];
+Ruta.temas().forEach(function (t) {
+  const k = Ruta.claveApunte(t.t);
+  const qs = Ruta.preguntasDe(t.t);
+  const exp = qs.filter(function (q) { return !!q.exp; });
+  const cs = Ruta.tarjetasDe(t.t);
+  if (!k) { sinApunte++; flacos.push('sin apunte: ' + t.t); }
+  if (exp.length < 5) { pocasPreg++; flacos.push('menos de 5 explicadas: ' + t.t + ' (' + exp.length + ')'); }
+  if (cs.length < 10) { pocasTarj++; flacos.push('menos de 10 tarjetas: ' + t.t + ' (' + cs.length + ')'); }
+});
+igual(sinApunte, 0, 'los 101 temas tienen apunte');
+igual(pocasPreg, 0, 'los 101 temas tienen al menos 5 preguntas explicadas');
+igual(pocasTarj, 0, 'los 101 temas tienen al menos 10 flashcards');
+if (flacos.length) flacos.forEach(function (f) { console.log('    . ' + f); });
+
+/* Las tarjetas de un tema tienen que venir de sus preguntas: es lo que
+   hoy NO hace el boton "Flashcards del tema" del Temario. */
+const idsHTA = {};
+Ruta.preguntasDe('Hipertensión arterial').forEach(function (q) { idsHTA[q.id] = 1; });
+const cartasHTA = Ruta.tarjetasDe('Hipertensión arterial');
+ok(cartasHTA.length > 0, 'hipertension arterial tiene flashcards');
+ok(cartasHTA.every(function (c) { return !!idsHTA[c.origen]; }),
+   'todas las flashcards de un tema nacen de preguntas de ese tema');
+
 fin();

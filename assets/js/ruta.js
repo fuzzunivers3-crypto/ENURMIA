@@ -57,7 +57,72 @@ window.Ruta = (function () {
     return null;
   }
 
-  function invalidar(){ cTemas = null; cProg = null; }
+  function invalidar(){
+    cTemas = null; cProg = null;
+    cIndice = null; cIndiceLargo = -1;
+    cApuntes = null; cApProg = null;
+  }
+
+  /* ---------- emparejar temas con el banco ---------- */
+  /* Cada tema del temario lleva `claves`: las palabras con las que se
+     engancha con las preguntas. Se normaliza a minusculas y sin tildes y
+     se busca en todo el texto util de la pregunta. Es el mismo criterio
+     que usa la vista del Temario, pero vive aqui porque esa vista
+     necesita UI y el DOM y este archivo tiene que correr en Node. */
+  function norm(s){
+    return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  }
+
+  let cIndice = null, cIndiceLargo = -1;
+  function indice(){
+    const banco = Motor.bancoActivo();
+    if (cIndice && cIndiceLargo === banco.length) return cIndice;
+    cIndiceLargo = banco.length;
+    cIndice = banco.map(function (q) {
+      return {
+        q: q,
+        txt: norm([q.enunciado, q.caso, q.tema, q.sub, q.clave, q.exp,
+                   (q.tags || []).join(' ')].join(' '))
+      };
+    });
+    return cIndice;
+  }
+
+  function preguntasDe(nombre){
+    const t = temaPorNombre(nombre);
+    if (!t) return [];
+    const ks = t.claves.map(norm).filter(Boolean);
+    if (!ks.length) return [];
+    return indice().filter(function (x) {
+      return ks.some(function (k) { return x.txt.indexOf(k) >= 0; });
+    }).map(function (x) { return x.q; });
+  }
+
+  function tarjetasDe(nombre){
+    const ids = {};
+    preguntasDe(nombre).forEach(function (q) { ids[q.id] = 1; });
+    return Tarjetas.mazo().filter(function (c) { return c.origen && ids[c.origen]; });
+  }
+
+  /* ---------- el texto de cada tema ---------- */
+  /* Se busca en window.APUNTES directamente y no via Apuntes.claveDeTema
+     porque ese modulo es una vista: necesita UI y el DOM. El
+     emparejamiento es el mismo, por nombre exacto. */
+  let cApuntes = null, cApProg = null;
+  function apuntesDelPrograma(){
+    const p = Almacen.programa();
+    if (cApuntes && cApProg === p) return cApuntes;
+    cApProg = p;
+    cApuntes = {};
+    const todo = window.APUNTES || {};
+    Object.keys(todo).forEach(function (k) {
+      const suyo = (todo[k].programa === 'unirm');
+      if (p === 'unirm' ? suyo : !suyo) cApuntes[todo[k].tema] = k;
+    });
+    return cApuntes;
+  }
+
+  function claveApunte(nombre){ return apuntesDelPrograma()[nombre] || null; }
 
   /* ---------- el orden del recorrido ---------- */
   /* Los bloques estan escritos por peso (Medicina Interna 41, Gineco 21,
@@ -147,6 +212,7 @@ window.Ruta = (function () {
   return {
     activa: activa, crear: crear, borrar: borrar,
     temas: temas, temaPorNombre: temaPorNombre, invalidar: invalidar,
+    preguntasDe: preguntasDe, tarjetasDe: tarjetasDe, claveApunte: claveApunte,
     _orden: ordenIntercalado, _tandas: repartirTandas
   };
 })();
