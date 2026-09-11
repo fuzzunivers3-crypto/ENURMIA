@@ -76,6 +76,15 @@
 <script src="datos/apuntes-07-pediatria.js"></script>
 <script src="datos/apuntes-08-cirugia.js"></script>
 
+<!-- UNIRMIA: van DESPUES de los datos de ENURMIA a proposito.
+     datos/temario.js y datos/tarjetas.js asignan el array entero
+     (window.TEMARIO = [...]) en vez de concatenar, asi que todo lo
+     que se cargue antes que ellos se pierde. -->
+<script src="datos/unirm-07-temario.js"></script>
+<script src="datos/unirm-07-apuntes.js"></script>
+<script src="datos/unirm-07-tarjetas.js"></script>
+<script src="datos/unirm-07-banco.js"></script>
+
 <!-- nucleo -->
 <script src="assets/js/vendor/supabase.js"></script>
 <script src="assets/js/nube.js"></script>
@@ -90,6 +99,7 @@
 <script src="assets/js/vistas/flashcards.js"></script>
 <script src="assets/js/vistas/temario.js"></script>
 <script src="assets/js/vistas/apuntes.js"></script>
+<script src="assets/js/vistas/material.js"></script>
 <script src="assets/js/vistas/ranking.js"></script>
 <script src="assets/js/vistas/admin.js"></script>
 <script src="assets/js/app.js"></script>

@@ -25,6 +25,20 @@ window.Temario = (function () {
   }
   function invalidar(){ cache = null; }
 
+  /* Solo los bloques del programa en curso. Los de UNIRMIA van marcados con
+     `programa:'unirm'`; los del ENURM no llevan marca. Se filtra aqui y no
+     al cargar el archivo para que el cambio de programa se note sin
+     recargar la pagina. */
+  const NUM = ['Ningún bloque','Un bloque','Los dos bloques','Los tres bloques','Los cuatro bloques',
+               'Los cinco bloques','Los seis bloques','Los siete bloques','Los ocho bloques',
+               'Los nueve bloques','Los diez bloques'];
+
+  function bloques(){
+    const prog = Almacen.programa();
+    return (window.TEMARIO || []).filter(b =>
+      prog === 'unirm' ? b.programa === 'unirm' : b.programa !== 'unirm');
+  }
+
   function preguntasDe(tema){
     const ks = tema.claves.map(norm).filter(Boolean);
     return indice().filter(x => ks.some(k => x.txt.indexOf(k) >= 0)).map(x => x.q);
@@ -51,7 +65,7 @@ window.Temario = (function () {
      ============================================================ */
   function menu(){
     invalidar();
-    const bloques = (window.TEMARIO || []).map((b, bi) => {
+    const tarjetasBloque = bloques().map((b, bi) => {
       const estados = b.temas.map(estadoTema);
       const totalPreg = estados.reduce((s, e) => s + e.total, 0);
       const totalExp  = estados.reduce((s, e) => s + e.conExp, 0);
@@ -94,7 +108,7 @@ window.Temario = (function () {
 
     // resumen global
     let temasTotales = 0, temasTocados = 0;
-    (window.TEMARIO || []).forEach(b => b.temas.forEach(t => {
+    bloques().forEach(b => b.temas.forEach(t => {
       temasTotales++;
       if (estadoTema(t).vistas > 0) temasTocados++;
     }));
@@ -104,7 +118,7 @@ window.Temario = (function () {
     '<div class="escalona">' +
       '<div class="encabezado"><p class="eyebrow">Temario</p>' +
       '<h1>Estudiar por temas, no al azar</h1>' +
-      '<p>Los cuatro bloques con todo lo que hay que llevar preparado. Cada tema te dice cuánto material tiene, cuánto llevas dominado y te deja entrar a estudiarlo directamente.</p></div>' +
+      '<p>' + NUM[Math.min(bloques().length, NUM.length - 1)] + ' con todo lo que hay que llevar preparado. Cada tema te dice cuánto material tiene, cuánto llevas dominado y te deja entrar a estudiarlo directamente.</p></div>' +
 
       '<div class="rejilla rejilla--4" style="margin-bottom:18px">' +
         '<div class="metrica"><b>' + temasTotales + '</b><span>Temas del programa</span></div>' +
@@ -121,7 +135,7 @@ window.Temario = (function () {
         '<p class="muted" style="margin-top:10px;font-size:13px">Un tema cuenta como tocado en cuanto respondes una pregunta suya. El porcentaje de la derecha de cada tema es tu dominio, no tu avance.</p>' +
       '</div>' +
 
-      '<div class="mapa">' + bloques + '</div>' +
+      '<div class="mapa">' + tarjetasBloque + '</div>' +
 
       '<div class="card" style="margin-top:18px"><span class="eyebrow">Además del temario</span>' +
         '<p class="muted" style="margin:8px 0 12px;font-size:13.5px">El examen también evalúa estos bloques transversales, que tienen banco propio:</p>' +
@@ -139,11 +153,11 @@ window.Temario = (function () {
     UI.$$('[data-tema]').forEach(el => el.onclick = e => {
       e.stopPropagation();
       const [bi, ti] = el.dataset.tema.split('-').map(Number);
-      abrirTema(window.TEMARIO[bi].temas[ti], window.TEMARIO[bi].bloque);
+      abrirTema(bloques()[bi].temas[ti], bloques()[bi].bloque);
     });
     UI.$$('[data-bloque-todo]').forEach(b => b.onclick = e => {
       e.stopPropagation();
-      const bl = window.TEMARIO[+b.dataset.bloqueTodo];
+      const bl = bloques()[+b.dataset.bloqueTodo];
       const ids = {};
       bl.temas.forEach(t => preguntasDe(t).forEach(q => ids[q.id] = q));
       lanzar(Object.values(ids), bl.bloque);

@@ -604,12 +604,21 @@ window.Tarjetas = (function () {
     return salida;
   }
 
-  let cacheMazo = null;
+  /* El mazo tambien es por programa: las tarjetas de UNIRMIA llevan
+     `programa:'unirm'` y las de ENURMIA no llevan nada, igual que en el
+     banco de preguntas. Las que genera el estudiante de su propio material
+     llevan el programa en el que estaba cuando las creo. */
+  let cacheMazo = null, cachePrograma = null;
   function mazo(){
-    if (!cacheMazo) cacheMazo = (window.TARJETAS || []).concat(derivadas());
+    const prog = Motor.programaActivo();
+    if (cacheMazo && cachePrograma === prog) return cacheMazo;
+    cachePrograma = prog;
+    const propias = (window.TARJETAS || []).filter(t =>
+      prog === 'unirm' ? t.programa === 'unirm' : t.programa !== 'unirm');
+    cacheMazo = propias.concat(derivadas());
     return cacheMazo;
   }
-  function invalidar(){ cacheMazo = null; }
+  function invalidar(){ cacheMazo = null; cachePrograma = null; }
   function porId(id){ return mazo().find(t => t.id === id); }
 
   /* ---------- estado ---------- */

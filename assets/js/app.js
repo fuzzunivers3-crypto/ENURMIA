@@ -5,27 +5,67 @@ window.App = (function () {
 
   const esc = UI.esc;
 
-  const RUTAS = [
-    { id:'inicio',      em:'🏠', nombre:'Inicio',      ver: p => Vistas.inicio(p) },
-    { id:'simulacro',   em:'📝', nombre:'Simulacro',   ver: p => Vistas.simulacro(p) },
-    { id:'estudiar',    em:'📖', nombre:'Estudiar',    ver: p => Apuntes.menu(p) },
-    { id:'temario',     em:'🗂️', nombre:'Temario',     ver: p => Temario.menu(p) },
-    { id:'entrenar',    em:'🧠', nombre:'Entrenar',    ver: p => Vistas.entrenar(p) },
-    { id:'clinica',     em:'🩺', nombre:'Clínica',     ver: p => Clinica.menu(p) },
-    { id:'flashcards',  em:'⚡', nombre:'Flashcards',  ver: p => Flashcards.menu(p) },
-    { id:'desafio',     em:'⚔️', nombre:'Desafío',     ver: p => Vistas.desafio(p) },
-    { id:'ranking',     em:'🏆', nombre:'Clasificación', ver: () => Ranking.menu() },
-    { id:'biblioteca',  em:'📚', nombre:'Biblioteca',  ver: p => Vistas.biblioteca(p) },
-    { id:'progreso',    em:'📊', nombre:'Progreso',    ver: p => Vistas.progreso(p) },
-    { id:'preparacion', em:'🎓', nombre:'¿Estoy listo?', ver: p => Vistas.preparacion(p) },
-    { id:'ajustes',     em:'⚙️', nombre:'Ajustes',     ver: p => Vistas.ajustes(p) }
-  ];
+  /* Todas las pantallas que existen. Cada programa arma su menu con las
+     que le sirven: no es lo mismo preparar una oposicion que aprobar un
+     cuatrimestre, y forzar el mismo orden a los dos seria comodo para mi
+     y malo para ellos. */
+  const PANTALLAS = {
+    inicio:      { em:'🏠', nombre:'Inicio',         ver: p => Vistas.inicio(p) },
+    simulacro:   { em:'📝', nombre:'Simulacro',      ver: p => Vistas.simulacro(p) },
+    estudiar:    { em:'📖', nombre:'Estudiar',       ver: p => Apuntes.menu(p) },
+    temario:     { em:'🗂️', nombre:'Temario',        ver: p => Temario.menu(p) },
+    entrenar:    { em:'🧠', nombre:'Entrenar',       ver: p => Vistas.entrenar(p) },
+    practicar:   { em:'🧠', nombre:'Practicar',      ver: p => Vistas.entrenar(p) },
+    clinica:     { em:'🩺', nombre:'Clínica',        ver: p => Clinica.menu(p) },
+    flashcards:  { em:'⚡', nombre:'Flashcards',     ver: p => Flashcards.menu(p) },
+    material:    { em:'📎', nombre:'Mi material',    ver: p => Material.menu(p) },
+    razonar:     { em:'🔍', nombre:'Razonar',        ver: p => Vistas.razonar(p) },
+    desafio:     { em:'⚔️', nombre:'Desafío',        ver: p => Vistas.desafio(p) },
+    ranking:     { em:'🏆', nombre:'Clasificación',  ver: () => Ranking.menu() },
+    biblioteca:  { em:'📚', nombre:'Biblioteca',     ver: p => Vistas.biblioteca(p) },
+    progreso:    { em:'📊', nombre:'Progreso',       ver: p => Vistas.progreso(p) },
+    preparacion: { em:'🎓', nombre:'¿Estoy listo?',  ver: p => Vistas.preparacion(p) },
+    ajustes:     { em:'⚙️', nombre:'Ajustes',        ver: p => Vistas.ajustes(p) },
+    admin:       { em:'🛡️', nombre:'Administración', ver: () => Admin.menu() }
+  };
 
-  const MOVIL = ['inicio','estudiar','flashcards','clinica','progreso'];
-  /* Donde parte el menu lateral: arriba lo que es estudiar, abajo lo que es
-     mirarse a uno mismo. Es un indice y no un numero magico repetido dos
-     veces, que era lo que se rompia al anadir una ruta en medio. */
-  const CORTE = RUTAS.findIndex(r => r.id === 'progreso');
+  /* ENURMIA va de examen: el simulacro arriba y todo apuntando a el.
+     UNIRMIA va de aprender una asignatura: primero leer y memorizar,
+     despues practicar, y solo entonces razonar sobre lo aprendido. Por eso
+     el orden no es el mismo ni las pantallas tampoco: un estudiante de
+     cuatrimestre 7 no tiene nada que hacer en un simulacro del ENURM. */
+  const MENUS = {
+    enurm: {
+      arriba: ['inicio','simulacro','estudiar','temario','entrenar','clinica','flashcards','desafio','ranking','biblioteca'],
+      abajo:  ['progreso','preparacion','ajustes'],
+      movil:  ['inicio','estudiar','flashcards','clinica','progreso']
+    },
+    unirm: {
+      arriba: ['inicio','estudiar','temario','flashcards','material','practicar','razonar','desafio','ranking'],
+      abajo:  ['progreso','ajustes'],
+      movil:  ['inicio','estudiar','flashcards','practicar','progreso']
+    }
+  };
+
+  /* El rol lo confirma el servidor despues de arrancar, asi que se guarda
+     en una bandera y no como una ruta suelta: RUTAS se recalcula en cada
+     repintado y un push se habria perdido. */
+  let esAdmin = false;
+
+  function menu(){
+    const m = MENUS[Almacen.programa()] || MENUS.enurm;
+    if (!esAdmin) return m;
+    return { arriba: m.arriba, abajo: m.abajo.concat('admin'), movil: m.movil };
+  }
+
+  function rutas(){
+    const m = menu();
+    return m.arriba.concat(m.abajo).map(id => Object.assign({ id }, PANTALLAS[id]));
+  }
+
+  /* Se recalcula en cada repintado porque el programa puede confirmarse
+     tarde: el servidor responde despues de que la pantalla ya este puesta. */
+  let RUTAS = rutas();
   let actual = 'inicio';
 
   function ir(id, param){
@@ -47,8 +87,14 @@ window.App = (function () {
 
   function marcaPrograma(){ return Almacen.programa() === 'unirm' ? 'UNIRMIA' : 'ENURMIA'; }
 
+  function boton(id){
+    const x = PANTALLAS[id];
+    return '<button class="rail__link" data-ruta="' + id + '"><span class="em">' + x.em + '</span>' + esc(x.nombre) + '</button>';
+  }
+
   function armazon(){
     const s = Almacen.sesion();
+    RUTAS = rutas();
     document.title = marcaPrograma();
     const d = Almacen.datos();
     const r = Motor.resumen();
@@ -57,11 +103,9 @@ window.App = (function () {
     '<aside class="rail">' +
       '<div class="rail__marca"><span class="marca__sello">✚</span>' +
         marcaPrograma() + '</div>' +
-      RUTAS.slice(0, CORTE).map(x =>
-        '<button class="rail__link" data-ruta="' + x.id + '"><span class="em">' + x.em + '</span>' + esc(x.nombre) + '</button>').join('') +
+      menu().arriba.map(id => boton(id)).join('') +
       '<div class="rail__sep"></div>' +
-      RUTAS.slice(CORTE).map(x =>
-        '<button class="rail__link" data-ruta="' + x.id + '"><span class="em">' + x.em + '</span>' + esc(x.nombre) + '</button>').join('') +
+      menu().abajo.map(id => boton(id)).join('') +
       '<div class="rail__pie">' +
         '<span class="eyebrow">Racha</span>' +
         '<div class="rail__racha"><b>' + r.racha + '</b><span style="font-size:12px;opacity:.6">' +
@@ -85,9 +129,9 @@ window.App = (function () {
     '</main>' +
 
     '<nav class="movil">' +
-      MOVIL.map(id => {
-        const x = RUTAS.find(r => r.id === id);
-        return '<button data-ruta="' + x.id + '" title="' + esc(x.nombre) + '">' + x.em + '</button>';
+      menu().movil.map(id => {
+        const x = PANTALLAS[id];
+        return '<button data-ruta="' + id + '" title="' + esc(x.nombre) + '">' + x.em + '</button>';
       }).join('') +
     '</nav>';
 
@@ -147,39 +191,43 @@ window.App = (function () {
     if (!p) return;
 
     /* El programa lo dice el servidor, no este navegador. Si no coincide con
-       el reflejo local se corrige y se repinta la marca, que es lo unico que
-       depende de el en el armazon: repintar entero cortaria la sesion. */
-    if (p.programa && p.programa !== Almacen.programa()){
-      Almacen.fijarPrograma(p.programa);
-      document.title = marcaPrograma();
-      const marca = document.querySelector('.rail__marca');
-      if (marca) marca.innerHTML = '<span class="marca__sello">✚</span>' + marcaPrograma();
-    }
+       el reflejo local hay que corregirlo, y eso cambia el menu entero:
+       ENURMIA y UNIRMIA no tienen las mismas pantallas. Se repinta solo la
+       barra lateral, nunca #vista: si la respuesta llega tarde y el
+       estudiante ya empezo una sesion de preguntas, repintar la cortaria. */
+    const cambioPrograma = p.programa && p.programa !== Almacen.programa();
+    if (cambioPrograma) Almacen.fijarPrograma(p.programa);
+    if (p.rol === 'admin') esAdmin = true;
+    if (!cambioPrograma && !esAdmin) return;
 
-    if (p.rol !== 'admin') return;
-    if (RUTAS.some(r => r.id === 'admin')) return;
-    RUTAS.push({ id:'admin', em:'🛡️', nombre:'Administración', ver: () => Admin.menu() });
-
-    /* Se inserta el boton en el menu sin repintar el armazon: repintarlo
-       borraria #vista y, si la respuesta del servidor llega tarde, podria
-       cortar una sesion de preguntas ya empezada. */
-    const rail = document.querySelector('.rail');
-    const pie = rail ? rail.querySelector('.rail__pie') : null;
-    if (rail && pie){
-      const b = document.createElement('button');
-      b.className = 'rail__link';
-      b.dataset.ruta = 'admin';
-      b.innerHTML = '<span class="em">🛡️</span>';
-      b.appendChild(document.createTextNode('Administración'));
-      b.onclick = () => ir('admin');
-      rail.insertBefore(b, pie);
-    }
+    RUTAS = rutas();
+    document.title = marcaPrograma();
+    repintarBarra();
     marcar();
+  }
+
+  /* Rehace la barra lateral dejando #vista intacto. */
+  function repintarBarra(){
+    const rail = document.querySelector('.rail');
+    if (!rail) return;
+    const marca = rail.querySelector('.rail__marca');
+    const pie = rail.querySelector('.rail__pie');
+    if (marca) marca.innerHTML = '<span class="marca__sello">✚</span>' + marcaPrograma();
+    rail.querySelectorAll('.rail__link, .rail__sep').forEach(e => e.remove());
+    const trozo = document.createElement('div');
+    trozo.innerHTML = menu().arriba.map(id => boton(id)).join('') +
+      '<div class="rail__sep"></div>' + menu().abajo.map(id => boton(id)).join('');
+    while (trozo.firstChild) rail.insertBefore(trozo.firstChild, pie);
+    rail.querySelectorAll('[data-ruta]').forEach(b => b.onclick = () => ir(b.dataset.ruta));
   }
 
   function arrancar(){
     if (!Almacen.sesion()){ location.replace('index.html'); return; }
     Motor.aplicarExplicaciones();
+    /* Las tarjetas del material propio se rehacen al arrancar: viven en el
+       progreso, no en un archivo, asi que no existen hasta que alguien las
+       vuelve a generar a partir del texto guardado. */
+    if (window.Material) try { Material.sembrar(); } catch (e) {}
     Almacen.tocarRacha();
     armazon();
     vigilarSincronizacion();

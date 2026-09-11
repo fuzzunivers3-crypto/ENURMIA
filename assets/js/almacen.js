@@ -60,6 +60,7 @@ window.Almacen = (function () {
       apuntes: {},              // temas leidos en la seccion Estudiar
       racha: { dias: 0, ultimo: null },
       desafios: { mejor: 0, mejorMes: 0, mes: null, partidas: 0 },
+      material: [],             // apuntes que sube el propio estudiante
       medallas: [],
       plan: null,               // plan de estudio de 7 dias
       ajustes: { pedirConfianza: true, defenderRespuesta: false, animaciones: true, bancoExtendido: true }

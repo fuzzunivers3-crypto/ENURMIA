@@ -14,7 +14,21 @@ window.Apuntes = (function () {
   let observador = null;
 
   /* ---------- datos ---------- */
-  function todos(){ return window.APUNTES || {}; }
+  /* Los apuntes de UNIRMIA llevan `programa:'unirm'`; los de ENURMIA no
+     llevan nada, igual que en el banco y en las tarjetas. Un estudiante de
+     ciencias basicas no tiene que tropezarse con un apunte de crisis
+     hipertensiva, ni al reves. */
+  function todos(){
+    const prog = Almacen.programa();
+    const todo = window.APUNTES || {};
+    const out = {};
+    Object.keys(todo).forEach(k => {
+      const a = todo[k];
+      const suyo = (a.programa === 'unirm');
+      if (prog === 'unirm' ? suyo : !suyo) out[k] = a;
+    });
+    return out;
+  }
   function lista(){ return Object.keys(todos()).map(k => Object.assign({ k }, todos()[k])); }
 
   function leidos(){
@@ -94,7 +108,7 @@ window.Apuntes = (function () {
     '<div class="escalona">' +
       '<div class="encabezado"><p class="eyebrow">Estudiar</p>' +
       '<h1>Los temas, explicados</h1>' +
-      '<p>Aquí no hay preguntas: hay texto para leer. Cada tema está escrito para que entiendas cómo se presenta el paciente, cómo se confirma el diagnóstico y qué decide la conducta. Si tienes poco tiempo, el bloque negro del final es lo que hay que llevarse.</p></div>' +
+      '<p>Aquí no hay preguntas: hay texto para leer. ' + (Almacen.programa() === 'unirm' ? 'Cada tema está escrito para que entiendas el mecanismo, no para que te lo aprendas de memoria.' : 'Cada tema está escrito para que entiendas cómo se presenta el paciente, cómo se confirma el diagnóstico y qué decide la conducta.') + ' Si tienes poco tiempo, el bloque negro del final es lo que hay que llevarse.</p></div>' +
 
       '<div class="rejilla rejilla--4" style="margin-bottom:18px">' +
         '<div class="metrica"><b>' + total + '</b><span>Temas escritos</span></div>' +

@@ -383,6 +383,65 @@ window.Vistas = (function () {
   }
 
   /* ============================================================
+     RAZONAR  (UNIRMIA)
+     ------------------------------------------------------------
+     El puente entre memorizar y decidir. En ciencias basicas es
+     facil aprenderse la lista y no saber para que sirve; aqui la
+     pregunta llega al reves: primero se piensa en voz alta por los
+     seis pasos y solo al final aparecen las opciones, para que no
+     se pueda reconocer la respuesta sin haberla razonado.
+     ============================================================ */
+  function razonar(){
+    const c = Almacen.cuatrimestre();
+    const info = (window.UNIRM_CUATRIMESTRES || {})[c];
+    const asigs = info ? info.asignaturas : [];
+    const hay = {};
+    Motor.bancoActivo().forEach(q => { hay[q.esp] = (hay[q.esp] || 0) + 1; });
+
+    const fichas = asigs.map(a =>
+      '<button class="card card--flota" data-razon="' + esc(a.nombre) + '"' +
+      (hay[a.nombre] ? '' : ' disabled') +
+      ' style="text-align:left;cursor:' + (hay[a.nombre] ? 'pointer' : 'not-allowed') +
+      ';font:inherit;border:1px solid var(--linea);opacity:' + (hay[a.nombre] ? '1' : '.45') + '">' +
+      '<b style="display:block;font-family:var(--display);font-size:16px">' + esc(a.nombre) + '</b>' +
+      '<small class="muted">' + (hay[a.nombre] ? hay[a.nombre] + ' preguntas' : 'sin preguntas todavía') + '</small></button>').join('');
+
+    V().innerHTML =
+    '<div class="escalona" style="max-width:900px">' +
+      '<div class="encabezado"><p class="eyebrow">Razonar</p>' +
+      '<h1>Piensa antes de ver las opciones</h1>' +
+      '<p>Saberse la tabla no es entenderla. Aquí la pregunta se abre en seis pasos y las ' +
+      'opciones aparecen al final, cuando ya decidiste. Es la parte que convierte lo memorizado en criterio.</p></div>' +
+
+      '<div class="card card--carbon" style="margin-bottom:18px">' +
+        '<span class="eyebrow" style="color:rgba(255,255,255,.45)">Cómo funciona</span>' +
+        '<ul style="margin:12px 0 0;padding-left:18px;color:rgba(255,255,255,.72);font-size:14px;line-height:1.9">' +
+          '<li>Se te presenta el escenario sin opciones a la vista.</li>' +
+          '<li>Dices qué te llama la atención y qué mecanismo lo explica.</li>' +
+          '<li>Solo entonces aparecen las cuatro opciones.</li>' +
+          '<li>Al final se compara tu razonamiento con el correcto, paso por paso.</li>' +
+        '</ul>' +
+      '</div>' +
+
+      (asigs.length
+        ? '<span class="eyebrow">Elige asignatura</span>' +
+          '<div class="rejilla rejilla--3" style="margin:12px 0 18px">' + fichas + '</div>'
+        : '<div class="card card--yodo" style="margin-bottom:18px"><p>Dime primero en qué cuatrimestre vas, en Inicio.</p></div>') +
+
+      '<button class="btn btn--lg" id="btnRazonarTodo">Razonar con todo mi cuatrimestre →</button>' +
+    '</div>';
+
+    UI.$$('[data-razon]').forEach(b => b.onclick = () => lanzarRazonar(b.dataset.razon));
+    document.getElementById('btnRazonarTodo').onclick = () => lanzarRazonar(null);
+  }
+
+  function lanzarRazonar(esp){
+    const preguntas = Motor.seleccionar(esp ? { esp, n:8 } : { n:8, distribuida:true });
+    if (!preguntas.length) return UI.tostada('Todavía no hay preguntas de eso', 'mal');
+    Sesion.iniciar({ modo:'razonar', titulo: esp || 'Razonamiento guiado', preguntas });
+  }
+
+  /* ============================================================
      DESAFIO
      ============================================================ */
   function desafio(){
@@ -806,5 +865,5 @@ window.Vistas = (function () {
       (on ? 'Activado' : 'Desactivado') + '</button></div>';
   }
 
-  return { inicio, entrenar, simulacro, desafio, biblioteca, progreso, preparacion, ajustes, lanzarEntrenamiento };
+  return { inicio, entrenar, simulacro, desafio, razonar, biblioteca, progreso, preparacion, ajustes, lanzarEntrenamiento };
 })();
