@@ -111,7 +111,10 @@ base    = floor(101 / nTandas)
 resto   = 101 % nTandas
 ```
 
-Las primeras `resto` tandas llevan `base + 1` temas; el resto, `base`.
+Los `resto` sobrantes se reparten **donde no toquen a la primera tanda**:
+quien pidió tandas de 5 tiene que recibir 5 en la primera, no 6. Si el
+reparto base ya da `tam`, los sobrantes van a las últimas tandas; si se queda
+corto, van a las primeras.
 
 | tam pedido | tandas | reparto real |
 |---|---|---|
@@ -381,8 +384,12 @@ se quedan en el código, sin invocarse, por si se quiere recuperar.
   ("2 temas de tu ruta ya no están en el temario"). No se guarda ninguna
   marca nueva y no se invalida la ruta entera.
 - **Temas nuevos añadidos al temario** con una ruta ya en curso: no se
-  insertan en el orden guardado. La pantalla avisa de que hay N temas nuevos
-  fuera del recorrido y ofrece rehacer la ruta conservando el historial.
+  insertan solos en el orden guardado, porque hacerlo descuadraría el cursor.
+  La pantalla avisa de que hay N temas fuera del recorrido y ofrece
+  **absorberlos al final**: se añaden a `orden` y se alarga `tandasN`, con lo
+  que el cursor, el historial y la cola de repaso quedan intactos. Rehacer la
+  ruta desde cero sigue siendo posible, pero es otra cosa y avisa de que borra
+  el historial.
 - **Ajuste `bancoExtendido` apagado**: cambia `Motor.bancoActivo()` y con él
   las preguntas de cada tema. La Ruta llama a `Temario.invalidar()` al entrar
   en la pantalla, porque ese caché se invalida hoy solo desde `Temario.menu()`.
