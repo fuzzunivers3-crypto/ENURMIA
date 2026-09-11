@@ -361,4 +361,180 @@ Ruta.preguntasDe(r8.orden[0]).forEach(function (q) { idsFlojo[q.id] = 1; });
 ok(sim3.some(function (q) { return idsFlojo[q.id]; }),
    'un tema en la cola de repaso aparece en el simulacro');
 
+/* ============================================================
+   8. Cierre de tanda y reinyeccion
+   ============================================================ */
+titulo('Cierre de tanda');
+
+/* Genera el examen DE VERDAD y lo responde segun el tema al que se
+   asigno cada pregunta. Medir por `claves` no vale: las de dos temas se
+   solapan y el resultado saldria falseado. Los temas que no aparezcan en
+   `pctPorTema` se responden al 100%. */
+function examenReal(pctPorTema){
+  const qs = Ruta.simulacroDeTanda();
+  const mapa = Ruta.activa().sim || {};
+  const porTema = {};
+  qs.forEach(function (q) {
+    const t = mapa[q.id] || '(relleno)';
+    (porTema[t] = porTema[t] || []).push(q);
+  });
+  const respuestas = [];
+  Object.keys(porTema).forEach(function (t) {
+    const lista = porTema[t];
+    const pct = pctPorTema[t] === undefined ? 100 : pctPorTema[t];
+    const aciertos = Math.round(lista.length * pct / 100);
+    lista.forEach(function (q, i) { respuestas.push({ qid:q.id, ok: i < aciertos }); });
+  });
+  return { respuestas: respuestas };
+}
+
+reiniciar();
+const rc = Ruta.crear(5);
+const temasT1 = Ruta.tandaActual().temas.map(function (f) { return f.tema; });
+temasT1.forEach(estudiarTema);
+Ruta.invalidar();
+
+/* El primero sale al 40% (flojo), los demas al 90%. */
+const notas1 = {};
+temasT1.forEach(function (t, i) { notas1[t] = i === 0 ? 40 : 90; });
+const res1 = Ruta.cerrarTanda(examenReal(notas1));
+
+igual(res1.flojos.length, 1, 'solo el tema por debajo del 60% queda flojo');
+igual(res1.flojos[0], temasT1[0], 'el tema flojo es el que salio al 40%');
+igual(Ruta.activa().repaso.length, 1, 'el tema flojo entra en la cola de repaso');
+igual(Ruta.activa().cursor, 5, 'el cursor avanza los temas de la tanda');
+igual(Ruta.activa().tanda, 2, 'se pasa a la tanda siguiente');
+igual(Ruta.activa().historial.length, 1, 'la tanda cerrada queda en el historial');
+igual(Ruta.activa().hilo, null, 'cerrar la tanda cierra el hilo');
+igual(Ruta.avance().temasCerrados, 5, 'el avance cuenta los 5 temas cerrados');
+
+const h = Ruta.activa().historial[0];
+igual(h.n, 1, 'el historial guarda el numero de tanda');
+igual(h.temas.length, 5, 'el historial guarda los temas de la tanda');
+ok(h.pct > 0 && h.pct < 100, 'el historial guarda el porcentaje global (' + h.pct + '%)');
+ok(h.porTema[temasT1[0]] < 60, 'el historial guarda el porcentaje por tema');
+
+/* Cada tema se mide SOLO con sus preguntas asignadas. Es lo que fallaba
+   midiendo por claves: el tema al 40% se llevaba el credito de las
+   preguntas de preeclampsia porque las dos enganchan "hipertensi". */
+ok(res1.porTema[temasT1[0]] < 60, 'el tema al 40% se mide como suyo, sin credito ajeno');
+ok(res1.porTema[temasT1[1]] >= 60, 'los temas al 90% se miden por encima del corte');
+
+/* La tanda se cierra siempre, aunque salga fatal. */
+reiniciar();
+const rz = Ruta.crear(5);
+const temasZ = Ruta.tandaActual().temas.map(function (f) { return f.tema; });
+temasZ.forEach(estudiarTema);
+Ruta.invalidar();
+const notasZ = {};
+temasZ.forEach(function (t) { notasZ[t] = 0; });
+Ruta.cerrarTanda(examenReal(notasZ));
+igual(Ruta.activa().cursor, 5, 'con 0% la tanda se cierra igual');
+igual(Ruta.activa().repaso.length, 5, 'con 0% los cinco temas quedan flojos');
+
+/* Un tema flojo se recupera con >= 60% y al menos 3 preguntas. */
+reiniciar();
+const rr = Ruta.crear(5);
+const temasR = Ruta.tandaActual().temas.map(function (f) { return f.tema; });
+temasR.forEach(estudiarTema);
+Ruta.invalidar();
+const notasR = {}; notasR[temasR[0]] = 20;
+Ruta.cerrarTanda(examenReal(notasR));
+igual(Ruta.activa().repaso.length, 1, 'el tema queda en la cola');
+
+const temasT2 = Ruta.tandaActual().temas.map(function (f) { return f.tema; });
+temasT2.forEach(estudiarTema);
+Ruta.invalidar();
+/* El de la cola vuelve en el bloque de repaso; esta vez se responde bien. */
+const res2 = Ruta.cerrarTanda(examenReal({}));
+igual(res2.recuperados.length, 1, 'el tema flojo se recupera al sacar 100%');
+igual(Ruta.activa().repaso.length, 0, 'la cola de repaso queda vacia');
+
+/* Con menos de 3 preguntas no se rescata: una pregunta afortunada no
+   puede sacar un tema de la cola. Se arma el mapa a mano porque el
+   selector normal le habria dado seis. */
+reiniciar();
+const rp = Ruta.crear(5);
+const tp = rp.orden[0];
+rp.cursor = 5; rp.tanda = 2; rp.repaso = [tp];
+Ruta.invalidar();
+const dos = Ruta.preguntasDe(tp).slice(0, 2);
+rp.sim = {};
+dos.forEach(function (q) { rp.sim[q.id] = tp; });
+Ruta.cerrarTanda({ respuestas: dos.map(function (q) { return { qid:q.id, ok:true }; }) });
+igual(Ruta.activa().repaso.length, 1, 'con 2 preguntas al 100% el tema sigue en la cola');
+
+reiniciar();
+const rq = Ruta.crear(5);
+const tq = rq.orden[0];
+rq.cursor = 5; rq.tanda = 2; rq.repaso = [tq];
+Ruta.invalidar();
+const tres = Ruta.preguntasDe(tq).slice(0, 3);
+rq.sim = {};
+tres.forEach(function (q) { rq.sim[q.id] = tq; });
+Ruta.cerrarTanda({ respuestas: tres.map(function (q) { return { qid:q.id, ok:true }; }) });
+igual(Ruta.activa().repaso.length, 0, 'con 3 preguntas al 100% si se rescata');
+
+/* ============================================================
+   9. Fin del recorrido y segunda vuelta
+   ============================================================ */
+titulo('Fin y segunda vuelta');
+
+reiniciar();
+const rf = Ruta.crear(5);
+/* Con tam=5 las tandas son [5 x19, 6]: antes de la ultima hay 95 temas. */
+rf.cursor = 95;
+rf.tanda = rf.tandasN.length;
+Ruta.invalidar();
+const ultimos = Ruta.tandaActual().temas.map(function (f) { return f.tema; });
+ultimos.forEach(estudiarTema);
+Ruta.invalidar();
+var notasF = {}; notasF[ultimos[0]] = 20;
+Ruta.cerrarTanda(examenReal(notasF));
+ok(!!Ruta.activa().terminada, 'al agotar los temas la ruta queda terminada');
+igual(Ruta.avance().terminada, true, 'el avance dice que la ruta termino');
+igual(Ruta.avance().pct, 100, 'el avance llega al 100%');
+
+const flojoFinal = Ruta.activa().repaso[0];
+const rv2 = Ruta.segundaVuelta();
+igual(rv2.vuelta, 2, 'la segunda vuelta incrementa el contador');
+igual(rv2.cursor, 0, 'la segunda vuelta reinicia el cursor');
+igual(rv2.tanda, 1, 'la segunda vuelta reinicia la tanda');
+igual(rv2.terminada, null, 'la segunda vuelta deja de estar terminada');
+igual(rv2.orden.length, 101, 'la segunda vuelta recorre los 101 temas otra vez');
+igual(rv2.orden[0], flojoFinal, 'la segunda vuelta empieza por el tema flojo');
+ok(rv2.historial.length > 0, 'la segunda vuelta conserva el historial');
+igual(Ruta.tandaActual().completa, true, 'en la segunda vuelta el simulacro esta abierto ya');
+
+/* ============================================================
+   9 bis. Temas anadidos al temario con la ruta ya en marcha
+   ============================================================ */
+titulo('Temas nuevos');
+
+reiniciar();
+const rn = Ruta.crear(5);
+igual(Ruta.temasNuevos().length, 0, 'una ruta recien creada no deja temas fuera');
+
+/* Se simula que el temario crecio: se quitan dos del recorrido. */
+const fuera = rn.orden.splice(40, 2);
+rn.tandasN = Ruta._tandas(rn.orden.length, rn.tam);
+igual(Ruta.temasNuevos().length, 2, 'detecta los dos temas fuera del recorrido');
+
+rn.cursor = 10;
+rn.tanda = 3;
+rn.repaso = [rn.orden[0]];
+const antesHistorial = rn.historial.length;
+const absorbidos = Ruta.absorber();
+
+igual(absorbidos, 2, 'absorber() se lleva los dos temas');
+igual(Ruta.temasNuevos().length, 0, 'despues de absorber no queda ninguno fuera');
+igual(Ruta.activa().orden.length, 101, 'el recorrido vuelve a tener los 101 temas');
+igual(Ruta.activa().orden[99], fuera[0], 'los nuevos se anaden al final, no en medio');
+igual(Ruta.activa().cursor, 10, 'absorber no mueve el cursor');
+igual(Ruta.activa().tanda, 3, 'absorber no cambia la tanda en curso');
+igual(Ruta.activa().repaso.length, 1, 'absorber conserva la cola de repaso');
+igual(Ruta.activa().historial.length, antesHistorial, 'absorber conserva el historial');
+igual(Ruta.activa().tandasN.reduce(function (a, c) { return a + c; }, 0), 101,
+      'las tandas vuelven a sumar 101');
+
 fin();

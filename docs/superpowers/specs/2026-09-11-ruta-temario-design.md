@@ -178,8 +178,16 @@ el historial de la pantalla Simulacro que ya existe.
 
 Al terminar el simulacro se calcula el porcentaje de **cada tema que aportó
 preguntas al examen** —los de la tanda y los del bloque de repaso— usando
-solo las preguntas de ese tema que salieron. Una pregunta que pertenece a dos
-temas cuenta en los dos.
+solo **las preguntas que se le asignaron al armar el examen**.
+
+Esto último no es un detalle: medirlo volviendo a emparejar por `claves`
+da un resultado falso, porque las claves de dos temas se solapan. `hipertensi`
+engancha también las preguntas de preeclampsia, así que Hipertensión arterial
+se llevaba el crédito de un tema de Ginecología respondido bien y nunca
+llegaba a marcarse flojo. Por eso `simulacroDeTanda()` guarda el mapa
+`pregunta → tema` en `d.ruta.sim`, que sobrevive a un refresco a mitad de
+examen y se limpia al cerrar la tanda. Las preguntas de relleno no se
+atribuyen a ningún tema del recorrido: no vienen de él.
 
 Luego se aplican dos reglas distintas según de dónde venga el tema:
 

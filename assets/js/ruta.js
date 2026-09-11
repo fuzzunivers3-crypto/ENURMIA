@@ -345,13 +345,21 @@ window.Ruta = (function () {
     const usados = {};
     const salida = [];
 
-    function tomar(lista, cuantos){
+    /* De que tema se pregunta cada una. Hace falta guardarlo: medir un
+       tema volviendo a emparejar por `claves` al terminar el examen da
+       un resultado falso, porque las claves de dos temas se solapan
+       (`hipertensi` engancha tambien las preguntas de preeclampsia) y el
+       tema se llevaria el credito de las preguntas de otro. */
+    const mapa = {};
+
+    function tomar(lista, cuantos, tema){
       let puestos = 0;
       for (let i = 0; i < lista.length && puestos < cuantos; i++){
         const q = lista[i];
         if (usados[q.id]) continue;
         usados[q.id] = 1;
         salida.push(q);
+        if (tema) mapa[q.id] = tema;
         puestos++;
       }
       return puestos;
@@ -373,7 +381,7 @@ window.Ruta = (function () {
       const qs = preguntasDe(f.tema);
       const conExp = barajar(qs.filter(function (q) { return !!q.exp; }));
       const sinExp = barajar(qs.filter(function (q) { return !q.exp; }));
-      puestasTanda += tomar(conExp.concat(sinExp), cupo);
+      puestasTanda += tomar(conExp.concat(sinExp), cupo, f.tema);
     });
 
     /* 2. El bloque de repaso: los temas ya cerrados, con los flojos
@@ -386,21 +394,28 @@ window.Ruta = (function () {
     const resto = cerrados.filter(function (x) { return r.repaso.indexOf(x) < 0; })
       .sort(function (a, b) { return dominioTema(a) - dominioTema(b); });
 
-    const pozo = [];
-    flojos.concat(resto).forEach(function (x) {
-      const qs = preguntasDe(x).filter(function (q) { return !!q.exp; });
-      barajar(qs).slice(0, 6).forEach(function (q) { pozo.push(q); });
-    });
-    const puestasRepaso = tomar(pozo, nRepaso);
+    let puestasRepaso = 0;
+    const cola = flojos.concat(resto);
+    for (let i = 0; i < cola.length && puestasRepaso < nRepaso; i++){
+      const qs = preguntasDe(cola[i]).filter(function (q) { return !!q.exp; });
+      puestasRepaso += tomar(barajar(qs).slice(0, 6),
+                             nRepaso - puestasRepaso, cola[i]);
+    }
 
     /* 3. Si aun falta (tanda 1, o temas muy delgados), lo cubre el
-          selector general con la distribucion del examen real. */
+          selector general con la distribucion del examen real. Estas no
+          se atribuyen a ningun tema del recorrido: no vienen de el. */
     let puestasRelleno = 0;
     if (salida.length < n){
       const falta = n - salida.length;
       const extra = Motor.seleccionar({ n: falta * 3, distribuida: true });
-      puestasRelleno = tomar(extra, falta);
+      puestasRelleno = tomar(extra, falta, null);
     }
+
+    /* Se guarda en la ruta y no en una variable del modulo para que
+       sobreviva a un refresco de la pagina a mitad de examen. */
+    r.sim = mapa;
+    guardar();
 
     ultimoReparto = {
       n: n, nTanda: nTanda, nRepaso: nRepaso,
@@ -412,11 +427,147 @@ window.Ruta = (function () {
     return barajar(salida).slice(0, n);
   }
 
+  /* ---------- cerrar la tanda ---------- */
+  /* `resultado` viene de la sesion: { respuestas:[{qid, ok}] }.
+     La tanda se cierra SIEMPRE, saque lo que saque. Lo que cambia con un
+     mal resultado es que los temas flojos vuelven mezclados en las
+     tandas siguientes, no que el avance se bloquee. */
+  function cerrarTanda(resultado){
+    const r = activa();
+    if (!r) return null;
+    const ta = tandaActual();
+    if (!ta) return null;
+
+    const resp = (resultado && resultado.respuestas) || [];
+    const porTema = {}, cuenta = {};
+
+    /* Cada tema se mide con las preguntas que se le asignaron al armar
+       el examen, no volviendo a emparejar por `claves`: eso ultimo daria
+       un resultado falso porque las claves de dos temas se solapan y el
+       tema se llevaria el credito de las preguntas del otro.
+       El emparejamiento por claves queda de reserva por si el mapa no
+       esta (una ruta guardada antes de que esto existiera). */
+    const mapa = r.sim || null;
+
+    function medir(nombre){
+      let mias;
+      if (mapa){
+        mias = resp.filter(function (x) { return mapa[x.qid] === nombre; });
+      } else {
+        const ids = {};
+        preguntasDe(nombre).forEach(function (q) { ids[q.id] = 1; });
+        mias = resp.filter(function (x) { return ids[x.qid]; });
+      }
+      if (!mias.length) return;
+      cuenta[nombre] = mias.length;
+      porTema[nombre] = Math.round(
+        mias.filter(function (x) { return x.ok; }).length / mias.length * 100);
+    }
+
+    ta.temas.forEach(function (f) { medir(f.tema); });
+    r.repaso.forEach(function (x) { medir(x); });
+
+    /* Regla 1: los temas DE LA TANDA se pueden marcar flojos. */
+    const flojos = [];
+    ta.temas.forEach(function (f) {
+      if (cuenta[f.tema] && porTema[f.tema] < CORTE_FLOJO){
+        flojos.push(f.tema);
+        if (r.repaso.indexOf(f.tema) < 0) r.repaso.push(f.tema);
+      }
+    });
+
+    /* Regla 2: los temas que YA estaban en la cola solo se pueden
+       recuperar, nunca penalizar dos veces. Hacen falta 3 preguntas para
+       que una sola afortunada no los rescate. */
+    const recuperados = [];
+    r.repaso.slice().forEach(function (x) {
+      if (flojos.indexOf(x) >= 0) return;
+      if ((cuenta[x] || 0) >= MIN_RESCATE && porTema[x] >= CORTE_FLOJO){
+        recuperados.push(x);
+        r.repaso.splice(r.repaso.indexOf(x), 1);
+      }
+    });
+
+    const correctas = resp.filter(function (x) { return x.ok; }).length;
+    r.historial.push({
+      n: r.tanda,
+      temas: ta.temas.map(function (f) { return f.tema; }),
+      fecha: Date.now(),
+      pct: resp.length ? Math.round(correctas / resp.length * 100) : 0,
+      correctas: correctas,
+      total: resp.length,
+      porTema: porTema,
+      flojos: flojos
+    });
+
+    r.cursor += ta.n;
+    r.tanda += 1;
+    r.hilo = null;
+    r.sim = null;
+    if (r.cursor >= r.orden.length) r.terminada = Date.now();
+    guardar();
+
+    return { porTema: porTema, flojos: flojos, recuperados: recuperados };
+  }
+
+  /* ---------- segunda vuelta ---------- */
+  /* No repite los tres pasos, y no puede: como el progreso se deduce del
+     estado del estudiante, los 101 temas ya los tienen hechos y una
+     vuelta normal naceria completa. A partir de la vuelta 2 el recorrido
+     es de solo simulacros, empezando por lo que quedo flojo. */
+  function segundaVuelta(){
+    const r = activa();
+    if (!r) return null;
+    const flojos = r.repaso.filter(function (x) { return !!temaPorNombre(x); });
+    const resto = ordenIntercalado().filter(function (x) { return flojos.indexOf(x) < 0; });
+    const orden = flojos.concat(resto);
+    r.vuelta += 1;
+    r.orden = orden;
+    r.tandasN = repartirTandas(orden.length, r.tam);
+    r.cursor = 0;
+    r.tanda = 1;
+    r.hilo = null;
+    r.terminada = null;
+    guardar();
+    return r;
+  }
+
+  /* ---------- temas que entraron al temario despues ---------- */
+  /* Un tema nuevo no se puede meter en medio del recorrido: correria el
+     cursor y descuadraria las tandas ya cerradas. Se anade al final, que
+     ademas es donde toca estudiarlo, y solo se recalculan las tandas que
+     aun no has empezado. Asi el cursor, el historial y la cola de repaso
+     quedan exactamente como estaban. */
+  function temasNuevos(){
+    const r = activa();
+    if (!r) return [];
+    const dentro = {};
+    r.orden.forEach(function (x) { dentro[x] = 1; });
+    return temas().filter(function (t) { return !dentro[t.t]; })
+                  .map(function (t) { return t.t; });
+  }
+
+  function absorber(){
+    const r = activa();
+    if (!r) return 0;
+    const nuevos = temasNuevos();
+    if (!nuevos.length) return 0;
+
+    r.orden = r.orden.concat(nuevos);
+    const cerradas = r.tandasN.slice(0, r.tanda - 1);
+    const restantes = r.orden.length - r.cursor;
+    r.tandasN = cerradas.concat(repartirTandas(restantes, r.tam));
+    guardar();
+    return nuevos.length;
+  }
+
   return {
     activa: activa, crear: crear, borrar: borrar,
     pasosDe: pasosDe, tandaActual: tandaActual, avance: avance,
     simulacroDeTanda: simulacroDeTanda, minutosDeTanda: minutosDeTanda,
     tamanoSimulacro: tamanoSimulacro, _reparto: reparto,
+    cerrarTanda: cerrarTanda, segundaVuelta: segundaVuelta,
+    temasNuevos: temasNuevos, absorber: absorber,
     temas: temas, temaPorNombre: temaPorNombre, invalidar: invalidar,
     preguntasDe: preguntasDe, tarjetasDe: tarjetasDe, claveApunte: claveApunte,
     _orden: ordenIntercalado, _tandas: repartirTandas
