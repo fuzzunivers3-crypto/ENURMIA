@@ -300,4 +300,65 @@ const rv = Ruta.crear(5);
 rv.vuelta = 2;
 igual(Ruta.tandaActual().completa, true, 'en la vuelta 2 la tanda esta abierta sin estudiar nada');
 
+/* ============================================================
+   7. El simulacro de cierre
+   ============================================================ */
+titulo('Simulacro de cierre');
+
+reiniciar();
+Ruta.crear(5);
+Ruta.tandaActual().temas.forEach(function (f) { estudiarTema(f.tema); });
+Ruta.invalidar();
+
+const sim1 = Ruta.simulacroDeTanda();
+const rep1 = Ruta._reparto();
+igual(sim1.length, rep1.n, 'el simulacro devuelve exactamente n preguntas');
+ok(rep1.n >= 20 && rep1.n <= 100, 'n queda entre 20 y 100 (salio ' + rep1.n + ')');
+igual(rep1.n, 30, 'con una tanda de 5 temas el simulacro es de 30 preguntas');
+igual(Ruta.minutosDeTanda(), 36, 'con 30 preguntas el examen dura 36 minutos');
+
+const vistos = {};
+let dups = 0;
+sim1.forEach(function (q) { if (vistos[q.id]) dups++; vistos[q.id] = 1; });
+igual(dups, 0, 'el simulacro no repite ninguna pregunta');
+
+igual(rep1.nTanda, 21, 'el 70% de 30 son 21 preguntas de la tanda');
+igual(rep1.nRepaso, 9, 'el 30% restante son 9 de repaso');
+igual(rep1.puestasTanda, 21, 'se colocan las 21 de la tanda');
+/* En la primera tanda no hay temas cerrados todavia, asi que el bloque
+   de repaso no tiene de donde salir y lo cubre el relleno general. */
+igual(rep1.puestasRepaso, 0, 'en la tanda 1 no hay repaso acumulado');
+igual(rep1.puestasRelleno, 9, 'el relleno general cubre lo que falta');
+
+/* Con tandas ya cerradas, el bloque de repaso si se llena. */
+reiniciar();
+const r7 = Ruta.crear(5);
+r7.cursor = 20;
+r7.tanda = 5;
+Ruta.invalidar();
+Ruta.tandaActual().temas.forEach(function (f) { estudiarTema(f.tema); });
+Ruta.invalidar();
+
+const sim2 = Ruta.simulacroDeTanda();
+const rep2 = Ruta._reparto();
+igual(sim2.length, rep2.n, 'con repaso disponible sigue devolviendo n preguntas');
+ok(rep2.puestasRepaso >= rep2.nRepaso - 1,
+   'el bloque de repaso se llena con temas ya cerrados (' + rep2.puestasRepaso + ' de ' + rep2.nRepaso + ')');
+
+/* Los temas flojos pasan delante en el bloque de repaso. */
+reiniciar();
+const r8 = Ruta.crear(5);
+r8.cursor = 20;
+r8.tanda = 5;
+r8.repaso = [r8.orden[0]];
+Ruta.invalidar();
+Ruta.tandaActual().temas.forEach(function (f) { estudiarTema(f.tema); });
+Ruta.invalidar();
+
+const sim3 = Ruta.simulacroDeTanda();
+const idsFlojo = {};
+Ruta.preguntasDe(r8.orden[0]).forEach(function (q) { idsFlojo[q.id] = 1; });
+ok(sim3.some(function (q) { return idsFlojo[q.id]; }),
+   'un tema en la cola de repaso aparece en el simulacro');
+
 fin();

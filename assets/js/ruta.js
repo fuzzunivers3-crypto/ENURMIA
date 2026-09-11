@@ -303,9 +303,120 @@ window.Ruta = (function () {
     };
   }
 
+  /* ---------- el simulacro que cierra la tanda ---------- */
+  function barajar(a){
+    const c = a.slice();
+    for (let i = c.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = c[i]; c[i] = c[j]; c[j] = t;
+    }
+    return c;
+  }
+
+  function dominioTema(nombre){
+    const p = pasosDe(nombre).preg.pct;
+    return p === null ? 0 : p;
+  }
+
+  /* El reparto del ultimo simulacro generado. No se persiste: existe
+     para que el validador pueda comprobar el 70/30 de verdad, en vez de
+     deducirlo volviendo a emparejar preguntas con temas (las claves de
+     dos temas se solapan y el recuento saldria inflado). */
+  let ultimoReparto = null;
+  function reparto(){ return ultimoReparto; }
+
+  function tamanoSimulacro(){
+    const ta = tandaActual();
+    const k = ta ? ta.temas.length : 0;
+    return Math.max(20, Math.min(100, k * 6));
+  }
+
+  function minutosDeTanda(){ return Math.round(tamanoSimulacro() * 1.2); }
+
+  function simulacroDeTanda(){
+    const r = activa();
+    if (!r) return [];
+    const ta = tandaActual();
+    if (!ta || !ta.temas.length) return [];
+
+    const n = tamanoSimulacro();
+    const nTanda = Math.round(n * 0.7);
+    const nRepaso = n - nTanda;
+    const usados = {};
+    const salida = [];
+
+    function tomar(lista, cuantos){
+      let puestos = 0;
+      for (let i = 0; i < lista.length && puestos < cuantos; i++){
+        const q = lista[i];
+        if (usados[q.id]) continue;
+        usados[q.id] = 1;
+        salida.push(q);
+        puestos++;
+      }
+      return puestos;
+    }
+
+    /* 1. El bloque de la tanda, a partes iguales entre sus temas. Los
+          restos van a los temas que peor dominas. Dentro de cada tema se
+          ponen delante las explicadas: una pregunta sin explicacion no
+          ensena nada cuando se repasa el examen. */
+    const k = ta.temas.length;
+    const porTema = Math.floor(nTanda / k);
+    const sobran = nTanda - porTema * k;
+    const orden = ta.temas.slice().sort(function (a, b) {
+      return dominioTema(a.tema) - dominioTema(b.tema);
+    });
+    let puestasTanda = 0;
+    orden.forEach(function (f, i) {
+      const cupo = porTema + (i < sobran ? 1 : 0);
+      const qs = preguntasDe(f.tema);
+      const conExp = barajar(qs.filter(function (q) { return !!q.exp; }));
+      const sinExp = barajar(qs.filter(function (q) { return !q.exp; }));
+      puestasTanda += tomar(conExp.concat(sinExp), cupo);
+    });
+
+    /* 2. El bloque de repaso: los temas ya cerrados, con los flojos
+          delante y el resto por dominio ascendente. Se cogen como mucho
+          seis por tema para que el repaso no lo acapare uno solo. */
+    const cerrados = r.orden.slice(0, r.cursor).filter(function (x) {
+      return !!temaPorNombre(x);
+    });
+    const flojos = cerrados.filter(function (x) { return r.repaso.indexOf(x) >= 0; });
+    const resto = cerrados.filter(function (x) { return r.repaso.indexOf(x) < 0; })
+      .sort(function (a, b) { return dominioTema(a) - dominioTema(b); });
+
+    const pozo = [];
+    flojos.concat(resto).forEach(function (x) {
+      const qs = preguntasDe(x).filter(function (q) { return !!q.exp; });
+      barajar(qs).slice(0, 6).forEach(function (q) { pozo.push(q); });
+    });
+    const puestasRepaso = tomar(pozo, nRepaso);
+
+    /* 3. Si aun falta (tanda 1, o temas muy delgados), lo cubre el
+          selector general con la distribucion del examen real. */
+    let puestasRelleno = 0;
+    if (salida.length < n){
+      const falta = n - salida.length;
+      const extra = Motor.seleccionar({ n: falta * 3, distribuida: true });
+      puestasRelleno = tomar(extra, falta);
+    }
+
+    ultimoReparto = {
+      n: n, nTanda: nTanda, nRepaso: nRepaso,
+      puestasTanda: puestasTanda,
+      puestasRepaso: puestasRepaso,
+      puestasRelleno: puestasRelleno
+    };
+
+    return barajar(salida).slice(0, n);
+  }
+
   return {
     activa: activa, crear: crear, borrar: borrar,
     pasosDe: pasosDe, tandaActual: tandaActual, avance: avance,
+    simulacroDeTanda: simulacroDeTanda, minutosDeTanda: minutosDeTanda,
+    tamanoSimulacro: tamanoSimulacro, _reparto: reparto,
     temas: temas, temaPorNombre: temaPorNombre, invalidar: invalidar,
     preguntasDe: preguntasDe, tarjetasDe: tarjetasDe, claveApunte: claveApunte,
     _orden: ordenIntercalado, _tandas: repartirTandas
