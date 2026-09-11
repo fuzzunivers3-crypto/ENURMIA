@@ -209,8 +209,103 @@ window.Ruta = (function () {
     guardar();
   }
 
+  /* ---------- los tres pasos de un tema ---------- */
+  /* Nada de esto se guarda: se lee del progreso normal del estudiante.
+     Asi el trabajo hecho antes de crear la ruta cuenta, y estudiar un
+     tema desde otra pantalla cuenta igual. */
+  function pasosDe(nombre){
+    const d = datos();
+    const k = claveApunte(nombre);
+
+    /* Sin apunte, el paso de leer se da por hecho: un tema nuevo del
+       temario que todavia no tenga texto no puede atascar la ruta. */
+    const leer = {
+      clave: k,
+      sinTexto: !k,
+      hecho: !k || !!(d.apuntes && d.apuntes[k])
+    };
+
+    const qs = preguntasDe(nombre);
+    const metaP = Math.min(META_PREG, qs.length);
+    let vistas = 0, dominadas = 0;
+    qs.forEach(function (q) {
+      const s = d.srs[q.id];
+      if (!s) return;
+      vistas++;
+      if (s.aciertos > s.fallos) dominadas++;
+    });
+    const pct = vistas ? Math.round(dominadas / vistas * 100) : null;
+    const preg = {
+      hechas: vistas, meta: metaP, pct: pct,
+      hecho: metaP === 0 || (vistas >= metaP && pct >= CORTE_PREG)
+    };
+
+    const cs = tarjetasDe(nombre);
+    const metaT = Math.min(META_TARJ, cs.length);
+    let repasadas = 0;
+    cs.forEach(function (c) { if (d.srsTarjetas[c.id]) repasadas++; });
+    const tarj = {
+      hechas: repasadas, meta: metaT,
+      hecho: metaT === 0 || repasadas >= metaT
+    };
+
+    return {
+      tema: nombre, leer: leer, preg: preg, tarj: tarj,
+      completo: leer.hecho && preg.hecho && tarj.hecho
+    };
+  }
+
+  /* ---------- la tanda en curso ---------- */
+  function tandaActual(){
+    const r = activa();
+    if (!r) return null;
+    const n = r.tandasN[r.tanda - 1] || 0;
+    const nombres = r.orden.slice(r.cursor, r.cursor + n);
+
+    /* Un tema que ya no existe en el temario (renombrado entre
+       versiones) se salta como si estuviera cerrado, en vez de dejar la
+       ruta encallada. La pantalla lo dice en el pie. */
+    const vivos = nombres.filter(function (x) { return !!temaPorNombre(x); });
+    const fichas = vivos.map(function (x) {
+      const p = pasosDe(x);
+      const t = temaPorNombre(x);
+      p.bloque = t.bloque;
+      p.em = t.em;
+      return p;
+    });
+
+    return {
+      n: n,
+      indice: r.tanda,
+      temas: fichas,
+      perdidos: nombres.length - vivos.length,
+      /* En la segunda vuelta los tres pasos ya estan hechos por
+         definicion, porque se deducen del progreso. Si bloquearan, la
+         vuelta naceria completa y se saltaria el recorrido entero: por
+         eso a partir de la vuelta 2 el simulacro esta abierto siempre. */
+      completa: r.vuelta >= 2 || (fichas.length > 0 && fichas.every(function (f) { return f.completo; }))
+    };
+  }
+
+  function avance(){
+    const r = activa();
+    if (!r) return null;
+    const cerrados = Math.min(r.cursor, r.orden.length);
+    return {
+      temasCerrados: cerrados,
+      total: r.orden.length,
+      pct: Math.round(cerrados / Math.max(1, r.orden.length) * 100),
+      tanda: r.tanda,
+      tandas: r.tandasN.length,
+      repaso: r.repaso.slice(),
+      vuelta: r.vuelta,
+      terminada: !!r.terminada
+    };
+  }
+
   return {
     activa: activa, crear: crear, borrar: borrar,
+    pasosDe: pasosDe, tandaActual: tandaActual, avance: avance,
     temas: temas, temaPorNombre: temaPorNombre, invalidar: invalidar,
     preguntasDe: preguntasDe, tarjetasDe: tarjetasDe, claveApunte: claveApunte,
     _orden: ordenIntercalado, _tandas: repartirTandas

@@ -212,4 +212,92 @@ ok(cartasHTA.length > 0, 'hipertension arterial tiene flashcards');
 ok(cartasHTA.every(function (c) { return !!idsHTA[c.origen]; }),
    'todas las flashcards de un tema nacen de preguntas de ese tema');
 
+/* ============================================================
+   5. Los tres pasos
+   ============================================================ */
+titulo('Los tres pasos');
+
+/* Marca un tema como estudiado del todo, tocando SOLO el progreso
+   normal del estudiante: es la prueba de que la Ruta lo deduce y no
+   guarda nada aparte. */
+function estudiarTema(nombre){
+  const k = Ruta.claveApunte(nombre);
+  if (k) D.apuntes[k] = Date.now();
+  Ruta.preguntasDe(nombre).slice(0, 10).forEach(function (q) {
+    D.srs[q.id] = { vistas:1, aciertos:1, fallos:0, prox: Date.now() + 86400000 };
+  });
+  Ruta.tarjetasDe(nombre).slice(0, 12).forEach(function (c) {
+    D.srsTarjetas[c.id] = { vistas:1, nivel:1, prox: Date.now() + 86400000 };
+  });
+}
+
+reiniciar();
+Ruta.crear(5);
+const t0 = Ruta.activa().orden[0];
+
+let p = Ruta.pasosDe(t0);
+igual(p.leer.hecho, false, 'un tema sin leer no tiene el paso de leer');
+igual(p.preg.hecho, false, 'un tema sin preguntas hechas no tiene el paso de preguntas');
+igual(p.tarj.hecho, false, 'un tema sin tarjetas repasadas no tiene el paso de tarjetas');
+igual(p.completo, false, 'un tema recien empezado no esta completo');
+igual(p.preg.meta, 10, 'la meta de preguntas es 10 cuando hay de sobra');
+igual(p.tarj.meta, 12, 'la meta de tarjetas es 12 cuando hay de sobra');
+
+D.apuntes[Ruta.claveApunte(t0)] = Date.now();
+p = Ruta.pasosDe(t0);
+igual(p.leer.hecho, true, 'marcar el apunte leido cierra el paso de leer');
+igual(p.completo, false, 'leer solo no completa el tema');
+
+/* Nueve de diez no basta, y diez con mal porcentaje tampoco. */
+Ruta.preguntasDe(t0).slice(0, 9).forEach(function (q) {
+  D.srs[q.id] = { vistas:1, aciertos:1, fallos:0, prox:0 };
+});
+igual(Ruta.pasosDe(t0).preg.hecho, false, 'nueve preguntas de diez no cierran el paso');
+
+reiniciar();
+Ruta.crear(5);
+Ruta.preguntasDe(t0).slice(0, 10).forEach(function (q) {
+  D.srs[q.id] = { vistas:1, aciertos:0, fallos:1, prox:0 };
+});
+igual(Ruta.pasosDe(t0).preg.pct, 0, 'diez preguntas falladas dan 0% de dominio');
+igual(Ruta.pasosDe(t0).preg.hecho, false, 'diez preguntas con 0% no cierran el paso');
+
+reiniciar();
+Ruta.crear(5);
+estudiarTema(t0);
+p = Ruta.pasosDe(t0);
+igual(p.completo, true, 'los tres pasos hechos completan el tema');
+
+/* ============================================================
+   6. La tanda en curso y el avance
+   ============================================================ */
+titulo('Tanda y avance');
+
+reiniciar();
+Ruta.crear(5);
+let ta = Ruta.tandaActual();
+igual(ta.indice, 1, 'la primera tanda es la 1');
+igual(ta.temas.length, ta.n, 'la tanda trae tantas fichas como temas');
+igual(ta.n, 5, 'con tam=5 la primera tanda trae 5 temas');
+igual(ta.completa, false, 'una tanda sin estudiar no esta completa');
+igual(ta.perdidos, 0, 'ningun tema de la tanda falta del temario');
+
+ta.temas.forEach(function (f) { estudiarTema(f.tema); });
+Ruta.invalidar();
+igual(Ruta.tandaActual().completa, true, 'estudiar todos los temas completa la tanda');
+
+const av = Ruta.avance();
+igual(av.temasCerrados, 0, 'sin cerrar tanda no hay temas cerrados');
+igual(av.total, 101, 'el avance cuenta sobre 101 temas');
+igual(av.tanda, 1, 'el avance dice en que tanda vas');
+igual(av.tandas, 20, 'con tam=5 el avance dice que hay 20 tandas');
+igual(av.pct, 0, 'el avance empieza en 0%');
+igual(av.vuelta, 1, 'el avance dice la vuelta');
+
+/* En la segunda vuelta los pasos no bloquean. */
+reiniciar();
+const rv = Ruta.crear(5);
+rv.vuelta = 2;
+igual(Ruta.tandaActual().completa, true, 'en la vuelta 2 la tanda esta abierta sin estudiar nada');
+
 fin();
