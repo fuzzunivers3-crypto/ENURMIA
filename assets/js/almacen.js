@@ -59,6 +59,7 @@ window.Almacen = (function () {
       tarjetas: { vistas:0, sesiones:0 },
       apuntes: {},              // temas leidos en la seccion Estudiar
       racha: { dias: 0, ultimo: null },
+      desafios: { mejor: 0, mejorMes: 0, mes: null, partidas: 0 },
       medallas: [],
       plan: null,               // plan de estudio de 7 dias
       ajustes: { pedirConfianza: true, defenderRespuesta: false, animaciones: true, bancoExtendido: true }
@@ -99,12 +100,14 @@ window.Almacen = (function () {
   /* ---------- cuentas de la nube ---------- */
   /* Crea o actualiza el reflejo local de una cuenta de Supabase y
      abre sesion con ella. Devuelve el usuario local equivalente. */
-  function abrirSesionNube(uid, nombre, correo) {
+  function abrirSesionNube(uid, nombre, correo, programa) {
     const u = usuarioNube(uid);
     const lista = usuarios();
     const ya = lista.find(x => x.usuario === u);
-    if (ya) { ya.nombre = nombre || ya.nombre; ya.correo = correo || ya.correo; }
-    else lista.push({ usuario: u, nombre: nombre || correo || 'Estudiante', correo: correo, nube: true, creado: Date.now() });
+    if (ya) { ya.nombre = nombre || ya.nombre; ya.correo = correo || ya.correo;
+              if (programa) ya.programa = programa; }
+    else lista.push({ usuario: u, nombre: nombre || correo || 'Estudiante', correo: correo,
+                      nube: true, programa: programa || 'enurm', creado: Date.now() });
     escribir(LLAVE_USUARIOS, lista);
     if (!leer(LLAVE_DATOS(u), null)) escribir(LLAVE_DATOS(u), datosNuevos(nombre || correo || 'Estudiante'));
     escribir(LLAVE_SESION, u);
@@ -233,6 +236,53 @@ window.Almacen = (function () {
     guardar();
   }
 
+  /* ---------- programa: ENURMIA o UNIRMIA ----------
+     Las cuentas son separadas, asi que el programa es una propiedad de la
+     cuenta y no un interruptor que se pueda cambiar desde dentro. Aqui solo
+     se guarda el reflejo local de lo que dice `perfiles.programa` en el
+     servidor; si no consta, se asume ENURMIA, que es lo que habia antes. */
+  function programa() {
+    const s = sesion();
+    return (s && s.programa === 'unirm') ? 'unirm' : 'enurm';
+  }
+
+  function fijarPrograma(p) {
+    const v = (p === 'unirm') ? 'unirm' : 'enurm';
+    const s = sesion(); if (!s) return v;
+    if (s.programa === v) return v;
+    const lista = usuarios();
+    const u = lista.find(x => x.usuario === s.usuario);
+    if (u) { u.programa = v; escribir(LLAVE_USUARIOS, lista); }
+    return v;
+  }
+
+  /* ---------- marcas del modo desafio ----------
+     Se guarda la mejor marca en local SIEMPRE (para que funcione sin
+     internet y para poder ensenarla al instante) y ademas se manda al
+     servidor, que es quien manda en la clasificacion publica. El servidor
+     no se fia de este numero: valida el rango y se queda con el maximo. */
+  function registrarDesafio(puntos) {
+    const d = datos(); if (!d) return null;
+    const n = Math.max(0, Math.round(Number(puntos) || 0));
+    const mes = hoyISO().slice(0, 7);
+    if (!d.desafios) d.desafios = { mejor: 0, mejorMes: 0, mes: null, partidas: 0 };
+    const x = d.desafios;
+    const recordHistorico = n > (x.mejor || 0);
+    const recordMes = (x.mes !== mes) || n > (x.mejorMes || 0);
+    x.mejor = Math.max(x.mejor || 0, n);
+    x.mejorMes = (x.mes === mes) ? Math.max(x.mejorMes || 0, n) : n;
+    x.mes = mes;
+    x.partidas = (x.partidas || 0) + 1;
+    guardar();
+
+    const s = sesion();
+    if (s && s.nube && window.Nube && Nube.disponible()) {
+      // Si falla no se pierde nada: la marca local ya esta guardada.
+      try { Nube.registrarDesafio(n); } catch (e) {}
+    }
+    return { puntos: n, recordHistorico, recordMes, mejor: x.mejor, mejorMes: x.mejorMes };
+  }
+
   /* ---------- respaldo ---------- */
   function exportar() {
     const s = sesion(); if (!s) return null;
@@ -268,6 +318,7 @@ window.Almacen = (function () {
     usuarios, registrar, entrar, salir, sesion, cambiarClave,
     datos, guardar, reiniciarProgreso, exportar, importar,
     tocarRacha, hoyISO,
+    programa, fijarPrograma, registrarDesafio,
     // puente con la nube
     abrirSesionNube, adoptar, peso, mejorLocal, sincronizarYa, sync, alSincronizar
   };

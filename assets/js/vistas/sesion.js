@@ -509,10 +509,23 @@ window.Sesion = (function () {
 
     let extra = '';
     if (S.modo === 'desafio'){
+      /* Aqui es donde el puntaje deja de ser un numero de pantalla y pasa a
+         existir: se guarda la marca en local y, si hay cuenta en la nube, se
+         manda al servidor. Sin esta llamada el ranking no tendria de donde
+         salir, porque hasta ahora los puntos morian al cerrar la sesion. */
+      const marca = Almacen.registrarDesafio(S.puntos) || {};
+      const sello = marca.recordHistorico ? '<div class="card card--rosa" style="margin-bottom:18px">' +
+            '<b>🏆 Nueva mejor marca: ' + S.puntos + ' puntos.</b>' +
+            '<p class="muted" style="margin-top:4px">Superaste todo lo que habías hecho antes en modo desafío.</p></div>'
+          : marca.recordMes ? '<div class="card card--yodo" style="margin-bottom:18px">' +
+            '<b>📅 Mejor marca del mes: ' + S.puntos + ' puntos.</b>' +
+            '<p class="muted" style="margin-top:4px">Tu récord histórico sigue en ' + marca.mejor + '.</p></div>'
+          : '';
       extra = '<div class="rejilla rejilla--3" style="margin-bottom:18px">' +
         '<div class="metrica"><b>' + S.puntos + '</b><span>Puntos</span></div>' +
         '<div class="metrica"><b>' + S.mejorCombo + '</b><span>Mejor racha seguida</span></div>' +
-        '<div class="metrica"><b>' + Math.max(0, S.vidas) + '</b><span>Vidas restantes</span></div></div>';
+        '<div class="metrica"><b>' + Math.max(0, S.vidas) + '</b><span>Vidas restantes</span></div></div>' +
+        sello;
     }
 
     const frag = Motor.fragilidad();
@@ -547,6 +560,7 @@ window.Sesion = (function () {
         '<div class="row wrap" style="gap:9px">' +
           (falladas.length ? '<button class="btn" id="btnRepasar">Repasar solo lo fallado</button>' : '') +
           '<button class="btn btn--fantasma" id="btnOtra">Otra sesión igual</button>' +
+          (S.modo === 'desafio' ? '<button class="btn btn--fantasma" id="btnRanking">Ver la clasificación</button>' : '') +
           '<button class="btn btn--fantasma" id="btnProgreso">Ver mi progreso</button>' +
           '<button class="btn btn--carbon" id="btnInicio">Volver al inicio</button>' +
         '</div>' +
@@ -566,6 +580,8 @@ window.Sesion = (function () {
       const nuevasP = Motor.seleccionar({ n: cfgPrevia.preguntas.length });
       iniciar({ ...cfgPrevia, preguntas: nuevasP.length ? nuevasP : cfgPrevia.preguntas });
     };
+    const btnRk = document.getElementById('btnRanking');
+    if (btnRk) btnRk.onclick = () => { salir(); App.ir('ranking'); };
     document.getElementById('btnProgreso').onclick = () => { salir(); App.ir('progreso'); };
     document.getElementById('btnInicio').onclick = () => { salir(); App.ir('inicio'); };
   }

@@ -53,11 +53,15 @@ window.Nube = (function () {
   }
 
   /* ---------- cuenta ---------- */
-  async function registrar(correo, clave, nombre){
+  async function registrar(correo, clave, nombre, programa){
     if (!iniciar()) return { ok:false, error:'La sincronización no está disponible sin conexión.' };
+    /* El programa (ENURMIA o UNIRMIA) viaja en los metadatos del registro.
+       Un disparador del servidor lo copia a `perfiles.programa` y valida
+       que sea uno de los dos: lo que llegue de aqui no se cree a ciegas. */
     const { data, error } = await cliente.auth.signUp({
       email: correo, password: clave,
-      options: { data: { nombre: nombre || correo.split('@')[0] } }
+      options: { data: { nombre: nombre || correo.split('@')[0],
+                         programa: (programa === 'unirm' ? 'unirm' : 'enurm') } }
     });
     if (error) return { ok:false, error: legible(error) };
     // Si el proyecto exige confirmar el correo, aun no hay sesion abierta.
@@ -119,7 +123,7 @@ window.Nube = (function () {
     if (!iniciar()) return null;
     const u = await usuario(); if (!u) return null;
     const { data } = await cliente.from('perfiles')
-      .select('user_id, correo, nombre, rol, creado').eq('user_id', u.id).maybeSingle();
+      .select('user_id, correo, nombre, rol, programa, creado').eq('user_id', u.id).maybeSingle();
     return data || null;
   }
 
@@ -129,6 +133,70 @@ window.Nube = (function () {
     const { data } = await cliente.from('suscripciones')
       .select('plan, estado, inicia, vence, notas').eq('user_id', u.id).maybeSingle();
     return data || null;
+  }
+
+  /* ---------- ranking de desafios ----------
+     Aparecer en la clasificacion es OPCIONAL y esta apagado de fabrica:
+     la columna `publico` nace en false y solo la cambia el propio
+     estudiante desde Ajustes. Mientras este en false su fila existe (se
+     le guarda su marca) pero nadie mas la ve, porque la politica de
+     lectura solo deja pasar `publico = true`, la fila propia y el admin.
+
+     Los puntos NO se escriben con un update normal: la tabla no tiene
+     politica de insert ni de update a proposito. Se entra por estas dos
+     funciones, que corren en el servidor con SECURITY DEFINER y validan
+     el rango. Asi nadie se pone diez millones de puntos desde la consola
+     del navegador. */
+  async function registrarDesafio(puntos){
+    if (!iniciar()) return { ok:false, error:'Sin conexión.' };
+    const u = await usuario(); if (!u) return { ok:false, error:'No hay sesión en la nube.' };
+    const n = Math.max(0, Math.round(Number(puntos) || 0));
+    const { error } = await cliente.rpc('registrar_desafio', { p_puntos: n });
+    if (error) return { ok:false, error: legible(error) };
+    return { ok:true };
+  }
+
+  async function configurarRanking(alias, publico){
+    if (!iniciar()) return { ok:false, error:'Sin conexión.' };
+    const u = await usuario(); if (!u) return { ok:false, error:'No hay sesión en la nube.' };
+    const { error } = await cliente.rpc('configurar_ranking',
+      { p_alias: (alias || '').slice(0, 24), p_publico: !!publico });
+    if (error) return { ok:false, error: legible(error) };
+    return { ok:true };
+  }
+
+  async function miRanking(){
+    if (!iniciar()) return null;
+    const u = await usuario(); if (!u) return null;
+    const { data } = await cliente.from('ranking')
+      .select('alias, publico, mejor_historico, mejor_mes, mes, partidas')
+      .eq('user_id', u.id).maybeSingle();
+    return data || null;
+  }
+
+  /* `tabla` = 'mes' o 'historico'. El mes se filtra en el servidor para
+     que la marca del mes pasado no se cuele en la clasificacion de este. */
+  async function clasificacion(programa, tabla, limite){
+    if (!iniciar()) return { ok:false, error:'Sin conexión.', filas:[], yo:null };
+    const u = await usuario();
+    const col = tabla === 'mes' ? 'mejor_mes' : 'mejor_historico';
+    let q = cliente.from('ranking')
+      .select('user_id, alias, mejor_historico, mejor_mes, mes, partidas')
+      .eq('programa', programa || 'enurm')
+      .gt(col, 0)
+      .order(col, { ascending:false })
+      .limit(limite || 50);
+    if (tabla === 'mes') q = q.eq('mes', mesActual());
+    const { data, error } = await q;
+    if (error) return { ok:false, error: legible(error), filas:[], yo:null };
+    const filas = data || [];
+    const yo = u ? filas.findIndex(f => f.user_id === u.id) : -1;
+    return { ok:true, filas: filas, miPuesto: yo >= 0 ? yo + 1 : null, miId: u ? u.id : null };
+  }
+
+  function mesActual(){
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
   }
 
   /* ---------- administracion ----------
@@ -169,6 +237,7 @@ window.Nube = (function () {
 
   return { disponible, registrar, entrar, salir, usuario, recuperar, bajar, subir,
            perfil, miSuscripcion,
+           registrarDesafio, configurarRanking, miRanking, clasificacion, mesActual,
            listarUsuarios, guardarSuscripcion, cambiarRol, progresoDe,
            URL_PROYECTO: URL_PROYECTO };
 })();

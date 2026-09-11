@@ -37,8 +37,33 @@ window.Motor = (function () {
     'Psiquiatría':0.03, 'Bioética':0.02, 'Medicina Familiar':0.01
   };
 
-  /* ---------- acceso al banco ---------- */
-  function banco(){ return window.BANCO || []; }
+  /* ---------- acceso al banco ----------
+     Hay dos programas viviendo en el mismo armazon: ENURMIA (residencia)
+     y UNIRMIA (universidad). Las preguntas de UNIRMIA llevan
+     `programa:'unirm'`; las del ENURM no llevan nada, porque son las que
+     ya existian y no vamos a reescribir miles de filas para anadir un
+     campo que se puede deducir por ausencia.
+
+     El resultado se memoriza porque banco() se llama en bucles (porId
+     hace una busqueda lineal por cada pregunta de una sesion) y filtrar
+     cinco mil objetos cada vez se notaria. La memoria se invalida sola si
+     cambia el programa o si entra otro archivo de banco. */
+  let bcLista = null, bcPrograma = null, bcLargo = -1;
+
+  function programaActivo(){
+    return (window.Almacen && Almacen.programa) ? Almacen.programa() : 'enurm';
+  }
+
+  function banco(){
+    const todo = window.BANCO || [];
+    const p = programaActivo();
+    if (bcLista && bcPrograma === p && bcLargo === todo.length) return bcLista;
+    bcPrograma = p; bcLargo = todo.length;
+    bcLista = (p === 'unirm')
+      ? todo.filter(q => q.programa === 'unirm')
+      : todo.filter(q => q.programa !== 'unirm');
+    return bcLista;
+  }
 
   /* Capa de enriquecimiento. Los archivos banco-mir-*.js son
      autogenerados: si escribieramos las explicaciones ahi, se
@@ -47,7 +72,9 @@ window.Motor = (function () {
   function aplicarExplicaciones(){
     const E = window.EXPLICACIONES || {};
     let n = 0;
-    banco().forEach(q => {
+    /* Sobre el banco entero, no sobre el del programa en curso: se aplica
+       una sola vez al arrancar y asi no depende de quien haya entrado. */
+    (window.BANCO || []).forEach(q => {
       const e = E[q.id];
       if (!e) return;
       Object.keys(e).forEach(k => { q[k] = e[k]; });
@@ -508,7 +535,7 @@ window.Motor = (function () {
     resumen, serieDiaria, erroresPorTipo, patronDeError, fragilidad,
     nivel, medallas, revisarMedallas, preparacion, proximaAccion, generarPlan,
     guardarSimulacro, alternarMarcada, estaMarcada, analizarDefensa,
-    TIPOS_ERROR, NIVELES, DISTRIBUCION
+    TIPOS_ERROR, NIVELES, DISTRIBUCION, programaActivo
   };
 })();
 

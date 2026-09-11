@@ -14,6 +14,7 @@ window.App = (function () {
     { id:'clinica',     em:'🩺', nombre:'Clínica',     ver: p => Clinica.menu(p) },
     { id:'flashcards',  em:'⚡', nombre:'Flashcards',  ver: p => Flashcards.menu(p) },
     { id:'desafio',     em:'⚔️', nombre:'Desafío',     ver: p => Vistas.desafio(p) },
+    { id:'ranking',     em:'🏆', nombre:'Clasificación', ver: () => Ranking.menu() },
     { id:'biblioteca',  em:'📚', nombre:'Biblioteca',  ver: p => Vistas.biblioteca(p) },
     { id:'progreso',    em:'📊', nombre:'Progreso',    ver: p => Vistas.progreso(p) },
     { id:'preparacion', em:'🎓', nombre:'¿Estoy listo?', ver: p => Vistas.preparacion(p) },
@@ -21,6 +22,10 @@ window.App = (function () {
   ];
 
   const MOVIL = ['inicio','estudiar','flashcards','clinica','progreso'];
+  /* Donde parte el menu lateral: arriba lo que es estudiar, abajo lo que es
+     mirarse a uno mismo. Es un indice y no un numero magico repetido dos
+     veces, que era lo que se rompia al anadir una ruta en medio. */
+  const CORTE = RUTAS.findIndex(r => r.id === 'progreso');
   let actual = 'inicio';
 
   function ir(id, param){
@@ -40,18 +45,22 @@ window.App = (function () {
     UI.$$('.movil button').forEach(b => b.classList.toggle('on', b.dataset.ruta === actual));
   }
 
+  function marcaPrograma(){ return Almacen.programa() === 'unirm' ? 'UNIRMIA' : 'ENURMIA'; }
+
   function armazon(){
     const s = Almacen.sesion();
+    document.title = marcaPrograma();
     const d = Almacen.datos();
     const r = Motor.resumen();
 
     document.getElementById('app').innerHTML =
     '<aside class="rail">' +
-      '<div class="rail__marca"><span class="marca__sello">✚</span>ENURMIA</div>' +
-      RUTAS.slice(0, 9).map(x =>
+      '<div class="rail__marca"><span class="marca__sello">✚</span>' +
+        marcaPrograma() + '</div>' +
+      RUTAS.slice(0, CORTE).map(x =>
         '<button class="rail__link" data-ruta="' + x.id + '"><span class="em">' + x.em + '</span>' + esc(x.nombre) + '</button>').join('') +
       '<div class="rail__sep"></div>' +
-      RUTAS.slice(9).map(x =>
+      RUTAS.slice(CORTE).map(x =>
         '<button class="rail__link" data-ruta="' + x.id + '"><span class="em">' + x.em + '</span>' + esc(x.nombre) + '</button>').join('') +
       '<div class="rail__pie">' +
         '<span class="eyebrow">Racha</span>' +
@@ -135,7 +144,19 @@ window.App = (function () {
     if (!s || !s.nube || !window.Nube || !Nube.disponible()) return;
     let p = null;
     try { p = await Nube.perfil(); } catch (e) { return; }
-    if (!p || p.rol !== 'admin') return;
+    if (!p) return;
+
+    /* El programa lo dice el servidor, no este navegador. Si no coincide con
+       el reflejo local se corrige y se repinta la marca, que es lo unico que
+       depende de el en el armazon: repintar entero cortaria la sesion. */
+    if (p.programa && p.programa !== Almacen.programa()){
+      Almacen.fijarPrograma(p.programa);
+      document.title = marcaPrograma();
+      const marca = document.querySelector('.rail__marca');
+      if (marca) marca.innerHTML = '<span class="marca__sello">✚</span>' + marcaPrograma();
+    }
+
+    if (p.rol !== 'admin') return;
     if (RUTAS.some(r => r.id === 'admin')) return;
     RUTAS.push({ id:'admin', em:'🛡️', nombre:'Administración', ver: () => Admin.menu() });
 

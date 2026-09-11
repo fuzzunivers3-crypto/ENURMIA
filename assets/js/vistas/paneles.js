@@ -7,6 +7,12 @@ window.Vistas = (function () {
   const esc = UI.esc;
   function V(){ return document.getElementById('vista'); }
 
+  /* Como se llama "el examen" en cada programa. ENURMIA prepara una prueba
+     concreta con nombre propio; UNIRMIA prepara los examenes del
+     cuatrimestre, que no tienen uno. Una sola funcion para no ir sembrando
+     condicionales por todas las pantallas. */
+  function EX(){ return Almacen.programa() === 'unirm' ? 'los exámenes' : 'el ENURM'; }
+
   /* ============================================================
      INICIO
      ============================================================ */
@@ -29,8 +35,23 @@ window.Vistas = (function () {
         '<small class="muted" style="font-size:12px">' + a.respondidas + ' respondidas de ' + a.total + ' disponibles</small>' +
       '</div>').join('');
 
+    /* UNIRMIA comparte toda la maquinaria con ENURMIA pero tiene su propio
+       banco por asignaturas. Mientras ese banco no este cargado no hay que
+       fingir que la app funciona: se dice claro y se evita que el
+       estudiante se pasee por pantallas vacias sin entender por que. */
+    const vacio = Motor.banco().length === 0;
+    const avisoVacio = vacio
+      ? '<div class="card card--yodo" style="margin-bottom:18px">' +
+        '<span class="eyebrow">Contenido en preparación</span>' +
+        '<p style="margin-top:6px">Todavía no hay preguntas cargadas para ' +
+        (Almacen.programa() === 'unirm' ? 'UNIRMIA' : 'este programa') + '. ' +
+        'La plataforma está lista; falta el banco por asignaturas de los cuatrimestres 7, 8 y 9. ' +
+        'Mientras tanto, las pantallas de estudio aparecerán vacías.</p></div>'
+      : '';
+
     V().innerHTML =
     '<div class="escalona">' +
+      avisoVacio +
       '<div class="encabezado">' +
         '<p class="eyebrow">' + esc(UI.saludo()) + '</p>' +
         '<h1>' + esc(d.perfil.nombre) + ', esto es lo que toca hoy</h1>' +
@@ -40,7 +61,8 @@ window.Vistas = (function () {
       '</div>' +
 
       '<div class="rejilla rejilla--4" style="margin-bottom:18px">' +
-        '<div class="metrica"><b>' + prep.pct + '%</b><span>Preparación ENURM</span>' +
+        '<div class="metrica"><b>' + prep.pct + '%</b><span>Preparación ' +
+          (Almacen.programa() === 'unirm' ? 'UNIRMIA' : 'ENURM') + '</span>' +
           '<span class="delta ' + (prep.pct >= 70 ? 'delta--sube' : 'delta--baja') + '">' + esc(prep.etiqueta) + '</span></div>' +
         '<div class="metrica"><b>' + r.respondidas + '</b><span>Preguntas respondidas</span>' +
           '<span class="delta">' + r.cobertura + '% del banco visto</span></div>' +
@@ -102,7 +124,7 @@ window.Vistas = (function () {
           '</div>' +
 
           '<div class="card card--rosa">' +
-            '<span class="eyebrow">¿Estoy listo para el ENURM?</span>' +
+            '<span class="eyebrow">¿Estoy listo para ' + EX() + '?</span>' +
             '<p style="margin:8px 0 14px;font-size:14px">Tu índice combina dominio, volumen de práctica, amplitud y consistencia entre áreas.</p>' +
             '<button class="btn btn--sm btn--ancho" id="btnPrep">Ver mi preparación</button>' +
           '</div>' +
@@ -275,7 +297,7 @@ window.Vistas = (function () {
     V().innerHTML =
     '<div class="escalona" style="max-width:960px">' +
       '<div class="encabezado"><p class="eyebrow">Modo examen</p>' +
-      '<h1>Simulacro ENURM</h1>' +
+      '<h1>Simulacro ' + (Almacen.programa() === 'unirm' ? 'UNIRMIA' : 'ENURM') + '</h1>' +
       '<p>Con reloj, sin pistas y sin explicación hasta el final. Así es como se siente el examen real.</p></div>' +
 
       '<div class="rejilla rejilla--2" style="margin-bottom:18px">' +
@@ -311,7 +333,7 @@ window.Vistas = (function () {
         '<button class="btn grow" id="empezarSim">Empezar ahora</button></div>');
       document.getElementById('empezarSim').onclick = () => {
         document.querySelector('.velo').remove();
-        Sesion.iniciar({ modo:'examen', titulo:'Simulacro ENURM', preguntas,
+        Sesion.iniciar({ modo:'examen', titulo:'Simulacro ' + (Almacen.programa() === 'unirm' ? 'UNIRMIA' : 'ENURM'), preguntas,
           tiempoTotal: min * 60000, etiqueta: preguntas.length + ' preguntas' });
       };
     });
@@ -549,7 +571,7 @@ window.Vistas = (function () {
     V().innerHTML =
     '<div class="escalona" style="max-width:1000px">' +
       '<div class="encabezado"><p class="eyebrow">Índice de preparación</p>' +
-      '<h1>¿Estoy listo para el ENURM?</h1>' +
+      '<h1>¿Estoy listo para ' + EX() + '?</h1>' +
       '<p>' + esc(p.detalle) + '</p></div>' +
 
       '<div class="rejilla rejilla--tablero" style="margin-bottom:18px">' +

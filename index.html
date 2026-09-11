@@ -6,6 +6,25 @@
 <title>ENURMIA — Entrar</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%236E0F1F'/><path d='M12 55h16l7-18 10 34 8-22 6 12h29' stroke='white' stroke-width='7' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
 <link rel="stylesheet" href="assets/css/app.css">
+<style>
+  /* Selector de programa. Vive solo en la pantalla de entrada, asi que se
+     queda aqui y no ensucia la hoja de estilos de la aplicacion. */
+  .selector-programa{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:18px; }
+  .selector-programa button{
+    display:flex; flex-direction:column; gap:2px; align-items:flex-start;
+    padding:12px 14px; border-radius:12px; cursor:pointer; font:inherit; text-align:left;
+    border:1.5px solid var(--linea, rgba(0,0,0,.12)); background:transparent;
+    color:inherit; transition:border-color .15s, background .15s;
+  }
+  .selector-programa button b{ font-size:14.5px; letter-spacing:.02em; }
+  .selector-programa button small{ font-size:11.5px; opacity:.62; line-height:1.3; }
+  .selector-programa button:hover{ border-color:currentColor; }
+  .selector-programa button.on{
+    border-color:var(--acento, #6E0F1F);
+    background:color-mix(in srgb, var(--acento, #6E0F1F) 8%, transparent);
+  }
+  @media (max-width:420px){ .selector-programa{ grid-template-columns:1fr; } }
+</style>
 </head>
 <body>
 
@@ -14,13 +33,13 @@
   <section class="acceso__arte">
     <div class="marca">
       <span class="marca__sello">✚</span>
-      ENURM<span style="opacity:.55;font-weight:600">IA</span>
+      <span id="marcaRaiz">ENURM</span><span style="opacity:.55;font-weight:600">IA</span>
     </div>
 
     <div class="acceso__lema">
-      <p class="eyebrow" style="color:rgba(255,255,255,.5)">Preparación para la residencia médica</p>
-      <h1>No estudies para recordar respuestas. Entrena para <em>decidir</em>.</h1>
-      <p>Cada pregunta te devuelve el dato clave, por qué fallaron las otras opciones y de qué fuente sale la conducta correcta.</p>
+      <p class="eyebrow" style="color:rgba(255,255,255,.5)" id="lemaCeja">Preparación para la residencia médica</p>
+      <h1 id="lemaTitulo">No estudies para recordar respuestas. Entrena para <em>decidir</em>.</h1>
+      <p id="lemaTexto">Cada pregunta te devuelve el dato clave, por qué fallaron las otras opciones y de qué fuente sale la conducta correcta.</p>
 
       <div class="acceso__trazo">
         <svg class="ecg" viewBox="0 0 600 60" preserveAspectRatio="none" style="--dash:900">
@@ -29,13 +48,25 @@
       </div>
 
       <div class="acceso__pilares">
-        <span>Aprender</span><span>Razonar</span><span>Decidir</span><span>Medir</span>
+        <span id="pilar1">Aprender</span><span id="pilar2">Razonar</span><span id="pilar3">Decidir</span><span id="pilar4">Medir</span>
       </div>
     </div>
   </section>
 
   <section class="acceso__panel">
     <div class="forma">
+
+      <!-- Los dos programas son mundos separados: cuentas distintas, banco de
+           preguntas distinto. Por eso esto va ARRIBA del todo y no escondido en
+           un ajuste: es lo primero que hay que decidir, no una preferencia. -->
+      <div class="selector-programa" role="group" aria-label="Elige tu programa">
+        <button type="button" class="on" data-programa="enurm">
+          <b>ENURMIA</b><small>Residencia médica · ENURM</small>
+        </button>
+        <button type="button" data-programa="unirm">
+          <b>UNIRMIA</b><small>Universidad · UCATECI</small>
+        </button>
+      </div>
 
       <div class="pestanas" role="tablist">
         <button id="tabEntrar" class="on" role="tab">Entrar</button>
@@ -124,6 +155,55 @@
   tEntrar.onclick = () => pestana('entrar');
   tCrear.onclick  = () => pestana('crear');
 
+  /* ---------- programa: ENURMIA o UNIRMIA ----------
+     Son dos plataformas con la misma maquinaria pero distinto publico y
+     distinto banco de preguntas. Las cuentas NO se comparten: quien se
+     registra en una no existe en la otra. Por eso al ENTRAR este selector
+     es solo decoracion (manda lo que diga el servidor sobre esa cuenta) y
+     al CREAR CUENTA es lo que decide en cual nace. */
+  const TEXTOS = {
+    enurm: {
+      raiz: 'ENURM',
+      ceja: 'Preparación para la residencia médica',
+      titulo: 'No estudies para recordar respuestas. Entrena para <em>decidir</em>.',
+      texto: 'Cada pregunta te devuelve el dato clave, por qué fallaron las otras opciones y de qué fuente sale la conducta correcta.',
+      pilares: ['Aprender','Razonar','Decidir','Medir'],
+      crear: 'Tu progreso queda guardado en la nube: podrás seguir desde otra computadora.'
+    },
+    unirm: {
+      raiz: 'UNIRM',
+      ceja: 'Para estudiantes de medicina de UCATECI',
+      titulo: 'Llega al examen sabiendo <em>por qué</em>, no solo qué.',
+      texto: 'Preguntas por asignatura de los cuatrimestres 7, 8 y 9, con la explicación completa detrás de cada respuesta.',
+      pilares: ['Asignaturas','Razonar','Practicar','Medir'],
+      crear: 'Cuenta de estudiante de UCATECI. Tu progreso se guarda en la nube y va contigo a cualquier computadora.'
+    }
+  };
+
+  let programa = 'enurm';
+  try { programa = localStorage.getItem('enurm.programa') === 'unirm' ? 'unirm' : 'enurm'; } catch (e) {}
+
+  function pintarPrograma(){
+    const t = TEXTOS[programa];
+    document.getElementById('marcaRaiz').textContent = t.raiz;
+    document.getElementById('lemaCeja').textContent = t.ceja;
+    document.getElementById('lemaTitulo').innerHTML = t.titulo;
+    document.getElementById('lemaTexto').textContent = t.texto;
+    t.pilares.forEach((x, i) => { document.getElementById('pilar' + (i + 1)).textContent = x; });
+    document.title = t.raiz + 'IA — Entrar';
+    const sub = fCrear.querySelector('p');
+    if (sub) sub.textContent = t.crear;
+    document.querySelectorAll('[data-programa]').forEach(b =>
+      b.classList.toggle('on', b.dataset.programa === programa));
+  }
+
+  document.querySelectorAll('[data-programa]').forEach(b => b.onclick = () => {
+    programa = b.dataset.programa;
+    try { localStorage.setItem('enurm.programa', programa); } catch (e) {}
+    pintarPrograma();
+  });
+  pintarPrograma();
+
   function aviso(donde, texto, ok){
     donde.innerHTML = '<div class="aviso' + (ok ? ' aviso--ok' : '') + '">' + texto + '</div>';
   }
@@ -150,7 +230,23 @@
      ya usaba la app con cuenta local, ese progreso se adopta y se sube. */
   async function sincronizarAlEntrar(user, correo){
     const nombre = (user.user_metadata && user.user_metadata.nombre) || (correo || '').split('@')[0];
-    Almacen.abrirSesionNube(user.id, nombre, correo);
+
+    /* A que programa pertenece esta cuenta lo decide `perfiles.programa` en
+       el servidor, no el boton que este pulsado aqui. Si alguien elige
+       UNIRMIA y entra con una cuenta de ENURMIA, entra en ENURMIA: es SU
+       cuenta la que manda. El selector solo importa al crear una nueva. */
+    let suyo = programa;
+    try {
+      const perfil = await Nube.perfil();
+      if (perfil && perfil.programa) suyo = perfil.programa;
+    } catch (e) {}
+
+    Almacen.abrirSesionNube(user.id, nombre, correo, suyo);
+    if (suyo !== programa){
+      programa = suyo;
+      try { localStorage.setItem('enurm.programa', programa); } catch (e) {}
+      pintarPrograma();
+    }
 
     const pesoAqui = Almacen.peso(Almacen.datos());
     let r = null;
@@ -194,13 +290,14 @@
     if (!hayNube)          return aviso($('#avisoCrear'), 'No hay conexión con el servidor. Inténtalo cuando vuelvas a tener internet.');
 
     ocupado(fCrear, true, 'Creando tu cuenta…');
-    const r = await Nube.registrar(correo, clave, nombre);
+    const r = await Nube.registrar(correo, clave, nombre, programa);
     if (!r.ok){ ocupado(fCrear, false); return aviso($('#avisoCrear'), r.error); }
 
     if (r.confirmar){
       ocupado(fCrear, false);
       return aviso($('#avisoCrear'),
-        'Cuenta creada. Te enviamos un correo a <b>' + correo + '</b>: abre el enlace para confirmarla y luego entra desde la pestaña <b>Entrar</b>.', true);
+        'Cuenta de <b>' + TEXTOS[programa].raiz + 'IA</b> creada. Te enviamos un correo a <b>' + correo +
+        '</b>: abre el enlace para confirmarla y luego entra desde la pestaña <b>Entrar</b>.', true);
     }
     const msg = await sincronizarAlEntrar(r.usuario, correo);
     ocupado(fCrear, false);
