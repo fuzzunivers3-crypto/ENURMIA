@@ -25,6 +25,7 @@ desbloquea. Se repite hasta agotar los 101 temas.
 | Si sale bajo | Avanza igual; los temas flojos se reinyectan en las tandas siguientes |
 | Alcance | Solo ENURMIA. El código queda genérico para añadir UNIRMIA después |
 | Orden del recorrido | Uno solo, intercalado por peso de bloque. Sin "empezar por lo débil" |
+| Quién guía | **Arturo**, un profesor con voz propia que acompaña todo el recorrido |
 
 ## Principio de diseño: la Ruta no duplica progreso
 
@@ -63,6 +64,7 @@ d.ruta = {
   cursor: 0,                    // índice en `orden` del primer tema de la tanda en curso
   tanda: 1,                     // 1-based
   repaso: ['Gota'],             // temas flojos pendientes de recuperar
+  hilo: { tema:'Insuficiencia cardíaca', abierto: ts },  // el tema que Arturo acompaña
   terminada: null,              // ts cuando cursor alcanza orden.length
   historial: [
     { n:1, temas:['Hipertensión arterial', ...], fecha:ts,
@@ -228,14 +230,102 @@ proximoPaso()             -> { tipo:'leer'|'preg'|'tarj'|'simulacro'|'fin', tema
 `proximoPaso()` es el que convierte la app en guía: lo consumen la pantalla
 Inicio y `Motor.proximaAccion()`.
 
+## Arturo
+
+La Ruta sabe qué toca. **Arturo es quien lo dice.** Sin él, el recorrido es una
+lista de casillas; con él, es un profesor que te lleva de la lectura a las
+preguntas y de ahí a las tarjetas sin soltarte en el menú entre paso y paso.
+
+### Qué es y qué no es
+
+Arturo es un **sistema de reglas sobre el estado de la ruta, con texto escrito
+a mano**. No es un chat ni un modelo de lenguaje: la app funciona sin servidor
+y sin internet, así que no hay nada que pueda improvisar una respuesta. Arturo
+elige entre frases escritas según el momento del recorrido, el tema en curso y
+cómo vienen saliendo los resultados. Eso es suficiente para guiar, y es
+honesto con lo que la plataforma puede sostener.
+
+### El hilo
+
+Lo que hace que Arturo guíe de verdad y no solo comente es que **mantiene el
+tema en curso**. Estás leyendo Insuficiencia cardíaca: al terminar el texto,
+Arturo no te devuelve al índice, te dice *"ya está el texto; ahora las diez
+preguntas de este mismo tema"* y te las lanza. Al acabarlas te interpreta el
+resultado y encadena las tarjetas. Al cerrarlas, anuncia el tema siguiente de
+la tanda —o el simulacro, si era el último.
+
+```js
+d.ruta.hilo = { tema:'Insuficiencia cardíaca', abierto: 1757548800000 }
+```
+
+Es el **único estado nuevo** que añade Arturo. Se fija al empezar un tema de la
+tanda y se limpia cuando el tema queda completo. Si el estudiante se va por su
+cuenta a otra pantalla, el hilo sigue ahí esperándolo, y Arturo lo retoma con
+*"lo dejamos en insuficiencia cardíaca"*.
+
+### Dónde aparece
+
+Aquí está el "todo el desglose de la página": Arturo remata **cada pantalla
+donde termina un paso**, no solo la suya.
+
+| Pantalla | Momento | Qué hace Arturo |
+|---|---|---|
+| Arturo (la Ruta) | siempre | tarjeta de cabecera con el paso del día y el botón Seguir |
+| Inicio | siempre | la tarjeta principal pasa a ser su frase del día |
+| Estudiar | pie del apunte | cierra la lectura y lanza las preguntas del mismo tema |
+| Sesión de preguntas | pantalla de resultado | interpreta el pct y encadena tarjetas, o manda a releer |
+| Flashcards | fin de sesión | cierra el tema y anuncia el siguiente |
+| Simulacro de cierre | antes y después | qué se mide; y al terminar, qué salió flojo y qué toca |
+
+**Durante el simulacro no habla.** El examen se hace solo, como el de verdad.
+
+Ninguno de estos enganches necesita callbacks: las pantallas de fin ya existen
+y Arturo lee el estado deducido, igual que la Ruta. Son inserciones de una
+tira de HTML en un sitio que ya se repinta.
+
+### La voz
+
+Profesor clínico, sobrio, segunda persona, frases cortas. La misma voz de los
+apuntes —la que se escribe alrededor de *"qué hago con este paciente
+delante"*— no la de un animador. Dice lo que toca y por qué toca, y cuando
+algo sale mal lo nombra sin adornarlo.
+
+El texto vive en `assets/js/arturo.js` como plantillas por situación
+(abrir tema, cerrar lectura, resultado alto, resultado bajo, cerrar tema,
+abrir simulacro, resultado de tanda, tema flojo, retomar hilo, fin de
+recorrido), varias frases por situación para que no se repita al tercer día.
+
+Sin ilustración de personaje: un sello con la inicial en rojo sangría, del
+mismo palo que el avatar del perfil. La plataforma ya tiene una identidad
+visual y Arturo entra dentro de ella, no encima.
+
+### API
+
+`window.Arturo` en `assets/js/arturo.js`:
+
+```
+paso()        -> { tipo, tema, titulo, frase, boton }   // envuelve Ruta.proximoPaso()
+frase(ctx)    -> string    // el texto para un momento concreto
+barra(ctx)    -> string    // la tira de Arturo, HTML, para incrustar en cualquier vista
+seguir()      -> navega y lanza la acción del paso actual
+hilo()        -> { tema, en } | null
+abrirHilo(t) / cerrarHilo()
+```
+
+`seguir()` es el botón único: sea cual sea el paso, Arturo sabe a dónde
+llevarte.
+
 ## Superficie visible
 
-**Pantalla nueva `ruta`** (emoji 📍, nombre "Mi ruta"), **segunda del menú de
-ENURMIA**, entre Inicio y Simulacro. Es la pantalla que dirige: tiene que
-estar arriba.
+**Pantalla nueva `ruta`** (emoji 👨‍⚕️, nombre **"Arturo"**), **segunda del menú
+de ENURMIA**, entre Inicio y Simulacro. Se llama por su nombre y no "Mi ruta"
+a propósito: el estudiante entra a ver a su profesor, no a consultar un
+diagrama de avance.
 
-- *Sin ruta*: arranque que explica el recorrido y pregunta el tamaño de tanda.
-- *Con ruta*: cabecera con "Tanda 3 de 20" y barra de avance global; tarjeta de
+- *Sin ruta*: Arturo se presenta, explica el recorrido y pregunta el tamaño de
+  tanda.
+- *Con ruta*: tarjeta de Arturo arriba con el paso del día y el botón Seguir;
+  debajo, "Tanda 3 de 20" y barra de avance global; tarjeta de
   la tanda en curso con un tema por fila y tres casillas por tema
   (`○ leer / ○ preguntas / ○ tarjetas`), cada casilla un botón que lanza su
   acción; bloque del simulacro de cierre, bloqueado hasta que los temas estén
@@ -244,10 +334,15 @@ estar arriba.
 - *Terminada*: la pantalla de cierre descrita arriba.
 
 **Inicio** (`paneles.js:19`): con ruta activa, la tarjeta principal pasa a ser
-el siguiente paso de la ruta ("Tanda 3: te faltan 2 temas").
+la frase de Arturo con su botón Seguir.
 
 **`Motor.proximaAccion()`** (`motor.js:478`): con ruta activa devuelve el paso
 de la ruta antes que cualquiera de sus heurísticas actuales.
+
+**Enganches de Arturo** en los pies de `vistas/apuntes.js`, `vistas/sesion.js`
+(pantalla de resultado) y `vistas/flashcards.js` (fin de sesión): una llamada
+a `Arturo.barra(ctx)` donde esas vistas ya pintan su cierre. Son ediciones de
+una línea; no se cablea ningún callback nuevo.
 
 **Plan de 7 días:** se retira de la pantalla "¿Estoy listo?"
 (`paneles.js:645-712`) y su sitio lo ocupa un enlace a la Ruta. Dos planes
@@ -257,18 +352,23 @@ se quedan en el código, sin invocarse, por si se quiere recuperar.
 ## Ficheros
 
 **Nuevos**
-- `assets/js/ruta.js` — motor
-- `assets/js/vistas/ruta.js` — pantalla
+- `assets/js/ruta.js` — motor del recorrido
+- `assets/js/arturo.js` — la voz: plantillas de texto, hilo y `barra()`
+- `assets/js/vistas/ruta.js` — pantalla de Arturo
 - `herramientas_validar_ruta.js` — validador
 
 **Editados**
-- `app.html` — dos `<script>` (`ruta.js` con el núcleo, `vistas/ruta.js` con las vistas)
+- `app.html` — tres `<script>` (`ruta.js` y `arturo.js` con el núcleo, `vistas/ruta.js` con las vistas)
 - `assets/js/app.js` — entrada en `PANTALLAS` y en `MENUS.enurm.arriba` / `.movil`
 - `assets/js/almacen.js` — `ruta: null` en `datosNuevos`
 - `assets/js/motor.js` — `proximaAccion` consulta la ruta
 - `assets/js/vistas/paneles.js` — Inicio, y retirada del plan de 7 días
 - `assets/js/vistas/temario.js` — exportar `preguntasDe` e `indice` en vez de
   que la Ruta duplique el emparejamiento tema-banco
+- `assets/js/vistas/apuntes.js` — `Arturo.barra()` al pie del apunte
+- `assets/js/vistas/sesion.js` — `Arturo.barra()` en la pantalla de resultado
+- `assets/js/vistas/flashcards.js` — `Arturo.barra()` al fin de sesión
+- `assets/css/app.css` — el sello y la tira de Arturo
 
 ## Degradación y casos límite
 
@@ -317,3 +417,9 @@ comprobando:
    sin que el estudiante haga nada.
 8. `crear()` acota: `crear(1)` y `crear(50)` producen rutas válidas de 101
    temas.
+9. `Arturo.paso()` devuelve un paso con frase y botón para **todos** los
+   estados posibles del recorrido (sin ruta, hilo abierto, tema completo,
+   tanda completa, simulacro pendiente, repaso pendiente, vuelta 2,
+   terminada). Ninguno cae en frase vacía.
+10. Cada situación de la voz tiene al menos tres frases distintas, y
+    `frase()` no repite la misma dos veces seguidas para un mismo estado.
