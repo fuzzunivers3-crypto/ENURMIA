@@ -40,14 +40,11 @@ window.Vistas = (function () {
        fingir que la app funciona: se dice claro y se evita que el
        estudiante se pasee por pantallas vacias sin entender por que. */
     const vacio = Motor.banco().length === 0;
-    const avisoVacio = vacio
-      ? '<div class="card card--yodo" style="margin-bottom:18px">' +
-        '<span class="eyebrow">Contenido en preparación</span>' +
-        '<p style="margin-top:6px">Todavía no hay preguntas cargadas para ' +
-        (Almacen.programa() === 'unirm' ? 'UNIRMIA' : 'este programa') + '. ' +
-        'La plataforma está lista; falta el banco por asignaturas de los cuatrimestres 7, 8 y 9. ' +
-        'Mientras tanto, las pantallas de estudio aparecerán vacías.</p></div>'
-      : '';
+    const avisoVacio = (Almacen.programa() === 'unirm')
+      ? tarjetaUnirm(vacio)
+      : (vacio ? '<div class="card card--yodo" style="margin-bottom:18px">' +
+          '<span class="eyebrow">Sin preguntas</span>' +
+          '<p style="margin-top:6px">No hay preguntas cargadas para este programa.</p></div>' : '');
 
     V().innerHTML =
     '<div class="escalona">' +
@@ -153,8 +150,49 @@ window.Vistas = (function () {
     };
     UI.$$('[data-esp]').forEach(el => el.onclick = () => App.ir('entrenar', { esp: el.dataset.esp }));
     UI.$$('[data-atajo]').forEach(el => el.onclick = () => App.ir(el.dataset.atajo));
+    engancharCuatri(inicio);
 
     setTimeout(() => UI.$$('.barra i').forEach(b => b.style.width = b.style.width), 30);
+  }
+
+  /* Lo primero que necesita saber UNIRMIA es en que cuatrimestre va el
+     estudiante. No es un adorno: el pensum de UCATECI mete asignaturas
+     distintas en el 7, el 8 y el 9, y de ahi sale que preguntas le tocan y
+     como se reparte su simulacro. Hasta que no lo diga, no hay nada
+     sensato que ensenarle, asi que se pregunta arriba del todo. */
+  function tarjetaUnirm(vacio){
+    const c = Almacen.cuatrimestre();
+    if (!c){
+      return '<div class="card card--carbon" style="margin-bottom:18px">' +
+        '<span class="eyebrow" style="color:rgba(255,255,255,.45)">Antes de empezar</span>' +
+        '<h3 style="font-size:22px;margin-top:6px">¿En qué cuatrimestre vas?</h3>' +
+        '<p style="color:rgba(255,255,255,.72);font-size:14px;margin-top:6px">' +
+        'De esto depende qué asignaturas te tocan. Lo puedes cambiar después en Ajustes.</p>' +
+        '<div class="row wrap" style="gap:9px;margin-top:14px">' +
+        [7, 8, 9].map(n => '<button class="btn btn--claro" data-cuatri="' + n + '">Cuatrimestre ' + n + '</button>').join('') +
+        '</div></div>';
+    }
+    const info = (window.UNIRM_CUATRIMESTRES || {})[c];
+    const lista = info ? info.asignaturas.map(a =>
+      '<span class="chip">' + esc(a.nombre) + '</span>').join(' ') : '';
+    return '<div class="card card--yodo" style="margin-bottom:18px">' +
+      '<div class="row-b"><span class="eyebrow">' + esc(info ? info.nombre : 'Cuatrimestre ' + c) + ' · ' +
+        esc(info ? info.ciclo : '') + '</span>' +
+        '<button class="btn btn--sm btn--fantasma" data-cuatri="0">Cambiar</button></div>' +
+      '<div class="row wrap" style="gap:6px;margin-top:12px">' + lista + '</div>' +
+      (vacio ? '<p style="margin-top:12px;font-size:13.5px">Todavía no hay preguntas cargadas de estas asignaturas. ' +
+        'La plataforma está lista y el pensum también; falta escribir el banco. ' +
+        'Mientras tanto las pantallas de estudio aparecerán vacías.</p>' : '') +
+      '</div>';
+  }
+
+  function engancharCuatri(repintar){
+    UI.$$('[data-cuatri]').forEach(b => b.onclick = () => {
+      const n = +b.dataset.cuatri;
+      if (n === 0){ Almacen.datos().perfil.cuatrimestre = null; Almacen.guardar(); }
+      else Almacen.fijarCuatrimestre(n);
+      repintar();
+    });
   }
 
   function atajo(em, titulo, texto, destino, cls){

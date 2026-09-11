@@ -49,7 +49,7 @@ window.Almacen = (function () {
   /* ---------- estado inicial de un estudiante ---------- */
   function datosNuevos(nombre) {
     return {
-      perfil: { nombre: nombre, creado: Date.now() },
+      perfil: { nombre: nombre, creado: Date.now(), cuatrimestre: null },
       respuestas: [],           // historial completo
       srs: {},                  // repeticion espaciada por pregunta
       marcadas: [],             // preguntas marcadas para revisar
@@ -256,6 +256,25 @@ window.Almacen = (function () {
     return v;
   }
 
+  /* En que cuatrimestre va el estudiante de UNIRMIA. Decide que preguntas
+     le tocan: el pensum de UCATECI mete asignaturas distintas en el 7, el 8
+     y el 9, y mezclarlas seria hacerle estudiar lo que todavia no ha visto
+     o lo que ya dejo atras. En ENURMIA no se usa. */
+  function cuatrimestre() {
+    const d = datos();
+    const n = d && d.perfil ? +d.perfil.cuatrimestre : 0;
+    return (n === 7 || n === 8 || n === 9) ? n : null;
+  }
+
+  function fijarCuatrimestre(n) {
+    const v = +n;
+    if (v !== 7 && v !== 8 && v !== 9) return null;
+    const d = datos(); if (!d) return null;
+    d.perfil.cuatrimestre = v;
+    guardar();
+    return v;
+  }
+
   /* ---------- marcas del modo desafio ----------
      Se guarda la mejor marca en local SIEMPRE (para que funcione sin
      internet y para poder ensenarla al instante) y ademas se manda al
@@ -318,7 +337,7 @@ window.Almacen = (function () {
     usuarios, registrar, entrar, salir, sesion, cambiarClave,
     datos, guardar, reiniciarProgreso, exportar, importar,
     tocarRacha, hoyISO,
-    programa, fijarPrograma, registrarDesafio,
+    programa, fijarPrograma, cuatrimestre, fijarCuatrimestre, registrarDesafio,
     // puente con la nube
     abrirSesionNube, adoptar, peso, mejorLocal, sincronizarYa, sync, alSincronizar
   };

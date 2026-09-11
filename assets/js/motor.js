@@ -37,6 +37,30 @@ window.Motor = (function () {
     'Psiquiatría':0.03, 'Bioética':0.02, 'Medicina Familiar':0.01
   };
 
+  /* La distribucion de un simulacro depende del programa.
+
+     ENURMIA reparte por especialidad, calibrado al peso real del ENURM.
+     UNIRMIA no puede hacer eso: un estudiante de cuatrimestre 7 no tiene
+     nada que hacer con preguntas de farmacologia, que es del 9. Asi que
+     reparte por ASIGNATURA dentro de SU cuatrimestre, y con el peso en
+     creditos que le da el pensum: Anatomia I son 6 creditos de 28, o sea
+     que le tocan 6 de cada 28 preguntas. */
+  function distribucion(){
+    if (programaActivo() !== 'unirm') return DISTRIBUCION;
+    const c = (window.UNIRM_CUATRIMESTRES || {})[cuatrimestreActivo()];
+    if (!c) return DISTRIBUCION;
+    const total = c.asignaturas.reduce((a, x) => a + x.cr, 0) || 1;
+    const m = {};
+    c.asignaturas.forEach(x => { m[x.nombre] = x.cr / total; });
+    return m;
+  }
+
+  function cuatrimestreActivo(){
+    const d = datos();
+    const n = d && d.perfil ? +d.perfil.cuatrimestre : 0;
+    return (n === 7 || n === 8 || n === 9) ? n : 7;
+  }
+
   /* ---------- acceso al banco ----------
      Hay dos programas viviendo en el mismo armazon: ENURMIA (residencia)
      y UNIRMIA (universidad). Las preguntas de UNIRMIA llevan
@@ -244,8 +268,9 @@ window.Motor = (function () {
 
     if (op.distribuida){
       const salida = [];
-      Object.keys(DISTRIBUCION).forEach(esp => {
-        const cupo = Math.round(n * DISTRIBUCION[esp]);
+      const reparto = distribucion();
+      Object.keys(reparto).forEach(esp => {
+        const cupo = Math.round(n * reparto[esp]);
         const grupo = lista.filter(q => q.esp === esp);
         salida.push.apply(salida, barajarPonderado(grupo, cupo));
       });
@@ -535,7 +560,7 @@ window.Motor = (function () {
     resumen, serieDiaria, erroresPorTipo, patronDeError, fragilidad,
     nivel, medallas, revisarMedallas, preparacion, proximaAccion, generarPlan,
     guardarSimulacro, alternarMarcada, estaMarcada, analizarDefensa,
-    TIPOS_ERROR, NIVELES, DISTRIBUCION, programaActivo
+    TIPOS_ERROR, NIVELES, DISTRIBUCION, programaActivo, distribucion, cuatrimestreActivo
   };
 })();
 
