@@ -561,8 +561,57 @@ window.Ruta = (function () {
     return nuevos.length;
   }
 
+  /* ---------- el hilo: el tema que Arturo acompana ---------- */
+  function hilo(){
+    const r = activa();
+    return (r && r.hilo) ? r.hilo : null;
+  }
+  function abrirHilo(tema){
+    const r = activa();
+    if (!r) return;
+    r.hilo = { tema: tema, abierto: Date.now() };
+    guardar();
+  }
+  function cerrarHilo(){
+    const r = activa();
+    if (!r) return;
+    r.hilo = null;
+    guardar();
+  }
+
+  /* ---------- que toca ahora ---------- */
+  function pasoDeTema(f){
+    if (!f.leer.hecho)
+      return { tipo:'leer', tema:f.tema, clave:f.leer.clave };
+    if (!f.preg.hecho)
+      return { tipo:'preg', tema:f.tema, meta:f.preg.meta, hechas:f.preg.hechas, pct:f.preg.pct };
+    return { tipo:'tarj', tema:f.tema, meta:f.tarj.meta, hechas:f.tarj.hechas };
+  }
+
+  function proximoPaso(){
+    const r = activa();
+    if (!r) return { tipo:'sinruta' };
+    if (r.terminada) return { tipo:'fin' };
+    const ta = tandaActual();
+    if (!ta || !ta.temas.length) return { tipo:'fin' };
+
+    /* Un tema empezado no se suelta a medias por empezar otro: si hay
+       hilo abierto y ese tema sigue sin cerrar, se sigue por ahi. */
+    if (r.hilo && r.hilo.tema){
+      for (let i = 0; i < ta.temas.length; i++){
+        if (ta.temas[i].tema === r.hilo.tema && !ta.temas[i].completo)
+          return pasoDeTema(ta.temas[i]);
+      }
+    }
+    for (let j = 0; j < ta.temas.length; j++){
+      if (!ta.temas[j].completo) return pasoDeTema(ta.temas[j]);
+    }
+    return { tipo:'simulacro', tanda:r.tanda, n:ta.temas.length };
+  }
+
   return {
     activa: activa, crear: crear, borrar: borrar,
+    proximoPaso: proximoPaso, hilo: hilo, abrirHilo: abrirHilo, cerrarHilo: cerrarHilo,
     pasosDe: pasosDe, tandaActual: tandaActual, avance: avance,
     simulacroDeTanda: simulacroDeTanda, minutosDeTanda: minutosDeTanda,
     tamanoSimulacro: tamanoSimulacro, _reparto: reparto,

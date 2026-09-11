@@ -537,4 +537,128 @@ igual(Ruta.activa().historial.length, antesHistorial, 'absorber conserva el hist
 igual(Ruta.activa().tandasN.reduce(function (a, c) { return a + c; }, 0), 101,
       'las tandas vuelven a sumar 101');
 
+/* ============================================================
+   10. El proximo paso y el hilo
+   ============================================================ */
+titulo('Proximo paso');
+
+reiniciar();
+igual(Ruta.proximoPaso().tipo, 'sinruta', 'sin ruta el paso es sinruta');
+
+Ruta.crear(5);
+const tA = Ruta.activa().orden[0];
+let pp = Ruta.proximoPaso();
+igual(pp.tipo, 'leer', 'lo primero de un tema es leer');
+igual(pp.tema, tA, 'el primer tema de la tanda es el primero del orden');
+ok(!!pp.clave, 'el paso de leer trae la clave del apunte');
+
+D.apuntes[Ruta.claveApunte(tA)] = Date.now();
+Ruta.invalidar();
+pp = Ruta.proximoPaso();
+igual(pp.tipo, 'preg', 'despues de leer tocan las preguntas');
+igual(pp.tema, tA, 'las preguntas son del mismo tema, no de otro');
+
+Ruta.preguntasDe(tA).slice(0, 10).forEach(function (q) {
+  D.srs[q.id] = { vistas:1, aciertos:1, fallos:0, prox:0 };
+});
+Ruta.invalidar();
+pp = Ruta.proximoPaso();
+igual(pp.tipo, 'tarj', 'despues de las preguntas tocan las tarjetas');
+igual(pp.tema, tA, 'las tarjetas son del mismo tema');
+
+Ruta.tarjetasDe(tA).slice(0, 12).forEach(function (c) {
+  D.srsTarjetas[c.id] = { vistas:1, nivel:1, prox:0 };
+});
+Ruta.invalidar();
+pp = Ruta.proximoPaso();
+igual(pp.tipo, 'leer', 'cerrado un tema se pasa al siguiente');
+ok(pp.tema !== tA, 'el siguiente paso ya no es del tema cerrado');
+
+Ruta.tandaActual().temas.forEach(function (f) { estudiarTema(f.tema); });
+Ruta.invalidar();
+igual(Ruta.proximoPaso().tipo, 'simulacro', 'con la tanda completa toca el simulacro');
+
+/* El hilo manda: un tema empezado no se suelta por otro. */
+reiniciar();
+Ruta.crear(5);
+const tercero = Ruta.tandaActual().temas[2].tema;
+D.apuntes[Ruta.claveApunte(tercero)] = Date.now();
+Ruta.abrirHilo(tercero);
+Ruta.invalidar();
+igual(Ruta.proximoPaso().tema, tercero, 'con el hilo abierto se sigue con ese tema');
+igual(Ruta.proximoPaso().tipo, 'preg', 'y por el paso que le toca');
+igual(Ruta.hilo().tema, tercero, 'hilo() dice que tema esta abierto');
+Ruta.cerrarHilo();
+igual(Ruta.hilo(), null, 'cerrarHilo lo deja en null');
+
+/* ============================================================
+   11. La voz de Arturo
+   ============================================================ */
+titulo('Arturo');
+
+cargar('assets/js/arturo.js');
+
+igual(Arturo.NOMBRE, 'Arturo', 'el profesor se llama Arturo');
+
+/* Todos los estados posibles dan una frase y un titulo. */
+const estados = [];
+
+reiniciar();
+estados.push({ n:'sin ruta', p:Arturo.paso() });
+
+Ruta.crear(5);
+estados.push({ n:'leer', p:Arturo.paso() });
+
+const tB = Ruta.activa().orden[0];
+D.apuntes[Ruta.claveApunte(tB)] = Date.now();
+Ruta.invalidar();
+estados.push({ n:'preguntas', p:Arturo.paso() });
+
+Ruta.preguntasDe(tB).slice(0, 10).forEach(function (q) {
+  D.srs[q.id] = { vistas:1, aciertos:1, fallos:0, prox:0 };
+});
+Ruta.invalidar();
+estados.push({ n:'tarjetas', p:Arturo.paso() });
+
+Ruta.tandaActual().temas.forEach(function (f) { estudiarTema(f.tema); });
+Ruta.invalidar();
+estados.push({ n:'simulacro', p:Arturo.paso() });
+
+Ruta.activa().terminada = Date.now();
+estados.push({ n:'fin', p:Arturo.paso() });
+
+estados.forEach(function (e) {
+  ok(!!e.p, 'hay paso en el estado "' + e.n + '"');
+  ok(!!e.p.frase && e.p.frase.length > 10, 'hay frase en el estado "' + e.n + '"');
+  ok(!!e.p.titulo, 'hay titulo en el estado "' + e.n + '"');
+  ok(!!e.p.boton, 'hay boton en el estado "' + e.n + '"');
+  ok(e.p.frase.indexOf('{') < 0, 'la frase de "' + e.n + '" no deja huecos sin rellenar');
+});
+
+/* Cada situacion tiene al menos tres frases, y no repite la misma dos
+   veces seguidas. */
+const SITUACIONES = ['sinruta', 'leer', 'preg', 'tarj', 'simulacro', 'fin',
+                     'cierraLectura', 'resultadoAlto', 'resultadoBajo',
+                     'cierraTema', 'resultadoTanda', 'retomar'];
+SITUACIONES.forEach(function (s) {
+  const vistas = {};
+  for (let i = 0; i < 40; i++) vistas[Arturo.frase(s, { tema:'Gota', tanda:3, tandas:20, repaso:1 })] = 1;
+  const distintas = Object.keys(vistas).length;
+  ok(distintas >= 3, 'la situacion "' + s + '" tiene al menos 3 frases (salieron ' + distintas + ')');
+  let seguidas = 0, previa = null;
+  for (let i = 0; i < 40; i++){
+    const f = Arturo.frase(s, { tema:'Gota', tanda:3, tandas:20, repaso:1 });
+    if (f === previa) seguidas++;
+    previa = f;
+  }
+  igual(seguidas, 0, 'la situacion "' + s + '" no repite frase dos veces seguidas');
+});
+
+/* barra() devuelve HTML sin depender del DOM. */
+reiniciar();
+Ruta.crear(5);
+const html = Arturo.barra();
+ok(html.indexOf('arturo') >= 0, 'barra() devuelve la tira de Arturo');
+ok(html.indexOf('arturoSeguir') >= 0, 'barra() trae el boton de seguir');
+
 fin();
