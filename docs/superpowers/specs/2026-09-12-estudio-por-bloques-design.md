@@ -166,8 +166,9 @@ abre un modal centrado nada más entrar:
 > Elige los bloques que quieres preparar y en qué orden. Irás cerrándolos de uno
 > en uno: no pasas al siguiente hasta terminar el anterior.
 
-Dentro, el mismo selector que la pantalla de Arturo, más el tamaño de tanda.
-Abajo, **"Lo haré después"**, que marca `bienvenidaVista` y no vuelve a salir.
+Dentro, el mismo selector que la pantalla de Arturo —con los temas y las tandas
+de cada bloque a la vista— más el tamaño de tanda. Abajo, **"Lo haré después"**,
+que marca `bienvenidaVista` y no vuelve a salir.
 
 Es lo primero que ve un estudiante nuevo, que es lo que se pidió.
 
@@ -176,6 +177,23 @@ Es lo primero que ve un estudiante nuevo, que es lo que se pidió.
 Cada bloque es una fila con casilla. Al marcarlo se añade **al final** de la
 lista elegida y muestra su número. Las filas elegidas llevan **↑ ↓** para
 moverlas.
+
+**Cada fila dice cuántos temas tiene el bloque y en cuántas tandas se recorre**,
+con el tamaño de tanda elegido en ese momento:
+
+```
+  1 ↑↓   🫀 Medicina Interna        41 temas · 9 tandas
+  2 ↑↓   👶 Pediatría               20 temas · 4 tandas
+  ☐      🤰 Ginecología y Obstetricia   21 temas · 5 tandas
+  ☐      🔪 Cirugía                 19 temas · 4 tandas
+```
+
+Esto no es decoración: los bloques son **muy desiguales**. Medicina Interna son
+41 temas y Cirugía 19, así que poner Medicina Interna primero significa semanas
+antes de llegar a la primera puerta, y ponerla última significa cerrar tres
+bloques pronto. El estudiante solo puede decidir eso si ve los números **antes**
+de ordenar, no después. El total de temas y de tandas del recorrido completo
+aparece debajo y se recalcula al marcar, desmarcar o reordenar.
 
 Nada de arrastrar y soltar: sin librerías, funciona en móvil y con teclado, y no
 hay estado intermedio que se pueda quedar a medias.
@@ -251,3 +269,6 @@ Apagarlo quita las puertas de inmediato; el recorrido sigue marcando el avance.
 7. Con la norma apagada, `preguntasDisponibles()` devuelve el banco activo entero.
 8. `examenDeBloque` devuelve `min(40, explicadas del bloque)` sin repetir ids y
    todas del bloque.
+9. El selector calcula bien los temas y las tandas de cada bloque: 41 y 9 para
+   Medicina Interna con tandas de 5, 19 y 4 para Cirugía, y el total cuadra con
+   la suma de los elegidos.
