@@ -65,12 +65,38 @@ window.Ruta = (function () {
 
   /* ---------- emparejar temas con el banco ---------- */
   /* Cada tema del temario lleva `claves`: las palabras con las que se
-     engancha con las preguntas. Se normaliza a minusculas y sin tildes y
-     se busca en todo el texto util de la pregunta. Es el mismo criterio
-     que usa la vista del Temario, pero vive aqui porque esa vista
-     necesita UI y el DOM y este archivo tiene que correr en Node. */
+     engancha con las preguntas. Donde aparece la clave importa tanto
+     como que aparezca:
+
+       NIVEL 1  tema / sub / tags   -> la pregunta TRATA de eso
+       NIVEL 2  clave / enunciado   -> tiene que ver, sirve de relleno
+       NUNCA    caso / explicacion  -> mencion de pasada
+
+     El caso clinico es narrativa: toda vinneta reporta la presion
+     arterial en las constantes vitales, asi que buscar ahi hacia que la
+     clave "presion arterial" casara con medio banco y estudiando
+     Hipertension arterial salieran preguntas de neumonia, preeclampsia o
+     sindrome neuroleptico maligno. Medido: 128 de 162 eran ruido.
+
+     Se devuelve nivel 1 primero y nivel 2 detras, de modo que quien
+     corte por las diez primeras se lleva lo bueno y los temas con poco
+     material propio no se quedan sin nada. */
   function norm(s){
     return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  }
+
+  /* La clave tiene que empezar en frontera de palabra. Puede continuar
+     (hipertensi engancha hipertension e hipertensiva, que es lo que se
+     quiere) pero no arrancar a mitad: si no, `parto` casa dentro de
+     posparto y `gota` dentro de gotas. */
+  function casa(txt, k){
+    let i = txt.indexOf(k);
+    while (i >= 0){
+      const antes = i === 0 ? ' ' : txt.charAt(i - 1);
+      if (!/[a-z0-9]/.test(antes)) return true;
+      i = txt.indexOf(k, i + 1);
+    }
+    return false;
   }
 
   let cIndice = null, cIndiceLargo = -1;
@@ -81,8 +107,8 @@ window.Ruta = (function () {
     cIndice = banco.map(function (q) {
       return {
         q: q,
-        txt: norm([q.enunciado, q.caso, q.tema, q.sub, q.clave, q.exp,
-                   (q.tags || []).join(' ')].join(' '))
+        deQue: norm([q.tema, q.sub, (q.tags || []).join(' ')].join(' ')),
+        roza: norm([q.clave, q.enunciado].join(' '))
       };
     });
     return cIndice;
@@ -93,9 +119,12 @@ window.Ruta = (function () {
     if (!t) return [];
     const ks = t.claves.map(norm).filter(Boolean);
     if (!ks.length) return [];
-    return indice().filter(function (x) {
-      return ks.some(function (k) { return x.txt.indexOf(k) >= 0; });
-    }).map(function (x) { return x.q; });
+    const n1 = [], n2 = [];
+    indice().forEach(function (x) {
+      if (ks.some(function (k) { return casa(x.deQue, k); })) n1.push(x.q);
+      else if (ks.some(function (k) { return casa(x.roza, k); })) n2.push(x.q);
+    });
+    return n1.concat(n2);
   }
 
   function tarjetasDe(nombre){
@@ -379,7 +408,12 @@ window.Ruta = (function () {
     orden.forEach(function (f, i) {
       const cupo = porTema + (i < sobran ? 1 : 0);
       const qs = preguntasDe(f.tema);
-      const conExp = barajar(qs.filter(function (q) { return !!q.exp; }));
+      const exp = qs.filter(function (q) { return !!q.exp; });
+      /* Se baraja solo dentro de las primeras. preguntasDe devuelve las
+         que tratan del tema delante y el relleno detras: barajar la
+         lista entera volveria a mezclar lo uno con lo otro. */
+      const ventana = Math.max(cupo * 3, 12);
+      const conExp = barajar(exp.slice(0, ventana)).concat(exp.slice(ventana));
       const sinExp = barajar(qs.filter(function (q) { return !q.exp; }));
       puestasTanda += tomar(conExp.concat(sinExp), cupo, f.tema);
     });
@@ -398,7 +432,7 @@ window.Ruta = (function () {
     const cola = flojos.concat(resto);
     for (let i = 0; i < cola.length && puestasRepaso < nRepaso; i++){
       const qs = preguntasDe(cola[i]).filter(function (q) { return !!q.exp; });
-      puestasRepaso += tomar(barajar(qs).slice(0, 6),
+      puestasRepaso += tomar(barajar(qs.slice(0, 12)).slice(0, 6),
                              nRepaso - puestasRepaso, cola[i]);
     }
 

@@ -188,20 +188,83 @@ ok(Ruta.preguntasDe('Hipertensión arterial').length > 0,
    'el emparejamiento usa el nombre exacto del temario');
 
 let sinApunte = 0, pocasPreg = 0, pocasTarj = 0;
-const flacos = [];
+const flacos = [], finos = [];
 Ruta.temas().forEach(function (t) {
   const k = Ruta.claveApunte(t.t);
   const qs = Ruta.preguntasDe(t.t);
   const exp = qs.filter(function (q) { return !!q.exp; });
   const cs = Ruta.tarjetasDe(t.t);
   if (!k) { sinApunte++; flacos.push('sin apunte: ' + t.t); }
-  if (exp.length < 5) { pocasPreg++; flacos.push('menos de 5 explicadas: ' + t.t + ' (' + exp.length + ')'); }
-  if (cs.length < 10) { pocasTarj++; flacos.push('menos de 10 tarjetas: ' + t.t + ' (' + cs.length + ')'); }
+  if (exp.length < 3) { pocasPreg++; flacos.push('menos de 3 explicadas: ' + t.t + ' (' + exp.length + ')'); }
+  if (cs.length < 6) { pocasTarj++; flacos.push('menos de 6 tarjetas: ' + t.t + ' (' + cs.length + ')'); }
+  if (exp.length < 8) finos.push(t.t + ' (' + exp.length + ')');
 });
 igual(sinApunte, 0, 'los 101 temas tienen apunte');
-igual(pocasPreg, 0, 'los 101 temas tienen al menos 5 preguntas explicadas');
-igual(pocasTarj, 0, 'los 101 temas tienen al menos 10 flashcards');
+igual(pocasPreg, 0, 'los 101 temas tienen al menos 3 preguntas explicadas');
+igual(pocasTarj, 0, 'los 101 temas tienen al menos 6 flashcards');
 if (flacos.length) flacos.forEach(function (f) { console.log('    . ' + f); });
+
+/* Los umbrales son 3 y 6 y no mas porque son las cifras REALES una vez
+   que el emparejamiento dejo de contar menciones de pasada. Las metas de
+   cada paso se adaptan (min(10, disponibles)), asi que un tema fino
+   funciona igual: pide lo que tiene. Esta lista es la cola de trabajo
+   para escribir preguntas nuevas. */
+console.log('\n    temas con menos de 8 preguntas propias explicadas: ' + finos.length);
+finos.forEach(function (f) { console.log('      - ' + f); });
+
+/* ---------- precision: las preguntas tienen que SER del tema ----------
+   El fallo que se arregla aqui: las claves se buscaban dentro del caso
+   clinico y de la explicacion. Toda vinneta reporta la presion arterial
+   en las constantes, asi que "presion arterial" casaba con medio banco y
+   estudiando Hipertension arterial salian preguntas de neumonia. */
+titulo('Precision del emparejamiento');
+
+const hta = Ruta.preguntasDe('Hipertensión arterial');
+const idsHta = hta.map(function (q) { return q.id; });
+
+/* MI-011 es de neumonia (escala CURB-65): solo menciona la presion
+   arterial en el caso. No puede salir estudiando hipertension. */
+ok(idsHta.indexOf('MI-011') < 0, 'una pregunta de neumonia no sale en hipertension arterial');
+/* MF-003 esta clasificada como sub "Hipertension arterial": tiene que salir. */
+ok(idsHta.indexOf('MF-003') >= 0, 'una pregunta clasificada en el tema si sale');
+
+/* Lo que ve el estudiante son las diez primeras. Todas tienen que ser
+   del tema por clasificacion, no por una mencion de pasada. */
+function normV(s){ return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+function esDelTema(q, claves){
+  const campo = normV([q.tema, q.sub, (q.tags || []).join(' ')].join(' '));
+  return claves.some(function (k) {
+    let i = campo.indexOf(k);
+    while (i >= 0){
+      const a = i === 0 ? ' ' : campo.charAt(i - 1);
+      if (!/[a-z0-9]/.test(a)) return true;
+      i = campo.indexOf(k, i + 1);
+    }
+    return false;
+  });
+}
+const clavesHta = Ruta.temaPorNombre('Hipertensión arterial').claves.map(normV);
+const diez = hta.filter(function (q) { return !!q.exp; }).slice(0, 10);
+const ajenas = diez.filter(function (q) { return !esDelTema(q, clavesHta); });
+igual(ajenas.length, 0, 'las diez primeras de hipertension son del tema' +
+  (ajenas.length ? ' (se colaron: ' + ajenas.map(function (q) { return q.id + '/' + (q.sub || q.tema); }).join(', ') + ')' : ''));
+
+/* Limite de palabra: "parto" no puede casar dentro de "posparto". */
+const clavesParto = Ruta.temaPorNombre('Parto').claves.map(normV);
+const primerosParto = Ruta.preguntasDe('Parto').filter(function (q) { return !!q.exp; }).slice(0, 2);
+ok(primerosParto.every(function (q) { return esDelTema(q, clavesParto); }),
+   'las primeras de Parto son del tema, no de posparto');
+
+/* Y que el apretar la regla no deje ningun tema sin material. */
+let vacios = 0, ralos = [];
+Ruta.temas().forEach(function (t) {
+  const n = Ruta.preguntasDe(t.t).filter(function (q) { return !!q.exp; }).length;
+  if (n === 0) vacios++;
+  if (n < 3) ralos.push(t.t + ' (' + n + ')');
+});
+igual(vacios, 0, 'ningun tema se queda sin preguntas explicadas');
+igual(ralos.length, 0, 'ningun tema baja de 3 explicadas' +
+  (ralos.length ? ' (' + ralos.join(', ') + ')' : ''));
 
 /* Las tarjetas de un tema tienen que venir de sus preguntas: es lo que
    hoy NO hace el boton "Flashcards del tema" del Temario. */
