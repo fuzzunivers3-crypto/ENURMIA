@@ -139,6 +139,18 @@ window.Apuntes = (function () {
   /* ============================================================
      LECTURA DE UN TEMA
      ============================================================ */
+  /* Arturo remata la lectura solo si este es el tema que esta
+     acompanando: leer un apunte suelto desde el indice no tiene por que
+     arrastrarte al recorrido. */
+  function rematePie(ap){
+    if (!window.Ruta || !Ruta.activa() || !window.Arturo) return '';
+    const h = Ruta.hilo();
+    if (!h || h.tema !== ap.tema) return '';
+    return '<div style="margin-top:16px">' +
+      Arturo.barra({ frase: Arturo.frase('cierraLectura', { tema: ap.tema }) }) +
+      '</div>';
+  }
+
   function abrir(k){
     const ap = todos()[k];
     if (!ap) return UI.tostada('Ese tema todavía no está escrito', 'mal');
@@ -189,6 +201,7 @@ window.Apuntes = (function () {
               (ap.sigue ? '<button class="btn btn--sm btn--fantasma" data-ap="' + esc(ap.sigue) + '">Siguiente tema →</button>' : '') +
             '</div>' +
             (qs.length ? '' : '<p class="muted" style="margin-top:10px;font-size:12.5px">Este tema todavía no tiene preguntas enlazadas.</p>') +
+            rematePie(ap) +
           '</div>' +
         '</div>' +
       '</div>' +
@@ -213,6 +226,7 @@ window.Apuntes = (function () {
       if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
     });
     seguirLectura();
+    if (window.Arturo) Arturo.enganchar();
     window.scrollTo(0, 0);
   }
 

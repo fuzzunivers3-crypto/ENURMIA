@@ -9,21 +9,10 @@ window.Temario = (function () {
   function V(){ return document.getElementById('vista'); }
   let abierto = null;
 
-  /* ---------- emparejar temas con el banco ---------- */
-  function norm(s){
-    return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-  }
-
-  let cache = null;
-  function indice(){
-    if (cache) return cache;
-    cache = Motor.bancoActivo().map(q => ({
-      q,
-      txt: norm([q.enunciado, q.caso, q.tema, q.sub, q.clave, q.exp, (q.tags || []).join(' ')].join(' '))
-    }));
-    return cache;
-  }
-  function invalidar(){ cache = null; }
+  /* El emparejamiento tema-banco vive en assets/js/ruta.js: es el mismo
+     criterio y no tiene sentido tenerlo dos veces. Alli ademas se puede
+     validar en Node, que esta vista no (necesita UI y el DOM). */
+  function invalidar(){ Ruta.invalidar(); }
 
   /* Solo los bloques del programa en curso. Los de UNIRMIA van marcados con
      `programa:'unirm'`; los del ENURM no llevan marca. Se filtra aqui y no
@@ -39,13 +28,8 @@ window.Temario = (function () {
       prog === 'unirm' ? b.programa === 'unirm' : b.programa !== 'unirm');
   }
 
-  function preguntasDe(tema){
-    const ks = tema.claves.map(norm).filter(Boolean);
-    return indice().filter(x => ks.some(k => x.txt.indexOf(k) >= 0)).map(x => x.q);
-  }
-
   function estadoTema(tema){
-    const qs = preguntasDe(tema);
+    const qs = Ruta.preguntasDe(tema.t);
     const conExp = qs.filter(q => !!q.exp).length;
     const d = Almacen.datos();
     let vistas = 0, ok = 0;
@@ -159,7 +143,7 @@ window.Temario = (function () {
       e.stopPropagation();
       const bl = bloques()[+b.dataset.bloqueTodo];
       const ids = {};
-      bl.temas.forEach(t => preguntasDe(t).forEach(q => ids[q.id] = q));
+      bl.temas.forEach(t => Ruta.preguntasDe(t.t).forEach(q => ids[q.id] = q));
       lanzar(Object.values(ids), bl.bloque);
     });
     UI.$$('[data-transv]').forEach(b => b.onclick = () => App.ir('entrenar', { esp: b.dataset.transv }));
@@ -215,10 +199,10 @@ window.Temario = (function () {
     };
     document.getElementById('tTarjetas').onclick = () => {
       document.querySelector('.velo').remove();
-      const ids = e.preguntas.map(q => q.id);
-      const cartas = Tarjetas.mazo().filter(t => t.origen && ids.indexOf(t.origen) >= 0);
+      const cartas = Ruta.tarjetasDe(tema.t);
       if (!cartas.length) return UI.tostada('Este tema aún no tiene flashcards: nacen de las preguntas explicadas', 'mal');
-      Flashcards.iniciar({ n: Math.min(30, cartas.length), titulo: tema.t, soloDerivadas: true });
+      Flashcards.iniciar({ n: Math.min(30, cartas.length), titulo: tema.t,
+                           ids: cartas.map(c => c.id) });
     };
     UI.$$('[data-ver]').forEach(el => el.onclick = () => Sesion.revisarPregunta(el.dataset.ver));
   }

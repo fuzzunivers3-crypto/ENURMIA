@@ -476,6 +476,15 @@ window.Motor = (function () {
 
   /* ---------- proxima mejor accion ---------- */
   function proximaAccion(){
+    /* Con un recorrido en marcha manda Arturo: la app deja de ofrecer
+       opciones y pasa a dirigir. Las heuristicas de abajo siguen ahi
+       para quien no haya creado recorrido. */
+    if (window.Ruta && Ruta.activa() && window.Arturo){
+      const pa = Arturo.paso();
+      if (pa.tipo !== 'sinruta'){
+        return { titulo: pa.titulo, texto: pa.frase, accion: 'ruta', param: {}, boton: pa.boton };
+      }
+    }
     const r = resumen();
     if (r.respondidas === 0){
       return { titulo:'Empieza por un diagnóstico rápido', texto:'Haz 10 preguntas mezcladas para que la plataforma sepa dónde estás parado.', accion:'entrenar', param:{ n:10 }, boton:'Empezar ahora' };

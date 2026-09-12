@@ -49,6 +49,7 @@ window.Vistas = (function () {
     V().innerHTML =
     '<div class="escalona">' +
       avisoVacio +
+      (window.Ruta && Ruta.activa() ? Arturo.barra() + '<div style="height:18px"></div>' : '') +
       '<div class="encabezado">' +
         '<p class="eyebrow">' + esc(UI.saludo()) + '</p>' +
         '<h1>' + esc(d.perfil.nombre) + ', esto es lo que toca hoy</h1>' +
@@ -151,6 +152,7 @@ window.Vistas = (function () {
     UI.$$('[data-esp]').forEach(el => el.onclick = () => App.ir('entrenar', { esp: el.dataset.esp }));
     UI.$$('[data-atajo]').forEach(el => el.onclick = () => App.ir(el.dataset.atajo));
     engancharCuatri(inicio);
+    if (window.Ruta && Ruta.activa() && window.Arturo) Arturo.enganchar();
 
     setTimeout(() => UI.$$('.barra i').forEach(b => b.style.width = b.style.width), 30);
   }
@@ -645,7 +647,6 @@ window.Vistas = (function () {
   function preparacion(){
     const p = Motor.preparacion();
     const d = Almacen.datos();
-    const plan = d.plan;
 
     const fuerzas = p.fuerzas.length
       ? p.fuerzas.map(a => '<div class="row" style="gap:9px;padding:7px 0"><span>🟢</span><b class="grow">' + esc(a.nombre) + '</b><span class="mono">' + a.dominio + '%</span></div>').join('')
@@ -656,14 +657,6 @@ window.Vistas = (function () {
           '<span>' + (a.dominio < 50 ? '🔴' : '🟠') + '</span><b class="grow">' + esc(a.nombre) + '</b>' +
           '<span class="mono">' + a.dominio + '%</span></div>').join('')
       : '<p class="muted">Ninguna área por debajo del 65%. Buen equilibrio.</p>';
-
-    const planHtml = plan ? plan.dias.map(dd =>
-      '<div class="item-lista" data-plan="' + dd.dia + '">' +
-        '<span class="item-lista__n">Día ' + dd.dia + '</span>' +
-        '<span class="grow"><b style="display:block;font-size:14px">' + esc(dd.titulo) + '</b>' +
-        '<small class="muted">' + esc(dd.detalle) + '</small></span>' +
-        '<span class="chip ' + (dd.hecho ? 'chip--verde' : '') + '">' + (dd.hecho ? '✓ Hecho' : 'Empezar') + '</span></div>').join('')
-      : '<p class="muted">Genera tu plan y la plataforma reparte los siete días según tus áreas más débiles.</p>';
 
     V().innerHTML =
     '<div class="escalona" style="max-width:1000px">' +
@@ -686,27 +679,15 @@ window.Vistas = (function () {
         '</div>' +
       '</div>' +
 
-      '<div class="card">' +
-        '<div class="row-b" style="margin-bottom:14px"><span class="eyebrow">Plan de estudio de 7 días</span>' +
-        '<button class="btn btn--sm" id="btnPlan">' + (plan ? 'Regenerar plan' : 'Generar plan') + '</button></div>' +
-        '<div style="display:flex;flex-direction:column;gap:9px">' + planHtml + '</div>' +
+      '<div class="card"><span class="eyebrow">Quién te guía</span>' +
+        '<h3 style="font-size:22px;margin:8px 0 10px">Arturo lleva tu recorrido</h3>' +
+        '<p class="muted" style="font-size:13.5px">El índice de arriba te dice dónde estás. El recorrido de Arturo te dice qué hacer con eso: qué tema toca hoy, en qué orden y cuándo medirte.</p>' +
+        '<button class="btn btn--sm" style="margin-top:14px" id="prepRuta">Ir con Arturo</button>' +
       '</div>' +
     '</div>';
 
-    document.getElementById('btnPlan').onclick = () => {
-      Motor.generarPlan();
-      UI.tostada('Plan generado según tus áreas más débiles', 'ok');
-      preparacion();
-    };
+    document.getElementById('prepRuta').onclick = () => App.ir('ruta');
     UI.$$('[data-deb]').forEach(el => el.onclick = () => App.ir('entrenar', { esp: el.dataset.deb }));
-    UI.$$('[data-plan]').forEach(el => el.onclick = () => {
-      const dd = plan.dias[+el.dataset.plan - 1];
-      dd.hecho = true; Almacen.guardar();
-      if (dd.tipo === 'simulacro') return App.ir('simulacro');
-      if (dd.tipo === 'clinica') return App.ir('clinica');
-      if (dd.tipo === 'errores') return lanzarEntrenamiento({ soloFalladas:true, n:20 });
-      lanzarEntrenamiento({ esp: dd.esp, n:20 });
-    });
   }
 
   /* ============================================================

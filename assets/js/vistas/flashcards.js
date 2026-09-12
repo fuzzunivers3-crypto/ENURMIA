@@ -231,6 +231,14 @@ window.Flashcards = (function () {
         '<span class="mono">' + r.pct + '%</span></div>' + UI.barra(r.pct) +
         '<p class="muted" style="margin-top:10px;font-size:13px">Vencidas para mañana: ' + r.vencidas + '</p></div>' +
 
+      (window.Ruta && Ruta.activa() && window.Arturo && Ruta.hilo() && Ruta.hilo().tema === S.titulo
+        ? '<div style="margin-bottom:18px">' +
+          Arturo.barra({ frase: Arturo.frase(
+            Ruta.pasosDe(S.titulo).completo ? 'cierraTema' : 'tarj',
+            { tema: S.titulo, tanda: Ruta.activa().tanda }) }) +
+          '</div>'
+        : '') +
+
       '<div class="row wrap" style="gap:9px">' +
         '<button class="btn" id="btnMas">Otra tanda</button>' +
         '<button class="btn btn--fantasma" id="btnMenuT">Volver a flashcards</button>' +
@@ -243,6 +251,7 @@ window.Flashcards = (function () {
     document.getElementById('btnMas').onclick = () => iniciar({ n:20, titulo });
     document.getElementById('btnMenuT').onclick = () => App.ir('flashcards');
     document.getElementById('btnCasaT').onclick = () => App.ir('inicio');
+    if (window.Arturo) Arturo.enganchar();
   }
 
   /* ---------- atajos de teclado ---------- */

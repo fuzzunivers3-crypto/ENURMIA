@@ -459,6 +459,21 @@ window.Sesion = (function () {
   /* ============================================================
      RESULTADOS
      ============================================================ */
+  /* El remate de Arturo despues de una tanda de preguntas de un tema del
+     recorrido. No aparece en el simulacro (ahi cierra la tanda entera)
+     ni fuera del recorrido. */
+  function remateArturo(pct){
+    if (!window.Ruta || !Ruta.activa() || !window.Arturo) return '';
+    if (S.modo !== 'aprender') return '';
+    const h = Ruta.hilo();
+    if (!h || h.tema !== S.titulo) return '';
+    const p = Ruta.pasosDe(h.tema);
+    const clave = p.preg.hecho ? 'resultadoAlto' : 'resultadoBajo';
+    return '<div style="margin-bottom:18px">' +
+      Arturo.barra({ frase: Arturo.frase(clave, { tema:h.tema, pct:pct }) }) +
+      '</div>';
+  }
+
   function terminar(porTiempo){
     detenerReloj();
     const res = S.respuestas;
@@ -550,6 +565,7 @@ window.Sesion = (function () {
         '<h1>' + pct + '% de precisión</h1>' +
         '<p>' + ok + ' correctas de ' + res.length + ' respondidas · ' + UI.reloj(duracion) + ' en total. ' + nota + '</p></div>' +
         extra +
+        remateArturo(pct) +
         '<div class="rejilla rejilla--3" style="margin-bottom:18px">' +
           '<div class="metrica"><b>' + ok + '</b><span>Correctas</span></div>' +
           '<div class="metrica"><b>' + (res.length - ok) + '</b><span>Incorrectas</span></div>' +
@@ -593,6 +609,7 @@ window.Sesion = (function () {
     if (btnRk) btnRk.onclick = () => { salir(); App.ir('ranking'); };
     document.getElementById('btnProgreso').onclick = () => { salir(); App.ir('progreso'); };
     document.getElementById('btnInicio').onclick = () => { salir(); App.ir('inicio'); };
+    if (window.Arturo) Arturo.enganchar();
   }
 
   /* ---------- revisar una pregunta suelta ---------- */
