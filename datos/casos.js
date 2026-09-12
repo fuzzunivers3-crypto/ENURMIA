@@ -8,6 +8,7 @@
 window.CASOS = [
 {
   id:'CL-01',
+  ref:'AHA/ACC, guía de síndrome coronario agudo con elevación del ST; ESC, guía de infarto de ventrículo derecho. Braunwald, Cardiología, 12.ª ed.',
   titulo:'Dolor torácico a las 3 de la madrugada',
   esp:'Emergencias', dif:3,
   resumen:'Hombre de 56 años, llega caminando a emergencias con dolor en el pecho.',
@@ -62,7 +63,7 @@ window.CASOS = [
     },
     alta:{
       texto:'Cuarenta minutos después el paciente regresa en paro cardiorrespiratorio traído por sus familiares.',
-      opciones:[ { txt:'Ver el análisis del caso', sig:'final_malo', pts:0, retro:'' } ]
+      opciones:[ { txt:'Ver el análisis del caso', sig:'final_malo', pts:0, retro:'Un dolor opresivo que despierta al paciente, con sudoración y factores de riesgo, es infarto hasta que un electrocardiograma diga lo contrario. El reflujo no se diagnostica por descarte apresurado ni se trata mandando a casa a quien tiene ese perfil.' } ]
     },
     reperfusion:{
       texto:'Se activa la reperfusión. Durante el traslado el paciente se hipotensa aún más, porque no se identificó el compromiso del ventrículo derecho.',
@@ -91,8 +92,9 @@ window.CASOS = [
 },
 {
   id:'CL-02',
+  ref:'OPS/OMS, guía para la atención del dengue en las Américas; Ministerio de Salud Pública de República Dominicana, protocolo nacional de dengue.',
   titulo:'Fiebre al quinto día',
-  esp:'Infectología', dif:3,
+  esp:'Medicina Interna', dif:3,
   resumen:'Mujer de 28 años, quinto día de fiebre, hoy amaneció sin fiebre pero se siente peor.',
   paciente:{ edad:28, sexo:'Femenino', motivo:'"La fiebre se me quitó, pero me duele mucho el estómago"' },
   vitales:{ TA:'104/68', FC:'104', FR:'20', T:'37.1 °C', Sat:'98%' },
@@ -149,6 +151,7 @@ window.CASOS = [
 },
 {
   id:'CL-03',
+  ref:'ACOG, boletín de práctica sobre hipertensión gestacional y preeclampsia; OMS, recomendaciones sobre preeclampsia y eclampsia. Williams Obstetricia, 26.ª ed.',
   titulo:'Una convulsión en el embarazo',
   esp:'Ginecología y Obstetricia', dif:4,
   resumen:'Primigesta de 22 años, 35 semanas, llega convulsionando.',
@@ -209,6 +212,7 @@ window.CASOS = [
 window.PACIENTES = [
 {
   id:'PV-01',
+  ref:'ESC, guía de enfermedades del pericardio; Harrison, Principios de Medicina Interna, 21.ª ed.',
   titulo:'"Me duele el pecho"',
   edad:45, sexo:'Masculino', esp:'Medicina Interna', dif:3,
   apertura:'Doctor, desde ayer tengo un dolor aquí en el pecho que no se me quita.',
@@ -261,8 +265,9 @@ window.PACIENTES = [
 },
 {
   id:'PV-02',
+  ref:'GOLD, informe de estrategia global para la EPOC; ATS/ERS, estándares de espirometría.',
   titulo:'"Me falta el aire"',
-  edad:34, sexo:'Femenino', esp:'Neumología', dif:4,
+  edad:34, sexo:'Femenino', esp:'Medicina Interna', dif:4,
   apertura:'Doctora, desde esta mañana no puedo respirar bien y me duele al inspirar.',
   vitales:{ TA:'118/74', FC:'116', FR:'26', T:'37.2 °C', Sat:'91%' },
   dxCorrecto:'Tromboembolia pulmonar',
@@ -311,6 +316,7 @@ window.PACIENTES = [
 },
 {
   id:'PV-03',
+  ref:'OMS/UNICEF, manual de tratamiento de la diarrea y planes A, B y C de rehidratación; AIEPI clínico.',
   titulo:'"Mi hijo no quiere comer"',
   edad:2, sexo:'Masculino', esp:'Pediatría', dif:3,
   apertura:'Doctor, el niño lleva tres días con diarrea y hoy no quiere comer nada.',
