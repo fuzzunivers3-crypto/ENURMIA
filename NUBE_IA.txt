@@ -1,0 +1,68 @@
+ARTURO REFORMULA - QUE HAY QUE TENER PUESTO
+===========================================
+
+Que hace
+--------
+Cuando un estudiante falla una pregunta y la explicacion escrita no le
+entra, puede pulsar "Aun no lo entiendo" y Arturo se la cuenta por otro
+angulo. Nada mas: no es un chat.
+
+El modelo recibe SOLO el material de esa pregunta (enunciado, caso,
+opciones, explicacion, trampa, descarte y bibliografia) y la instruccion
+de explicar unicamente desde ahi. Si la duda no se contesta con eso, lo
+dice y remite a la bibliografia. Eso es lo que impide que se invente una
+dosis, que en una app de medicina no es un detalle.
+
+La clave nunca esta en la app
+-----------------------------
+La app se publica como archivos estaticos: una clave ahi la lee
+cualquiera. Vive como secreto de la Edge Function `arturo-reexplica`.
+
+ESTADO ACTUAL (12/09/2026)
+--------------------------
+  [x] Tabla `uso_ia` creada, con RLS y sin politicas
+  [x] Funcion `arturo-reexplica` desplegada
+  [x] IA_PROVEEDOR = gemini
+  [x] IA_MODELO    = gemini-2.0-flash
+  [ ] IA_CLAVE     <-- FALTA. La pone shael, no Claude.
+
+Para ponerla: panel de Supabase -> Edge Functions -> Secrets ->
+New secret, con nombre IA_CLAVE y la clave de Google AI Studio.
+
+Hasta que este puesta, la funcion responde 502 y el boton avisa en una
+linea sin romper nada.
+
+La tabla del contador
+---------------------
+`uso_ia` (user_id, dia, n) limita a 20 llamadas al dia por estudiante.
+La cuota gratuita se comparte entre TODOS, asi que el tope por persona es
+lo que evita que uno solo deje mudo a Arturo para los demas.
+
+El dia se cuenta en UTC: para Republica Dominicana el contador se
+reinicia a las 8 de la noche, no a medianoche.
+
+Cuando no hay cuota
+-------------------
+El boton avisa en una linea y se retira el resto de la sesion. La Ruta,
+el Arturo de reglas y los tres pasos no dependen de esto para nada: si la
+funcion no existiera, la app seria exactamente la de hoy.
+
+Volver a desplegar tras tocar la funcion
+----------------------------------------
+  npx --yes supabase@latest functions deploy arturo-reexplica       --project-ref msxvpyddpqxmnhosgxnw
+
+Si la capa gratuita se queda corta
+----------------------------------
+Poner IA_PROVEEDOR=anthropic, IA_MODELO=claude-haiku-4-5 y la clave de
+Anthropic. Sale alrededor de 0,40 dolares al mes por estudiante activo
+(unas 100 reformulaciones). No hay que tocar ni una linea de la app.
+
+Aviso sobre Gemini
+------------------
+Los endpoints y los nombres de modelo de Google cambian cada pocos meses.
+Si un dia deja de responder, comprobar con:
+
+  curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=TU_CLAVE"     -H 'Content-Type: application/json'     -d '{"contents":[{"role":"user","parts":[{"text":"Di hola."}]}]}'
+
+Si la respuesta no llega como candidates[0].content.parts[0].text, hay
+que ajustar SOLO la rama `gemini` de llamar() en index.ts.
