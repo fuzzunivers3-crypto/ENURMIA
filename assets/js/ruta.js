@@ -198,6 +198,38 @@ window.Ruta = (function () {
     return marcas.map(function (m) { return m.nombre; });
   }
 
+  /* El otro modo de recorrido: los bloques enteros, uno detras de otro,
+     en el orden que eligio el estudiante. Concatenacion pura, sin
+     intercalar: dentro de cada bloque los temas van como estan escritos
+     en el temario, que ya es un orden didactico. */
+  function ordenPorBloques(elegidos){
+    const filtro = normalizarBloques(elegidos);
+    const out = [];
+    filtro.forEach(function (nombre) {
+      bloques().forEach(function (b) {
+        if (b.bloque !== nombre) return;
+        b.temas.forEach(function (t) { out.push(t.t); });
+      });
+    });
+    return out;
+  }
+
+  function temasDeBloque(nombre){
+    return temas().filter(function (t) { return t.bloque === nombre; })
+                  .map(function (t) { return t.t; });
+  }
+
+  /* Las puertas solo aplican si el recorrido nacio en modo bloques Y la
+     norma sigue activada. Un recorrido creado antes de que esto
+     existiera no tiene `modo`, y eso es 'mezclado': no se le puede
+     imponer un orden por bloques a media carrera. */
+  function porBloques(){
+    const r = activa();
+    const d = datos();
+    if (!r || r.modo !== 'bloques') return false;
+    return !(d && d.ajustes && d.ajustes.porBloques === false);
+  }
+
   /* 101 no es multiplo de casi nada, y una ultima tanda de 1 tema queda
      coja. Se decide cuantas tandas caben y se reparte entero, con una
      regla para donde van los sobrantes: el estudiante pidio tandas de
@@ -234,16 +266,34 @@ window.Ruta = (function () {
     const d = datos();
     if (!d) return null;
     const bls = normalizarBloques(elegidos);
-    const orden = ordenIntercalado(bls);
+    /* El modo se decide aqui, mirando el ajuste, y ya no cambia: apagar
+       la norma despues quita las puertas pero no reescribe el orden,
+       porque reordenar con el cursor a medias descuadraria las tandas
+       ya cerradas. */
+    const modo = (d.ajustes && d.ajustes.porBloques === false) ? 'mezclado' : 'bloques';
+    const orden = (modo === 'bloques') ? ordenPorBloques(bls) : ordenIntercalado(bls);
+    /* En modo bloques las tandas se reparten DENTRO de cada bloque y se
+       concatenan, no sobre los temas seguidos. Si no, una tanda quedaria
+       a caballo entre dos bloques y al cerrar el bloque el cursor caeria
+       a mitad de tanda: el recorrido se encallaria con una tanda que ya
+       no se puede cerrar. Asi cada frontera de bloque es tambien
+       frontera de tanda. */
+    const tandasN = (modo === 'bloques')
+      ? bls.reduce(function (acc, nombre) {
+          return acc.concat(repartirTandas(temasDeBloque(nombre).length, tam));
+        }, [])
+      : repartirTandas(orden.length, tam);
     d.ruta = {
       v: 1,
       creado: Date.now(),
       tam: acotar(tam),
       vuelta: 1,
+      modo: modo,
       bloques: bls,
+      bloquesCerrados: {},
       orden: orden,
       examenes: {},
-      tandasN: repartirTandas(orden.length, tam),
+      tandasN: tandasN,
       cursor: 0,
       tanda: 1,
       repaso: [],
@@ -737,6 +787,8 @@ window.Ruta = (function () {
     temasNuevos: temasNuevos, absorber: absorber,
     temas: temas, temaPorNombre: temaPorNombre, invalidar: invalidar,
     bloquesDisponibles: bloquesDisponibles,
+    _ordenPorBloques: ordenPorBloques, temasDeBloque: temasDeBloque,
+    porBloques: porBloques,
     preguntasDe: preguntasDe, tarjetasDe: tarjetasDe, claveApunte: claveApunte,
     _orden: ordenIntercalado, _tandas: repartirTandas
   };

@@ -65,7 +65,7 @@ window.Almacen = (function () {
       plan: null,               // plan de estudio de 7 dias (retirado de la interfaz)
       ruta: null,               // el recorrido guiado del temario (ver assets/js/ruta.js)
       reexplicaciones: {},      // lo que Arturo ha reformulado, por pregunta
-      ajustes: { pedirConfianza: true, defenderRespuesta: false, animaciones: true, bancoExtendido: true, reexplicar: true }
+      ajustes: { pedirConfianza: true, defenderRespuesta: false, animaciones: true, bancoExtendido: true, reexplicar: true, porBloques: true, bienvenidaVista: false }
     };
   }
 

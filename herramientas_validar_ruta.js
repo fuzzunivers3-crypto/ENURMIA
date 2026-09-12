@@ -546,6 +546,10 @@ igual(Ruta.activa().repaso.length, 0, 'con 3 preguntas al 100% si se rescata');
 titulo('Fin y segunda vuelta');
 
 reiniciar();
+/* El reparto [5 x19, 6] sobre los 101 temas seguidos es el del modo
+   mezclado. En modo bloques las tandas se reparten por bloque y las
+   fronteras caen en otro sitio. */
+D.ajustes.porBloques = false;
 const rf = Ruta.crear(5);
 /* Con tam=5 las tandas son [5 x19, 6]: antes de la ultima hay 95 temas. */
 rf.cursor = 95;
@@ -750,6 +754,9 @@ ok(rPed.orden.every(function (x) { return Ruta.temaPorNombre(x).bloque === 'Pedi
 igual(Ruta.temasNuevos().length, 0, 'los temas de bloques no elegidos no cuentan como nuevos');
 
 reiniciar();
+/* Este comprueba el INTERCALADO, que ahora solo sale con la norma
+   apagada: por defecto los recorridos nacen por bloques. */
+D.ajustes.porBloques = false;
 const rDos = Ruta.crear(4, ['Pediatría', 'Cirugía']);
 igual(rDos.orden.length, 39, 'con dos bloques entran sus 39 temas');
 /* El intercalado reparte en proporcion ENTRE LOS ELEGIDOS: 20 y 19 temas
@@ -893,5 +900,79 @@ ok(!podado['Q-0|0'], 'tira la mas vieja');
 
 /* 9. Sin sesion de nube no esta disponible: la funcion exige autenticacion. */
 igual(ArturoIA.disponible(), false, 'una cuenta solo local no puede usarlo');
+
+/* ============================================================
+   15. Orden por bloques y modo del recorrido
+   ============================================================ */
+titulo('Orden por bloques');
+
+/* Concatenacion pura, en el orden pedido: nada de intercalar. */
+const ordenPB = Ruta._ordenPorBloques(['Pediatría', 'Cirugía']);
+igual(ordenPB.length, 39, 'Pediatria y Cirugia suman 39 temas');
+const bloquePB = ordenPB.map(function (n) { return Ruta.temaPorNombre(n).bloque; });
+igual(bloquePB.slice(0, 20).filter(function (b) { return b === 'Pediatría'; }).length, 20,
+      'los 20 primeros son todos de Pediatria');
+igual(bloquePB.slice(20).filter(function (b) { return b === 'Cirugía'; }).length, 19,
+      'los 19 siguientes son todos de Cirugia');
+
+const alReves = Ruta._ordenPorBloques(['Cirugía', 'Pediatría']);
+igual(Ruta.temaPorNombre(alReves[0]).bloque, 'Cirugía', 'invertir la lista invierte el recorrido');
+
+igual(Ruta._ordenPorBloques(['Pediatría'])[0],
+      Ruta.temas().filter(function (t) { return t.bloque === 'Pediatría'; })[0].t,
+      'dentro del bloque los temas van en el orden del temario');
+
+/* ---- el modo se fija al crear, mirando el ajuste ---- */
+reiniciar();
+D.ajustes.porBloques = true;
+const rB = Ruta.crear(5, ['Pediatría', 'Cirugía']);
+igual(rB.modo, 'bloques', 'con la norma activada el recorrido nace en modo bloques');
+igual(rB.orden.length, 39, 'y recorre los dos bloques elegidos');
+igual(Ruta.temaPorNombre(rB.orden[0]).bloque, 'Pediatría', 'empieza por el primero que eligio');
+ok(!!rB.bloquesCerrados, 'nace con el registro de bloques cerrados');
+igual(Object.keys(rB.bloquesCerrados).length, 0, 'y vacio');
+igual(Ruta.porBloques(), true, 'porBloques() dice que si');
+
+reiniciar();
+D.ajustes.porBloques = false;
+const rM = Ruta.crear(5, ['Pediatría', 'Cirugía']);
+igual(rM.modo, 'mezclado', 'con la norma apagada el recorrido nace mezclado');
+const primerosMez = rM.orden.slice(0, 4).map(function (n) { return Ruta.temaPorNombre(n).bloque; });
+igual(new Set(primerosMez).size, 2, 'en mezclado los dos bloques salen desde el principio');
+igual(Ruta.porBloques(), false, 'porBloques() dice que no');
+
+/* ---- un recorrido viejo, sin modo, se lee como mezclado ---- */
+reiniciar();
+D.ajustes.porBloques = true;
+const rViejo = Ruta.crear(5);
+delete rViejo.modo;
+delete rViejo.bloquesCerrados;
+igual(Ruta.porBloques(), false, 'un recorrido sin modo no tiene puertas aunque la norma este activada');
+
+/* ---- apagar la norma con el recorrido en marcha quita las puertas ---- */
+reiniciar();
+D.ajustes.porBloques = true;
+Ruta.crear(5, ['Pediatría', 'Cirugía']);
+igual(Ruta.porBloques(), true, 'con la norma activada hay puertas');
+D.ajustes.porBloques = false;
+igual(Ruta.porBloques(), false, 'apagar la norma las quita al instante');
+igual(Ruta.activa().modo, 'bloques', 'pero no reescribe el orden ya creado');
+
+/* ---- las tandas se reparten DENTRO de cada bloque ---- */
+reiniciar();
+D.ajustes.porBloques = true;
+const rF = Ruta.crear(5, ['Pediatría', 'Cirugía']);
+igual(rF.tandasN.reduce(function (a, c) { return a + c; }, 0), 39,
+      'las tandas suman los 39 temas de los dos bloques');
+let acumF = 0; const fronteras = [];
+rF.tandasN.forEach(function (n) { acumF += n; fronteras.push(acumF); });
+ok(fronteras.indexOf(20) >= 0, 'el final de Pediatria (tema 20) es frontera de tanda');
+igual(rF.tandasN.length, Ruta._tandas(20, 5).length + Ruta._tandas(19, 5).length,
+      'el numero de tandas es la suma de las de cada bloque');
+
+/* ---- los temas de un bloque ---- */
+igual(Ruta.temasDeBloque('Pediatría').length, 20, 'Pediatria tiene 20 temas');
+igual(Ruta.temasDeBloque('Medicina Interna').length, 41, 'Medicina Interna tiene 41');
+igual(Ruta.temasDeBloque('No existe').length, 0, 'un bloque inexistente no tiene temas');
 
 fin();
