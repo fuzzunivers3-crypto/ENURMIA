@@ -1,13 +1,11 @@
 /* ============================================================
-   UNIRMIA — asignaturas de UCATECI, cuatrimestres 7, 8 y 9
+   UNIRMIA — asignaturas de la universidad, cuatrimestres 7, 8 y 9
    ------------------------------------------------------------
-   Fuente: pensum oficial de la carrera de Medicina (MED) de la
-   Universidad Catolica Tecnologica del Cibao, version
-   MED-R1-2014, resolucion 001-A 2014, publicado por la propia
-   universidad en ucateci.edu.do (Escuela de Medicina > Ver
-   Pensum). Los creditos estan copiados de ahi y los tres
-   cuatrimestres cuadran con el total que declara el documento:
-   28, 29 y 26.
+   Fuente: pensum oficial de la carrera de Medicina (MED),
+   version MED-R1-2014, resolucion 001-A 2014, publicado por la
+   propia universidad. Los creditos estan copiados de ahi y los
+   tres cuatrimestres cuadran con el total que declara el
+   documento: 28, 29 y 26.
 
    DATO IMPORTANTE PARA EL CONTENIDO: los cuatrimestres 7 y 8 son
    CICLO DE CIENCIAS BASICAS, no clinica. Anatomia, fisiologia,

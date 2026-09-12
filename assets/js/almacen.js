@@ -260,7 +260,7 @@ window.Almacen = (function () {
   }
 
   /* En que cuatrimestre va el estudiante de UNIRMIA. Decide que preguntas
-     le tocan: el pensum de UCATECI mete asignaturas distintas en el 7, el 8
+     le tocan: el pensum de la universidad mete asignaturas distintas en el 7, el 8
      y el 9, y mezclarlas seria hacerle estudiar lo que todavia no ha visto
      o lo que ya dejo atras. En ENURMIA no se usa. */
   function cuatrimestre() {

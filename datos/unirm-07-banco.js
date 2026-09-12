@@ -1,6 +1,6 @@
 /* ============================================================
    UNIRMIA — BANCO DEL CUATRIMESTRE 7
-   Ciclo de Ciencias Basicas, pensum MED-R1-2014 de UCATECI.
+   Ciclo de Ciencias Basicas, pensum MED-R1-2014.
 
    Cambio de formato respecto a ENURMIA, y es deliberado: aqui
    casi no hay pacientes. En anatomia, histologia y bioquimica lo

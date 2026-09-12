@@ -1,6 +1,6 @@
 /* ============================================================
    UNIRMIA — TEMARIO DEL CUATRIMESTRE 7
-   Ciclo de Ciencias Basicas del pensum MED-R1-2014 de UCATECI.
+   Ciclo de Ciencias Basicas del pensum MED-R1-2014.
 
    El orden de los bloques sigue el peso en creditos del pensum,
    que es lo que de verdad indica cuanto tiempo va a ocupar cada

@@ -154,11 +154,72 @@ window.Vistas = (function () {
     engancharCuatri(inicio);
     if (window.Ruta && Ruta.activa() && window.Arturo) Arturo.enganchar();
 
+    /* Lo primero que ve un estudiante nuevo: organizar su estudio. Solo
+       sale si no hay recorrido y no lo ha despachado antes. */
+    if (window.Ruta && !Ruta.activa() && !d.ajustes.bienvenidaVista &&
+        window.VistaRuta && Almacen.programa() !== 'unirm'){
+      setTimeout(bienvenida, 350);
+    }
+
     setTimeout(() => UI.$$('.barra i').forEach(b => b.style.width = b.style.width), 30);
   }
 
+  /* El menu central de la primera vez. Usa el mismo selector que la
+     pantalla de Arturo para no tener dos sitios que mantener. */
+  function bienvenida(){
+    const elegidos = Ruta.bloquesDisponibles().map(function (b) { return b.bloque; });
+    let tam = 5;
+
+    function pintar(){
+      /* UI.modal apila un velo nuevo cada vez, y este menu se repinta en
+         cada clic del selector. Sin quitar el anterior se acumulaban
+         capas: el pie que leias era el del primer modal y al cerrar
+         quedaba otro debajo. */
+      const previo = document.querySelector('.velo');
+      if (previo) previo.remove();
+      UI.modal(
+        '<p class="eyebrow">Antes de empezar</p>' +
+        '<h3 style="font-size:24px;margin:4px 0 10px">Vamos a organizar tu estudio</h3>' +
+        '<p class="muted" style="margin-bottom:16px">Elige los bloques que quieres preparar y en qué orden. Irás cerrándolos de uno en uno: no pasas al siguiente hasta terminar el anterior.</p>' +
+        VistaRuta.selectorBloques(elegidos, tam) +
+        '<div class="row wrap" style="gap:9px;margin:16px 0;align-items:center">' +
+          '<span class="muted" style="font-size:13px">Temas por tanda:</span>' +
+          [3, 5, 8, 10].map(function (n) {
+            return '<button class="chip' + (tam === n ? ' on' : '') + '" data-bt="' + n + '">' + n + '</button>';
+          }).join('') +
+        '</div>' +
+        '<div class="row" style="margin-top:18px;gap:9px">' +
+          '<button class="btn btn--fantasma grow" id="bvDespues">Lo haré después</button>' +
+          '<button class="btn grow" id="bvCrear">Crear mi recorrido</button>' +
+        '</div>');
+
+      VistaRuta.engancharSelector(elegidos, pintar);
+      UI.$$('[data-bt]').forEach(function (b) {
+        b.onclick = function () { tam = +b.dataset.bt; pintar(); };
+      });
+      document.getElementById('bvDespues').onclick = function () {
+        const dd = Almacen.datos();
+        dd.ajustes.bienvenidaVista = true;
+        Almacen.guardar();
+        document.querySelector('.velo').remove();
+      };
+      document.getElementById('bvCrear').onclick = function () {
+        if (!elegidos.length) return UI.tostada('Marca al menos un bloque', 'mal');
+        const dd = Almacen.datos();
+        dd.ajustes.bienvenidaVista = true;
+        Almacen.guardar();
+        Ruta.crear(tam, elegidos);
+        document.querySelector('.velo').remove();
+        UI.tostada('Recorrido creado. Arturo te espera.', 'ok');
+        App.ir('ruta');
+      };
+    }
+
+    pintar();
+  }
+
   /* Lo primero que necesita saber UNIRMIA es en que cuatrimestre va el
-     estudiante. No es un adorno: el pensum de UCATECI mete asignaturas
+     estudiante. No es un adorno: el pensum de la universidad mete asignaturas
      distintas en el 7, el 8 y el 9, y de ahi sale que preguntas le tocan y
      como se reparte su simulacro. Hasta que no lo diga, no hay nada
      sensato que ensenarle, asi que se pregunta arriba del todo. */
@@ -213,6 +274,11 @@ window.Vistas = (function () {
     if (param && param.esp) filtro.esp = param.esp;
     const esps = Motor.especialidades();
     const temas = filtro.esp ? Motor.temas(filtro.esp) : [];
+    /* Con la norma de bloques activada solo se entrena lo ya cerrado, el
+       bloque en curso y las transversales. Los demas salen con candado y
+       dicen que hay que cerrar. */
+    const bloqueado = function (n) { return window.Ruta && !Ruta.espDisponible(n); };
+    const faltaCerrar = (window.Ruta && Ruta.porBloques()) ? Ruta.bloqueActual() : null;
     const r = Motor.resumen();
 
     const opBanco = filtro.banco === 'curado' ? { soloCurado:true }
@@ -229,8 +295,10 @@ window.Vistas = (function () {
         '<span class="eyebrow">Especialidad</span>' +
         '<div class="filtros" style="margin-top:12px">' +
           '<button class="chip' + (!filtro.esp ? ' on' : '') + '" data-f-esp="">Todas</button>' +
-          esps.map(e => '<button class="chip' + (filtro.esp === e.nombre ? ' on' : '') +
-            '" data-f-esp="' + esc(e.nombre) + '">' + esc(e.nombre) + ' · ' + e.total + '</button>').join('') +
+          esps.map(e => bloqueado(e.nombre)
+            ? '<button class="chip chip--llave" data-llave="' + esc(e.nombre) + '">🔒 ' + esc(e.nombre) + '</button>'
+            : '<button class="chip' + (filtro.esp === e.nombre ? ' on' : '') +
+              '" data-f-esp="' + esc(e.nombre) + '">' + esc(e.nombre) + ' · ' + e.total + '</button>').join('') +
         '</div>' +
         (temas.length ? '<span class="eyebrow" style="display:block;margin-top:18px">Tema</span>' +
           '<div class="filtros" style="margin-top:12px;margin-bottom:0">' +
@@ -275,6 +343,11 @@ window.Vistas = (function () {
       '</div>' +
     '</div>';
 
+    UI.$$('[data-llave]').forEach(b => b.onclick = () => UI.tostada(
+      faltaCerrar
+        ? 'Cierra ' + faltaCerrar + ' para abrir este bloque. Puedes quitar la norma en Ajustes.'
+        : 'Este bloque todavía no está abierto.', 'mal'));
+
     UI.$$('[data-f-esp]').forEach(b => b.onclick = () => {
       filtro.esp = b.dataset.fEsp || null; filtro.tema = null; entrenar();
     });
@@ -304,6 +377,14 @@ window.Vistas = (function () {
   }
 
   function lanzarEntrenamiento(op){
+    /* Con la norma activada el entrenamiento sale solo de lo abierto. */
+    if (window.Ruta && Ruta.porBloques() && !op.esp){
+      const ids = {};
+      Ruta.preguntasDisponibles().forEach(function (q) { ids[q.id] = 1; });
+      const sel = Motor.seleccionar(op).filter(function (q) { return ids[q.id]; });
+      if (sel.length) return Sesion.iniciar({ modo: op.modo || 'aprender',
+        titulo: op.titulo || 'Entrenamiento', preguntas: sel });
+    }
     const preguntas = Motor.seleccionar(op);
     if (!preguntas.length) return UI.tostada('No hay preguntas con ese filtro', 'mal');
     Sesion.iniciar({
@@ -350,18 +431,45 @@ window.Vistas = (function () {
         '<div class="card">' +
           '<span class="eyebrow">Elige el formato</span>' +
           '<div style="display:flex;flex-direction:column;gap:9px;margin-top:14px">' +
+  
+            '<span class="eyebrow" style="display:block;margin-bottom:8px">Simulacro ENURM — de todo el temario</span>' +
             formato('Simulacro corto', '25 preguntas · 30 minutos', 25, 30) +
             formato('Medio simulacro', '50 preguntas · 60 minutos', 50, 60) +
             formato('Simulacro completo', Math.min(100, total) + ' preguntas · 120 minutos', 100, 120) +
+            '<p class="muted" style="margin:12px 0 0;font-size:12.5px">Siempre del temario completo, hayas estudiado o no. Es el único número que responde a "¿estaría listo hoy?".</p>' +
+            ((window.Ruta && Ruta.porBloques())
+              ? '<div style="border-top:1px solid var(--linea);margin-top:16px;padding-top:16px">' +
+                '<span class="eyebrow" style="display:block;margin-bottom:8px">Examen de lo que llevas</span>' +
+                '<button class="accion-clinica" id="simMio"><span class="em">📗</span>' +
+                '<span class="grow"><b>Examen de mi bloque</b><small>Solo de lo que ya estudiaste · 30 preguntas</small></span>→</button>' +
+                '</div>'
+              : '') +
+
           '</div>' +
           '<p class="muted" style="margin-top:14px;font-size:12.5px">El banco tiene ' + total +
           ' preguntas cargadas. Si pides más de las disponibles, se usan todas.</p>' +
         '</div>' +
       '</div>' +
 
+      ((window.Ruta && Ruta.activa())
+        ? '<p class="muted" style="margin:-6px 0 18px;font-size:13px">Llevas el ' +
+          Ruta.avance().pct + '% del temario recorrido. El simulacro ENURM te pregunta del 100%, que es lo que hará el examen real.</p>'
+        : '') +
+
       '<div class="card"><span class="eyebrow">Tus simulacros anteriores</span>' +
       '<div style="display:flex;flex-direction:column;gap:9px;margin-top:14px">' + historial + '</div></div>' +
     '</div>';
+
+    const sm = document.getElementById('simMio');
+    if (sm) sm.onclick = () => {
+      const pool = Ruta.preguntasDisponibles().filter(q => !!q.exp);
+      if (pool.length < 10) return UI.tostada('Todavía no has abierto suficientes preguntas', 'mal');
+      const n = Math.min(30, pool.length);
+      const preguntas = pool.slice().sort(() => Math.random() - 0.5).slice(0, n);
+      Sesion.iniciar({ modo:'examen', titulo:'Examen de lo que llevas',
+        preguntas, tiempoTotal: Math.round(n * 1.2) * 60000,
+        etiqueta: 'Mi bloque · ' + n + ' preguntas' });
+    };
 
     UI.$$('[data-sim]').forEach(b => b.onclick = () => {
       const n = +b.dataset.sim, min = +b.dataset.min;
@@ -720,6 +828,9 @@ window.Vistas = (function () {
           ' ya tienen explicación completa; el resto trae la respuesta oficial pero todavía no el porqué. ' +
           'No se incluye el bloque del examen FIR de farmacia, que quedó fuera por no ser materia del ENURM. ' +
           'Apágalo si prefieres estudiar solo con explicación completa.', a.bancoExtendido) +
+        conmutador('porBloques', 'Estudiar por bloques en orden',
+          'Eliges los bloques y su orden, y no pasas al siguiente hasta cerrar el anterior con sus temas hechos y su examen aprobado. Al apagarlo desaparecen los candados y entras a lo que quieras; tu avance se sigue registrando igual.',
+          a.porBloques !== false) +
         conmutador('reexplicar', 'Arturo puede reformular',
           'Cuando falles una pregunta y la explicación no te entre, puedes pedirle a Arturo que te la cuente de otra forma, partiendo solo de lo que ya está escrito para esa pregunta. Necesita internet y cuenta en la nube.',
           a.reexplicar !== false) +
