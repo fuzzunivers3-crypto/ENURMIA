@@ -1128,4 +1128,33 @@ reiniciar();
 igual(Ruta.preguntasDisponibles().length, Motor.bancoActivo().length,
       'sin recorrido el pool es el banco entero');
 
+/* ============================================================
+   18. El memo por tema no puede sobrevivir a un cambio de banco
+   ============================================================ */
+titulo('Memoria del emparejamiento');
+
+reiniciar();
+D.ajustes.bancoExtendido = true;
+const bancoCon = Motor.bancoActivo().length;
+const conMir = Ruta.preguntasDe('Insuficiencia cardíaca')
+  .filter(function (q) { return q.fuente === 'MIR'; }).length;
+
+D.ajustes.bancoExtendido = false;
+const bancoSin = Motor.bancoActivo().length;
+const sinMir = Ruta.preguntasDe('Insuficiencia cardíaca')
+  .filter(function (q) { return q.fuente === 'MIR'; }).length;
+
+ok(bancoCon > bancoSin, 'apagar el banco extendido reduce el banco activo');
+ok(conMir > 0, 'con el banco extendido el tema trae preguntas del MIR');
+/* El memo por tema cuelga del indice, y el indice se rehace cuando
+   cambia el tamano del banco. Si el memo se consultara ANTES que el
+   indice, cortocircuitaria esa comprobacion y un estudiante que apagara
+   el banco extendido seguiria viendo preguntas del MIR en sus temas. */
+igual(sinMir, 0, 'apagado, el tema no trae ninguna del MIR');
+
+D.ajustes.bancoExtendido = true;
+const otraVez = Ruta.preguntasDe('Insuficiencia cardíaca')
+  .filter(function (q) { return q.fuente === 'MIR'; }).length;
+igual(otraVez, conMir, 'y al volver a encenderlo vuelven las mismas');
+
 fin();

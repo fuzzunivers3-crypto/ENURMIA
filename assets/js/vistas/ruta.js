@@ -10,9 +10,10 @@ window.VistaRuta = (function () {
   function V(){ return document.getElementById('vista'); }
 
   function menu(){
-    /* El ajuste del banco extendido cambia las preguntas de cada tema, y
-       ese cache solo se limpia desde aqui y desde el Temario. */
-    Ruta.invalidar();
+    /* No se invalida nada aqui a proposito. El indice del banco se
+       rehace solo cuando cambia su tamano (el ajuste del banco
+       extendido), y el emparejamiento por tema cuelga de el. Invalidar
+       en cada repintado tiraba ese memo y pintar tardaba tres segundos. */
     const r = Ruta.activa();
     if (!r) return arranque();
     if (r.terminada) return cierre();
@@ -231,6 +232,44 @@ window.VistaRuta = (function () {
     /* El temario puede crecer mientras alguien va por la tanda 7. Los
        temas nuevos no se cuelan en medio (correrian el cursor): se
        ofrecen para el final del recorrido. */
+    /* La tira de bloques: donde estas, que cerraste y que falta. Solo
+       tiene sentido en modo bloques. */
+    const tiraBloques = Ruta.porBloques()
+      ? '<div class="card" style="margin-bottom:18px">' +
+        '<span class="eyebrow">Tu recorrido por bloques</span>' +
+        '<div class="bl-tira">' +
+          r.bloques.map(function (n) {
+            const e = Ruta.estadoBloque(n);
+            const cls = e.cerrado ? ' bl-paso--ok' : e.disponible ? ' bl-paso--act' : '';
+            return '<div class="bl-paso' + cls + '">' +
+              '<b>' + esc(n) + '</b>' +
+              '<small>' + (e.cerrado ? '✓ cerrado · ' + e.pct + '%'
+                         : e.disponible ? e.hechos + ' de ' + e.total + ' temas'
+                         : '🔒 ' + e.total + ' temas') + '</small>' +
+            '</div>';
+          }).join('') +
+        '</div></div>'
+      : '';
+
+    /* Con todos los temas del bloque hechos, el examen de tanda deja
+       paso al del bloque: es el que abre la puerta. */
+    const bAct = Ruta.porBloques() ? Ruta.bloqueActual() : null;
+    const eAct = bAct ? Ruta.estadoBloque(bAct) : null;
+    const tocaExamenBloque = !!(eAct && eAct.completo && !eAct.cerrado);
+    const nExBloque = tocaExamenBloque ? Ruta.tamExamenDeBloque(bAct) : 0;
+
+    const bloqueExamenBloque = tocaExamenBloque
+      ? '<div class="card card--sangria" style="margin-bottom:18px">' +
+        '<span class="eyebrow" style="color:rgba(255,255,255,.5)">Examen del bloque</span>' +
+        '<h3 style="font-size:23px;margin:8px 0 10px">' + esc(bAct) + '</h3>' +
+        '<p style="color:rgba(255,255,255,.78);font-size:14.5px">Tienes los ' + eAct.total +
+        ' temas hechos. Este examen sale de todo el bloque, no solo de la última tanda, y hace falta un 60% para abrir el siguiente. Si no llega, puedes repetirlo.</p>' +
+        '<p style="color:rgba(255,255,255,.6);font-size:13px;margin-top:8px">' +
+          nExBloque + ' preguntas · ' + Ruta.minutosDeBloque(bAct) + ' minutos</p>' +
+        '<button class="btn btn--claro" style="margin-top:14px" id="rutaSimBloque">Empezar el examen del bloque</button>' +
+      '</div>'
+      : '';
+
     const nuevos = Ruta.temasNuevos();
     const avisoNuevos = nuevos.length
       ? '<div class="card card--suero" style="margin-bottom:18px">' +
@@ -251,6 +290,7 @@ window.VistaRuta = (function () {
       '<p>Llevas ' + av.temasCerrados + ' de ' + av.total + ' temas cerrados.</p></div>' +
 
       Arturo.barra() +
+      tiraBloques +
 
       '<div class="card" style="margin:18px 0">' +
         '<div class="row-b" style="margin-bottom:8px"><span class="eyebrow">Avance por el temario</span>' +
@@ -270,6 +310,9 @@ window.VistaRuta = (function () {
         avisoPerdidos +
       '</div>' +
 
+      bloqueExamenBloque +
+
+      (tocaExamenBloque ? '' :
       '<div class="card' + (ta.completa ? ' card--sangria' : '') + '" style="margin-bottom:18px">' +
         '<span class="eyebrow"' + (ta.completa ? ' style="color:rgba(255,255,255,.5)"' : '') + '>Examen de la tanda</span>' +
         '<h3 style="font-size:22px;margin:8px 0 10px">' + Ruta.tamanoSimulacro() + ' preguntas · ' +
@@ -278,7 +321,7 @@ window.VistaRuta = (function () {
         (ta.completa
           ? '<button class="btn btn--claro" style="margin-top:14px" id="rutaSim">Empezar el examen</button>'
           : '<p class="muted" style="margin-top:12px;font-size:13px">Se abre cuando los ' + ta.temas.length + ' temas estén cerrados.</p>') +
-      '</div>' +
+      '</div>') +
 
       '<div class="card"><span class="eyebrow">Tandas cerradas</span>' +
       '<div style="display:flex;flex-direction:column;gap:9px;margin-top:14px">' + historial + '</div></div>' +
@@ -321,6 +364,9 @@ window.VistaRuta = (function () {
       UI.tostada(n + ' tema(s) añadidos al final del recorrido', 'ok');
       menu();
     };
+
+    const sb = document.getElementById('rutaSimBloque');
+    if (sb) sb.onclick = function () { empezarExamenDeBloque(bAct); };
 
     const sim = document.getElementById('rutaSim');
     if (sim) sim.onclick = empezarSimulacro;
@@ -390,6 +436,38 @@ window.VistaRuta = (function () {
         tiempoTotal: min * 60000,
         etiqueta: 'Tema · ' + tema,
         alTerminar: function (res) { Ruta.cerrarExamenDeTema(tema, res); }
+      });
+    };
+  }
+
+  /* El examen que abre la puerta al bloque siguiente. */
+  function empezarExamenDeBloque(nombre){
+    const preguntas = Ruta.examenDeBloque(nombre);
+    if (!preguntas.length) return UI.tostada('Este bloque no tiene preguntas para examinarte', 'mal');
+    const min = Ruta.minutosDeBloque(nombre);
+
+    UI.modal('<p class="eyebrow">Examen del bloque</p>' +
+      '<h3 style="font-size:23px;margin:4px 0 10px">' + esc(nombre) + '</h3>' +
+      '<p class="muted">' + preguntas.length + ' preguntas · ' + min + ' minutos, de todo el bloque. Con 60% o más se cierra y se abre el siguiente. Si no llega, lo repites cuando quieras, y los temas que salgan flojos volverán mezclados.</p>' +
+      '<div class="row" style="margin-top:20px;gap:9px">' +
+      '<button class="btn btn--fantasma grow" onclick="this.closest(\'.velo\').remove()">Todavía no</button>' +
+      '<button class="btn grow" id="rutaEmpezarBloque">Empezar</button></div>');
+
+    document.getElementById('rutaEmpezarBloque').onclick = function () {
+      document.querySelector('.velo').remove();
+      Sesion.iniciar({
+        modo: 'examen',
+        titulo: 'Examen de ' + nombre,
+        preguntas: preguntas,
+        tiempoTotal: min * 60000,
+        etiqueta: 'Bloque · ' + nombre,
+        alTerminar: function (res) {
+          const rr = Ruta.cerrarExamenDeBloque(nombre, res);
+          UI.tostada(rr.aprobado
+            ? '¡Bloque cerrado con ' + rr.pct + '%! Se abre el siguiente.'
+            : rr.pct + '%: hace falta 60% para abrir el siguiente. Puedes repetirlo.',
+            rr.aprobado ? 'ok' : 'mal');
+        }
       });
     };
   }

@@ -61,6 +61,7 @@ window.Ruta = (function () {
     cTemas = null; cProg = null;
     cIndice = null; cIndiceLargo = -1;
     cApuntes = null; cApProg = null;
+    cPorTema = {}; cTarjTema = {};
   }
 
   /* ---------- emparejar temas con el banco ---------- */
@@ -104,6 +105,11 @@ window.Ruta = (function () {
     const banco = Motor.bancoActivo();
     if (cIndice && cIndiceLargo === banco.length) return cIndice;
     cIndiceLargo = banco.length;
+    /* El emparejamiento por tema cuelga de este indice, asi que se tira
+       exactamente cuando el indice se rehace: ni antes (perderiamos el
+       memo en cada repintado) ni despues (serviriamos preguntas de un
+       banco que ya cambio). */
+    cPorTema = {}; cTarjTema = {};
     cIndice = banco.map(function (q) {
       return {
         q: q,
@@ -114,23 +120,44 @@ window.Ruta = (function () {
     return cIndice;
   }
 
+  /* Emparejar un tema recorre las 2.279 preguntas del banco, y la
+     pantalla del recorrido lo pide cientos de veces por pintado: una vez
+     por tema para los tres pasos, otra para las tarjetas, y otra por cada
+     comparacion al ordenar. Sin memoria, pintar un bloque de 41 temas
+     tardaba once segundos. Se guarda por tema y se tira entero en
+     invalidar(), igual que el indice. */
+  let cPorTema = {}, cTarjTema = {};
+
   function preguntasDe(nombre){
+    /* indice() PRIMERO, y solo despues se mira el memo: es indice() quien
+       detecta que el banco cambio de tamano y tira el memo. Al reves, el
+       memo cortocircuitaba esa comprobacion y un estudiante que apagara
+       el banco extendido seguia viendo preguntas del MIR en sus temas. */
+    const idx = indice();
+    if (cPorTema[nombre]) return cPorTema[nombre];
     const t = temaPorNombre(nombre);
     if (!t) return [];
     const ks = t.claves.map(norm).filter(Boolean);
     if (!ks.length) return [];
     const n1 = [], n2 = [];
-    indice().forEach(function (x) {
+    idx.forEach(function (x) {
       if (ks.some(function (k) { return casa(x.deQue, k); })) n1.push(x.q);
       else if (ks.some(function (k) { return casa(x.roza, k); })) n2.push(x.q);
     });
-    return n1.concat(n2);
+    cPorTema[nombre] = n1.concat(n2);
+    return cPorTema[nombre];
   }
 
   function tarjetasDe(nombre){
+    /* preguntasDe() primero, por lo mismo: puede tirar los dos memos. */
+    const qs = preguntasDe(nombre);
+    if (cTarjTema[nombre]) return cTarjTema[nombre];
     const ids = {};
-    preguntasDe(nombre).forEach(function (q) { ids[q.id] = 1; });
-    return Tarjetas.mazo().filter(function (c) { return c.origen && ids[c.origen]; });
+    qs.forEach(function (q) { ids[q.id] = 1; });
+    cTarjTema[nombre] = Tarjetas.mazo().filter(function (c) {
+      return c.origen && ids[c.origen];
+    });
+    return cTarjTema[nombre];
   }
 
   /* ---------- el texto de cada tema ---------- */
@@ -630,12 +657,23 @@ window.Ruta = (function () {
   /* ---------- el examen que abre la puerta ---------- */
   /* Sale de TODO el bloque, no de la ultima tanda: la diferencia entre
      "hice los deberes" y "esto lo se". */
+  /* Cuantas preguntas tendria el examen, sin llegar a armarlo. La vista
+     lo necesita para anunciarlo en cada pintado, y armar el examen es
+     caro: ordena los temas por dominio y eso recorre el banco y el mazo
+     por cada comparacion. Llamarlo tres veces por pintado congelaba el
+     navegador. */
+  function tamExamenDeBloque(nombre){
+    const ts = temasDeBloque(nombre);
+    if (!ts.length) return 0;
+    return Math.min(40, ts.reduce(function (a, t) {
+      return a + preguntasDe(t).filter(function (q) { return !!q.exp; }).length;
+    }, 0));
+  }
+
   function examenDeBloque(nombre){
     const ts = temasDeBloque(nombre);
     if (!ts.length) return [];
-    const n = Math.min(40, ts.reduce(function (a, t) {
-      return a + preguntasDe(t).filter(function (q) { return !!q.exp; }).length;
-    }, 0));
+    const n = tamExamenDeBloque(nombre);
     if (!n) return [];
 
     const usados = {};
@@ -644,10 +682,12 @@ window.Ruta = (function () {
     const porTema = Math.max(1, Math.floor(n / ts.length));
 
     /* Los temas que peor llevas van primero, para que si el cupo no
-       alcanza a todos se gaste donde hace falta. */
-    const orden = ts.slice().sort(function (a, b) {
-      return dominioTema(a) - dominioTema(b);
-    });
+       alcanza a todos se gaste donde hace falta. El dominio se calcula
+       UNA vez por tema: dentro del comparador se recalcularia en cada
+       comparacion, y cada calculo recorre el banco y el mazo. */
+    const dom = {};
+    ts.forEach(function (t) { dom[t] = dominioTema(t); });
+    const orden = ts.slice().sort(function (a, b) { return dom[a] - dom[b]; });
 
     orden.forEach(function (t) {
       if (salida.length >= n) return;
@@ -682,7 +722,7 @@ window.Ruta = (function () {
   }
 
   function minutosDeBloque(nombre){
-    return Math.max(2, Math.round(examenDeBloque(nombre).length * 1.2));
+    return Math.max(2, Math.round(tamExamenDeBloque(nombre) * 1.2));
   }
 
   function cerrarExamenDeBloque(nombre, resultado){
@@ -986,7 +1026,7 @@ window.Ruta = (function () {
     espDisponible: espDisponible, preguntasDisponibles: preguntasDisponibles,
     bloqueActual: bloqueActual, bloqueDisponible: bloqueDisponible,
     estadoBloque: estadoBloque, examenDeBloque: examenDeBloque,
-    minutosDeBloque: minutosDeBloque, cerrarExamenDeBloque: cerrarExamenDeBloque,
+    minutosDeBloque: minutosDeBloque, tamExamenDeBloque: tamExamenDeBloque, cerrarExamenDeBloque: cerrarExamenDeBloque,
     preguntasDe: preguntasDe, tarjetasDe: tarjetasDe, claveApunte: claveApunte,
     _orden: ordenIntercalado, _tandas: repartirTandas
   };
