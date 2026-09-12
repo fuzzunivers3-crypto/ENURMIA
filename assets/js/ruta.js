@@ -589,6 +589,160 @@ window.Ruta = (function () {
     return (n === undefined) ? null : n;
   }
 
+  /* ---------- las puertas entre bloques ---------- */
+  function estadoBloque(nombre){
+    const r = activa();
+    const ts = temasDeBloque(nombre);
+    let hechos = 0;
+    ts.forEach(function (t) { if (pasosDe(t).completo) hechos++; });
+    const cerrado = !!(r && r.bloquesCerrados && r.bloquesCerrados[nombre]);
+    return {
+      nombre: nombre,
+      total: ts.length,
+      hechos: hechos,
+      completo: ts.length > 0 && hechos === ts.length,
+      cerrado: cerrado,
+      pct: cerrado ? r.bloquesCerrados[nombre].pct : null,
+      disponible: bloqueDisponible(nombre)
+    };
+  }
+
+  /* El primero de la lista que no este cerrado. Cuando no queda ninguno,
+     el recorrido se acabo. */
+  function bloqueActual(){
+    const r = activa();
+    if (!r) return null;
+    const cerrados = r.bloquesCerrados || {};
+    for (let i = 0; i < r.bloques.length; i++){
+      if (!cerrados[r.bloques[i]]) return r.bloques[i];
+    }
+    return null;
+  }
+
+  function bloqueDisponible(nombre){
+    if (!porBloques()) return true;
+    const r = activa();
+    if (!r) return true;
+    if (r.bloquesCerrados && r.bloquesCerrados[nombre]) return true;
+    return bloqueActual() === nombre;
+  }
+
+  /* ---------- el examen que abre la puerta ---------- */
+  /* Sale de TODO el bloque, no de la ultima tanda: la diferencia entre
+     "hice los deberes" y "esto lo se". */
+  function examenDeBloque(nombre){
+    const ts = temasDeBloque(nombre);
+    if (!ts.length) return [];
+    const n = Math.min(40, ts.reduce(function (a, t) {
+      return a + preguntasDe(t).filter(function (q) { return !!q.exp; }).length;
+    }, 0));
+    if (!n) return [];
+
+    const usados = {};
+    const salida = [];
+    const mapa = {};
+    const porTema = Math.max(1, Math.floor(n / ts.length));
+
+    /* Los temas que peor llevas van primero, para que si el cupo no
+       alcanza a todos se gaste donde hace falta. */
+    const orden = ts.slice().sort(function (a, b) {
+      return dominioTema(a) - dominioTema(b);
+    });
+
+    orden.forEach(function (t) {
+      if (salida.length >= n) return;
+      const qs = barajar(preguntasDe(t).filter(function (q) { return !!q.exp; }));
+      let puestos = 0;
+      for (let i = 0; i < qs.length && puestos < porTema && salida.length < n; i++){
+        if (usados[qs[i].id]) continue;
+        usados[qs[i].id] = 1;
+        salida.push(qs[i]);
+        mapa[qs[i].id] = t;
+        puestos++;
+      }
+    });
+
+    /* Si el reparto por tema no llego a n, se completa con lo que quede
+       del bloque. */
+    if (salida.length < n){
+      orden.forEach(function (t) {
+        if (salida.length >= n) return;
+        preguntasDe(t).filter(function (q) { return !!q.exp; }).forEach(function (q) {
+          if (salida.length >= n || usados[q.id]) return;
+          usados[q.id] = 1;
+          salida.push(q);
+          mapa[q.id] = t;
+        });
+      });
+    }
+
+    const r = activa();
+    if (r){ r.sim = mapa; guardar(); }
+    return barajar(salida);
+  }
+
+  function minutosDeBloque(nombre){
+    return Math.max(2, Math.round(examenDeBloque(nombre).length * 1.2));
+  }
+
+  function cerrarExamenDeBloque(nombre, resultado){
+    const r = activa();
+    if (!r) return null;
+    const resp = (resultado && resultado.respuestas) || [];
+    if (!resp.length) return { pct: 0, aprobado: false, flojos: [] };
+
+    const pct = Math.round(
+      resp.filter(function (x) { return x.ok; }).length / resp.length * 100);
+    const aprobado = pct >= CORTE_FLOJO;
+
+    /* Los temas por debajo del corte entran en la cola de repaso, se
+       apruebe o no: repetir el examen no tiene que ser repetir lo mismo. */
+    const mapa = r.sim || {};
+    const cuenta = {}, aciertos = {};
+    resp.forEach(function (x) {
+      const t = mapa[x.qid];
+      if (!t) return;
+      cuenta[t] = (cuenta[t] || 0) + 1;
+      if (x.ok) aciertos[t] = (aciertos[t] || 0) + 1;
+    });
+    const flojos = [];
+    Object.keys(cuenta).forEach(function (t) {
+      const p = Math.round((aciertos[t] || 0) / cuenta[t] * 100);
+      if (p < CORTE_FLOJO){
+        flojos.push(t);
+        if (r.repaso.indexOf(t) < 0) r.repaso.push(t);
+      }
+    });
+
+    if (aprobado){
+      if (!r.bloquesCerrados) r.bloquesCerrados = {};
+      r.bloquesCerrados[nombre] = { fecha: Date.now(), pct: pct };
+      /* El cursor salta al primer tema del bloque siguiente. Como las
+         tandas se reparten por bloque, esa posicion es siempre frontera
+         de tanda, asi que la cuenta de tandas cuadra sin arrastres. */
+      const suyos = temasDeBloque(nombre).length;
+      let antes = 0;
+      for (let i = 0; i < r.bloques.length; i++){
+        if (r.bloques[i] === nombre) break;
+        antes += temasDeBloque(r.bloques[i]).length;
+      }
+      const destino = antes + suyos;
+      if (destino > r.cursor){
+        r.cursor = destino;
+        let acumulado = 0, n = 1;
+        for (let j = 0; j < r.tandasN.length && acumulado < destino; j++){
+          acumulado += r.tandasN[j];
+          n = j + 2;
+        }
+        r.tanda = n;
+      }
+      if (r.cursor >= r.orden.length) r.terminada = Date.now();
+    }
+    r.sim = null;
+    guardar();
+    return { pct: pct, aprobado: aprobado, flojos: flojos };
+  }
+
   /* ---------- cerrar la tanda ---------- */
   /* `resultado` viene de la sesion: { respuestas:[{qid, ok}] }.
      La tanda se cierra SIEMPRE, saque lo que saque. Lo que cambia con un
@@ -789,6 +943,9 @@ window.Ruta = (function () {
     bloquesDisponibles: bloquesDisponibles,
     _ordenPorBloques: ordenPorBloques, temasDeBloque: temasDeBloque,
     porBloques: porBloques,
+    bloqueActual: bloqueActual, bloqueDisponible: bloqueDisponible,
+    estadoBloque: estadoBloque, examenDeBloque: examenDeBloque,
+    minutosDeBloque: minutosDeBloque, cerrarExamenDeBloque: cerrarExamenDeBloque,
     preguntasDe: preguntasDe, tarjetasDe: tarjetasDe, claveApunte: claveApunte,
     _orden: ordenIntercalado, _tandas: repartirTandas
   };

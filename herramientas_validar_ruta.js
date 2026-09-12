@@ -975,4 +975,101 @@ igual(Ruta.temasDeBloque('Pediatría').length, 20, 'Pediatria tiene 20 temas');
 igual(Ruta.temasDeBloque('Medicina Interna').length, 41, 'Medicina Interna tiene 41');
 igual(Ruta.temasDeBloque('No existe').length, 0, 'un bloque inexistente no tiene temas');
 
+/* ============================================================
+   16. Las puertas entre bloques
+   ============================================================ */
+titulo('Puertas entre bloques');
+
+function estudiarBloque(nombre){
+  Ruta.temasDeBloque(nombre).forEach(estudiarTema);
+  Ruta.invalidar();
+}
+
+reiniciar();
+D.ajustes.porBloques = true;
+Ruta.crear(5, ['Pediatría', 'Cirugía']);
+
+igual(Ruta.bloqueActual(), 'Pediatría', 'el bloque actual es el primero elegido');
+igual(Ruta.bloqueDisponible('Pediatría'), true, 'el actual esta disponible');
+igual(Ruta.bloqueDisponible('Cirugía'), false, 'el siguiente esta cerrado con llave');
+
+let eB = Ruta.estadoBloque('Pediatría');
+igual(eB.total, 20, 'Pediatria tiene 20 temas');
+igual(eB.hechos, 0, 'sin estudiar nada lleva 0');
+igual(eB.completo, false, 'no esta completo');
+igual(eB.cerrado, false, 'ni cerrado');
+
+/* Con TODOS los temas hechos pero sin examen, el bloque sigue abierto:
+   esa es la diferencia entre "hice los deberes" y "esto lo se". */
+estudiarBloque('Pediatría');
+eB = Ruta.estadoBloque('Pediatría');
+igual(eB.hechos, 20, 'los 20 temas quedan hechos');
+igual(eB.completo, true, 'el bloque esta completo de temas');
+igual(eB.cerrado, false, 'pero NO cerrado: falta el examen');
+igual(Ruta.bloqueDisponible('Cirugía'), false, 'y el siguiente sigue con llave');
+igual(Ruta.bloqueActual(), 'Pediatría', 'el bloque actual no avanza sin aprobar');
+
+const exB = Ruta.examenDeBloque('Pediatría');
+ok(exB.length > 0, 'el examen de bloque trae preguntas');
+ok(exB.length <= 40, 'como mucho 40 (salieron ' + exB.length + ')');
+const vistosB = {};
+let dupsB = 0;
+exB.forEach(function (q) { if (vistosB[q.id]) dupsB++; vistosB[q.id] = 1; });
+igual(dupsB, 0, 'sin preguntas repetidas');
+const idsPed = {};
+Ruta.temasDeBloque('Pediatría').forEach(function (t) {
+  Ruta.preguntasDe(t).forEach(function (q) { idsPed[q.id] = 1; });
+});
+ok(exB.every(function (q) { return idsPed[q.id]; }), 'todas las preguntas son del bloque');
+ok(Ruta.minutosDeBloque('Pediatría') > 0, 'el examen tiene tiempo asignado');
+
+const malB = Ruta.cerrarExamenDeBloque('Pediatría', {
+  respuestas: exB.map(function (q) { return { qid:q.id, ok:false }; })
+});
+igual(malB.pct, 0, 'un examen fallado da 0%');
+igual(malB.aprobado, false, 'y no aprueba');
+igual(Ruta.estadoBloque('Pediatría').cerrado, false, 'el bloque sigue abierto');
+igual(Ruta.bloqueDisponible('Cirugía'), false, 'y el siguiente con llave');
+ok(Ruta.examenDeBloque('Pediatría').length > 0, 'se puede repetir el examen');
+
+const exB2 = Ruta.examenDeBloque('Pediatría');
+const bienB = Ruta.cerrarExamenDeBloque('Pediatría', {
+  respuestas: exB2.map(function (q) { return { qid:q.id, ok:true }; })
+});
+igual(bienB.pct, 100, 'un examen perfecto da 100%');
+igual(bienB.aprobado, true, 'y aprueba');
+igual(Ruta.estadoBloque('Pediatría').cerrado, true, 'el bloque queda cerrado');
+igual(Ruta.estadoBloque('Pediatría').pct, 100, 'con su nota');
+igual(Ruta.bloqueActual(), 'Cirugía', 'el bloque actual pasa al siguiente');
+igual(Ruta.bloqueDisponible('Cirugía'), true, 'que ya esta disponible');
+igual(Ruta.bloqueDisponible('Pediatría'), true, 'y el cerrado sigue accesible');
+
+/* El cursor salta al primer tema del bloque siguiente, en frontera de
+   tanda: sin esto el recorrido se encalla en la ultima tanda de un
+   bloque ya cerrado. */
+igual(Ruta.activa().cursor, 20, 'el cursor salta al primer tema de Cirugia');
+igual(Ruta.temaPorNombre(Ruta.activa().orden[Ruta.activa().cursor]).bloque, 'Cirugía',
+      'y ese tema es del bloque siguiente');
+const taTrasCierre = Ruta.tandaActual();
+ok(!!taTrasCierre && taTrasCierre.temas.length > 0, 'hay tanda en curso despues de cerrar');
+ok(taTrasCierre.temas.every(function (f) {
+     return Ruta.temaPorNombre(f.tema).bloque === 'Cirugía';
+   }), 'y todos sus temas son del bloque nuevo');
+
+/* Justo en el corte: 60% aprueba. */
+reiniciar();
+D.ajustes.porBloques = true;
+Ruta.crear(5, ['Pediatría', 'Cirugía']);
+estudiarBloque('Pediatría');
+const ex60 = Ruta.examenDeBloque('Pediatría');
+const justo = Math.round(ex60.length * 0.6);
+const r60 = Ruta.cerrarExamenDeBloque('Pediatría', {
+  respuestas: ex60.map(function (q, i) { return { qid:q.id, ok: i < justo }; })
+});
+ok(r60.pct >= 60, 'el examen al 60% da ' + r60.pct + '%');
+igual(r60.aprobado, true, 'y con 60% se aprueba');
+
+D.ajustes.porBloques = false;
+igual(Ruta.bloqueDisponible('Cirugía'), true, 'sin norma todos los bloques estan disponibles');
+
 fin();
