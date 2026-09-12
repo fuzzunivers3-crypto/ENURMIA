@@ -1072,4 +1072,60 @@ igual(r60.aprobado, true, 'y con 60% se aprueba');
 D.ajustes.porBloques = false;
 igual(Ruta.bloqueDisponible('Cirugía'), true, 'sin norma todos los bloques estan disponibles');
 
+/* ============================================================
+   17. Que se puede entrenar
+   ============================================================ */
+titulo('Pool disponible');
+
+reiniciar();
+D.ajustes.porBloques = true;
+Ruta.crear(5, ['Pediatría', 'Cirugía']);
+
+/* Las transversales nunca se cierran: no estan en ningun bloque del
+   temario y atraviesan todos. Ponerlas tras una puerta dejaria al
+   estudiante sin poder estudiarlas nunca. */
+igual(Ruta.esTransversal('Farmacología'), true, 'Farmacologia es transversal');
+igual(Ruta.esTransversal('Ciencias Básicas'), true, 'Ciencias Basicas es transversal');
+igual(Ruta.esTransversal('Epidemiología'), true, 'Epidemiologia es transversal');
+igual(Ruta.esTransversal('Pediatría'), false, 'Pediatria NO es transversal, es un bloque');
+igual(Ruta.esTransversal('Medicina Interna'), false, 'Medicina Interna tampoco');
+
+igual(Ruta.espDisponible('Pediatría'), true, 'el bloque actual esta disponible');
+igual(Ruta.espDisponible('Cirugía'), false, 'el bloque siguiente no');
+igual(Ruta.espDisponible('Medicina Interna'), false, 'un bloque no elegido tampoco');
+igual(Ruta.espDisponible('Farmacología'), true, 'las transversales siempre');
+
+const pool = Ruta.preguntasDisponibles();
+ok(pool.length > 0, 'hay preguntas disponibles');
+igual(pool.filter(function (q) { return q.esp === 'Cirugía'; }).length, 0,
+      'ninguna de un bloque con llave');
+ok(pool.filter(function (q) { return q.esp === 'Pediatría'; }).length > 0,
+   'si las del bloque actual');
+ok(pool.filter(function (q) { return q.esp === 'Farmacología'; }).length > 0,
+   'y las transversales');
+ok(pool.length < Motor.bancoActivo().length, 'el pool es menor que el banco entero');
+
+/* Al cerrar Pediatria entran las de Cirugia. */
+Ruta.temasDeBloque('Pediatría').forEach(estudiarTema);
+Ruta.invalidar();
+const exPed = Ruta.examenDeBloque('Pediatría');
+Ruta.cerrarExamenDeBloque('Pediatría', {
+  respuestas: exPed.map(function (q) { return { qid:q.id, ok:true }; })
+});
+const pool2 = Ruta.preguntasDisponibles();
+ok(pool2.filter(function (q) { return q.esp === 'Cirugía'; }).length > 0,
+   'cerrado Pediatria, entran las de Cirugia');
+ok(pool2.filter(function (q) { return q.esp === 'Pediatría'; }).length > 0,
+   'y las de Pediatria siguen');
+ok(pool2.length > pool.length, 'el pool crece al avanzar');
+
+D.ajustes.porBloques = false;
+igual(Ruta.preguntasDisponibles().length, Motor.bancoActivo().length,
+      'sin norma el pool es el banco activo entero');
+igual(Ruta.espDisponible('Medicina Interna'), true, 'y todo esta disponible');
+
+reiniciar();
+igual(Ruta.preguntasDisponibles().length, Motor.bancoActivo().length,
+      'sin recorrido el pool es el banco entero');
+
 fin();

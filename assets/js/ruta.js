@@ -743,6 +743,45 @@ window.Ruta = (function () {
     return { pct: pct, aprobado: aprobado, flojos: flojos };
   }
 
+  /* ---------- que se puede entrenar ---------- */
+  /* El filtro va por la especialidad de la pregunta y no recorriendo los
+     temas: recorrer los temas dejaria fuera las preguntas de un bloque
+     abierto que ninguna clave del temario llega a enganchar, y esas
+     existen. Los cuatro bloques del temario y los valores de `esp`
+     coinciden exactos, asi que es comparacion directa. */
+  function nombresDeBloque(){
+    return bloques().map(function (b) { return b.bloque; });
+  }
+
+  /* Farmacologia, Ciencias Basicas, Epidemiologia, Salud Publica,
+     Bioetica, Emergencias, Psiquiatria y Medicina Familiar no estan en
+     ningun bloque del temario y atraviesan todos. Nunca se cierran:
+     ponerlas tras una puerta dejaria al estudiante sin poder
+     estudiarlas nunca. */
+  function esTransversal(esp){
+    return nombresDeBloque().indexOf(esp) < 0;
+  }
+
+  function bloquesAbiertos(){
+    const r = activa();
+    if (!r) return nombresDeBloque();
+    const cerrados = Object.keys(r.bloquesCerrados || {});
+    const act = bloqueActual();
+    return act ? cerrados.concat([act]) : cerrados;
+  }
+
+  function espDisponible(esp){
+    if (!porBloques()) return true;
+    if (esTransversal(esp)) return true;
+    return bloquesAbiertos().indexOf(esp) >= 0;
+  }
+
+  function preguntasDisponibles(){
+    const banco = Motor.bancoActivo();
+    if (!porBloques()) return banco;
+    return banco.filter(function (q) { return espDisponible(q.esp); });
+  }
+
   /* ---------- cerrar la tanda ---------- */
   /* `resultado` viene de la sesion: { respuestas:[{qid, ok}] }.
      La tanda se cierra SIEMPRE, saque lo que saque. Lo que cambia con un
@@ -943,6 +982,8 @@ window.Ruta = (function () {
     bloquesDisponibles: bloquesDisponibles,
     _ordenPorBloques: ordenPorBloques, temasDeBloque: temasDeBloque,
     porBloques: porBloques,
+    esTransversal: esTransversal, bloquesAbiertos: bloquesAbiertos,
+    espDisponible: espDisponible, preguntasDisponibles: preguntasDisponibles,
     bloqueActual: bloqueActual, bloqueDisponible: bloqueDisponible,
     estadoBloque: estadoBloque, examenDeBloque: examenDeBloque,
     minutosDeBloque: minutosDeBloque, cerrarExamenDeBloque: cerrarExamenDeBloque,
