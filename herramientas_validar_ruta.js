@@ -42,11 +42,13 @@ function estudianteVacio(){
   };
 }
 let D = estudianteVacio();
+let sesionFalsa = { usuario:'prueba', nube:false };
 function reiniciar(){ D = estudianteVacio(); if (window.Ruta) Ruta.invalidar(); }
 
 window.Almacen = {
   datos: function(){ return D; },
   guardar: function(){},
+  sesion: function(){ return sesionFalsa; },
   programa: function(){ return 'enurm'; },
   cuatrimestre: function(){ return null; }
 };
@@ -804,5 +806,92 @@ const mal = Ruta.cerrarExamenDeTema(ty, {
 igual(mal.pct, 0, 'un examen fallado da 0%');
 igual(mal.solido, false, 'con 0% el tema no es solido');
 ok(Ruta.activa().repaso.indexOf(ty) >= 0, 'un tema suspendido entra en la cola de repaso');
+
+/* ============================================================
+   14. Arturo reformula: el material que se manda
+   ============================================================ */
+titulo('Material para reformular');
+
+cargar('assets/js/arturo-ia.js');
+
+reiniciar();
+
+/* Una pregunta con explicacion completa del banco curado. */
+const qRef = Motor.bancoActivo().filter(function (q) {
+  return q.exp && q.no && Object.keys(q.no).length && q.ops && q.ops.length === 4;
+})[0];
+ok(!!qRef, 'hay una pregunta con explicacion y descartes para la prueba');
+
+/* El nombre se pone ANTES de armar el material: si se pusiera despues, la
+   comprobacion de mas abajo pasaria sola y no probaria nada. */
+D.perfil.nombre = 'NombreDelEstudiante';
+
+const distinto = qRef.ok === 0 ? 1 : 0;
+const mat = ArturoIA.armarMaterial(qRef, distinto);
+
+/* 1. Lleva lo que hace falta para reformular. */
+['qid', 'tema', 'enunciado', 'opciones', 'correcta', 'clave', 'exp', 'ref'].forEach(function (k) {
+  ok(mat[k] !== undefined, 'el material lleva ' + k);
+});
+igual(mat.qid, qRef.id, 'el material identifica la pregunta');
+igual(mat.correcta, qRef.ok, 'el material dice cual es la correcta');
+ok(mat.descarte !== undefined, 'lleva el descarte del distractor que se marco');
+igual(mat.eligio, distinto, 'y dice cual se marco');
+
+/* 2. Y NADA mas. Esta es la comprobacion que importa: lo que se manda a
+      un tercero es una lista blanca, no el objeto pregunta entero ni nada
+      del estudiante. */
+const PERMITIDOS = ['qid','tema','enunciado','caso','opciones','correcta',
+                    'clave','exp','trampa','ref','descarte','eligio'];
+const colados = Object.keys(mat).filter(function (k) { return PERMITIDOS.indexOf(k) < 0; });
+igual(colados.length, 0, 'no se cuela ningun campo fuera de la lista blanca' +
+  (colados.length ? ' (' + colados.join(', ') + ')' : ''));
+
+/* El progreso del estudiante no puede viajar ni por accidente. */
+const textoMat = JSON.stringify(mat);
+ok(textoMat.indexOf('NombreDelEstudiante') < 0, 'el nombre del estudiante no viaja');
+ok(textoMat.indexOf('"srs"') < 0 && textoMat.indexOf('"respuestas"') < 0, 'el progreso no viaja');
+
+/* 3. Sin explicacion no hay material: ahi el boton no debe existir. */
+const qSin = Motor.banco().filter(function (q) { return !q.exp; })[0];
+if (qSin) igual(ArturoIA.armarMaterial(qSin, 0), null, 'una pregunta sin explicacion no produce material');
+
+/* 4. Si no marco nada, no hay descarte pero si material. */
+const matBlanco = ArturoIA.armarMaterial(qRef, null);
+ok(!!matBlanco, 'sin marcar opcion sigue habiendo material');
+igual(matBlanco.descarte, undefined, 'sin marcar opcion no hay descarte');
+
+/* 5. La pregunta mas larga del banco cabe por debajo del tope de 6 KB. */
+let peorPeso = 0, peorId = '';
+Motor.bancoActivo().forEach(function (q) {
+  const m = ArturoIA.armarMaterial(q, 0);
+  if (!m) return;
+  const p = ArturoIA.pesa(m);
+  if (p > peorPeso){ peorPeso = p; peorId = q.id; }
+});
+ok(peorPeso <= 6144, 'la pregunta mas pesada cabe en 6 KB (' + peorId + ': ' + peorPeso + ' bytes)');
+
+/* 6. La llave distingue dos distractores de la misma pregunta. */
+ok(ArturoIA.clave('TE-012', 1) !== ArturoIA.clave('TE-012', 2), 'dos distractores dan llaves distintas');
+igual(ArturoIA.clave('TE-012', null), 'TE-012|-', 'sin marcar opcion la llave usa un guion');
+
+/* 7. Guardar y reutilizar. */
+reiniciar();
+igual(ArturoIA.guardada('TE-012', 1), null, 'sin nada guardado devuelve null');
+ArturoIA.guardar('TE-012', 1, 'Otra forma de verlo.');
+igual(ArturoIA.guardada('TE-012', 1), 'Otra forma de verlo.', 'lo guardado se recupera');
+igual(ArturoIA.guardada('TE-012', 2), null, 'y no se confunde con otro distractor');
+
+/* 8. La poda deja las 100 mas recientes. Este objeto viaja entero a
+      Supabase en cada sincronizacion, asi que el tope no es cosmetico. */
+const mapa = {};
+for (let i = 0; i < 130; i++) mapa['Q-' + i + '|0'] = { texto:'t', fecha: 1000 + i };
+const podado = ArturoIA._podar(mapa, 100);
+igual(Object.keys(podado).length, 100, 'la poda deja exactamente 100');
+ok(!!podado['Q-129|0'], 'conserva la mas reciente');
+ok(!podado['Q-0|0'], 'tira la mas vieja');
+
+/* 9. Sin sesion de nube no esta disponible: la funcion exige autenticacion. */
+igual(ArturoIA.disponible(), false, 'una cuenta solo local no puede usarlo');
 
 fin();
