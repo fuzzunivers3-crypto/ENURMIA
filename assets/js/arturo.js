@@ -83,6 +83,21 @@ window.Arturo = (function () {
       'Cerrada la tanda {tanda}. Los temas que no llegaron al 60% te los voy a devolver mas adelante, no te libras.',
       'Tanda {tanda} medida. Seguimos avanzando; lo flojo lo recupero yo por ti.'
     ],
+    eligeTema: [
+      'Tema cerrado. Puedes seguir con el siguiente o medirte ahora mismo con este, en caliente.',
+      'Ya esta {tema}. O pasamos al siguiente, o te examino de este ahora que lo tienes fresco.',
+      '{tema} queda hecho. Tu decides: seguimos avanzando o lo pruebas ya con un examen corto.'
+    ],
+    temaSolido: [
+      '{pct}% en {tema}. Ese lo tienes sujeto; sigamos.',
+      'Bien. {tema} queda solido con {pct}%. Al siguiente.',
+      '{pct}% y sin dudar. {tema} ya no me preocupa.'
+    ],
+    temaFlojo: [
+      '{pct}% en {tema}. Te lo apunto para repasar: va a volver en los proximos examenes.',
+      'Ese no quedo: {pct}%. Lo meto en la cola y te lo devuelvo mas adelante.',
+      '{pct}% no alcanza en {tema}. Mejor saberlo ahora que el dia del examen.'
+    ],
     retomar: [
       'Lo dejamos en {tema}. Sigamos por ahi antes de abrir nada nuevo.',
       'Tenias {tema} a medias. Terminemoslo y despues pasamos al siguiente.',
@@ -165,18 +180,35 @@ window.Arturo = (function () {
         '</div>' +
         (boton ? '<button class="btn btn--sm" id="arturoSeguir" data-accion="' +
                  esc(accion) + '">' + esc(boton) + '</button>' : '') +
+        (op.boton2 ? '<button class="btn btn--sm btn--fantasma" id="arturoOtro" data-accion="' +
+                 esc(op.accion2 || '') + '">' + esc(op.boton2) + '</button>' : '') +
       '</div>';
   }
 
   function enganchar(){
-    const b = document.getElementById('arturoSeguir');
+    cablear(document.getElementById('arturoSeguir'));
+    cablear(document.getElementById('arturoOtro'));
+  }
+
+  function cablear(b){
     if (!b) return;
     const accion = b.getAttribute('data-accion') || '';
     b.onclick = function () {
       if (accion === 'cerrarLectura') return cerrarLectura();
       if (accion === 'releer') return releer();
+      if (accion === 'examenTema') return examenDeTema();
       seguir();
     };
+  }
+
+  /* Medirse de un tema recien cerrado, sin esperar al examen de la tanda.
+     Se lanza sobre el tema del hilo, que es el que se acaba de terminar. */
+  function examenDeTema(){
+    const h = Ruta.hilo();
+    const tema = h ? h.tema : null;
+    if (!tema) return App.ir('ruta');
+    if (window.VistaRuta) return VistaRuta.examenDeTema(tema);
+    App.ir('ruta');
   }
 
   /* Llegar al pie del texto ES haberlo leido. Sin esto la cadena se
@@ -244,6 +276,7 @@ window.Arturo = (function () {
     NOMBRE: NOMBRE,
     paso: paso, frase: frase, barra: barra,
     enganchar: enganchar, seguir: seguir,
-    cerrarLectura: cerrarLectura, releer: releer
+    cerrarLectura: cerrarLectura, releer: releer,
+    examenDeTema: examenDeTema
   };
 })();

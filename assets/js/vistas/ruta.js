@@ -20,8 +20,16 @@ window.VistaRuta = (function () {
   }
 
   /* ---------- 1. antes de empezar ---------- */
+  /* Los bloques marcados en la pantalla de arranque. Vive fuera de la
+     funcion porque repintamos al marcar y desmarcar para recalcular
+     cuantas tandas salen. */
+  let elegidos = null;
+
   function arranque(){
-    const total = Ruta.temas().length;
+    const bls = Ruta.bloquesDisponibles();
+    if (elegidos === null) elegidos = bls.map(function (b) { return b.bloque; });
+    const total = bls.filter(function (b) { return elegidos.indexOf(b.bloque) >= 0; })
+                     .reduce(function (a, b) { return a + b.n; }, 0);
     const p = Arturo.paso();
 
     V().innerHTML =
@@ -34,6 +42,26 @@ window.VistaRuta = (function () {
         '<span class="eyebrow" style="color:rgba(255,255,255,.5)">Cómo funciona</span>' +
         '<h3 style="font-size:23px;margin:8px 0 12px">Estudiar, medirse, avanzar</h3>' +
         '<p style="color:rgba(255,255,255,.78);font-size:14.5px">De cada tema se leen sus apuntes, se hacen sus preguntas y se pasan sus tarjetas. Cuando la tanda entera está hecha, entra un examen de esos mismos temas con algo de lo anterior mezclado. Lo que salga flojo vuelve solo en los exámenes siguientes. Y así hasta agotar los ' + total + ' temas del programa.</p>' +
+      '</div>' +
+
+      '<div class="card" style="margin-bottom:18px">' +
+        '<span class="eyebrow">Qué quieres estudiar</span>' +
+        '<p class="muted" style="margin:8px 0 14px;font-size:13.5px">Marca los bloques que entran en el recorrido. Si solo vas a por Pediatría, no tiene sentido que te aparezca cardiología por el medio.</p>' +
+        '<div class="ruta__bloques">' +
+          bls.map(function (b) {
+            const on = elegidos.indexOf(b.bloque) >= 0;
+            return '<button class="ruta__bloque' + (on ? ' ruta__bloque--on' : '') + '" ' +
+              'data-bloque="' + esc(b.bloque) + '">' +
+              '<span class="ruta__bloque__marca">' + (on ? '✓' : '') + '</span>' +
+              '<span style="font-size:18px">' + b.em + '</span>' +
+              '<span class="grow"><b>' + esc(b.bloque) + '</b>' +
+              '<small class="muted" style="display:block;font-size:12px">' + b.n + ' temas</small></span>' +
+              '</button>';
+          }).join('') +
+        '</div>' +
+        '<p class="muted" style="margin-top:12px;font-size:13px">' +
+          (total ? 'Entran <b>' + total + ' temas</b> en tu recorrido.'
+                 : 'Marca al menos un bloque.') + '</p>' +
       '</div>' +
 
       '<div class="card">' +
@@ -53,6 +81,14 @@ window.VistaRuta = (function () {
       '</div>' +
     '</div>';
 
+    UI.$$('[data-bloque]').forEach(function (b) {
+      b.onclick = function () {
+        const nom = b.dataset.bloque;
+        const i = elegidos.indexOf(nom);
+        if (i >= 0) elegidos.splice(i, 1); else elegidos.push(nom);
+        arranque();
+      };
+    });
     UI.$$('[data-tam]').forEach(function (b) {
       b.onclick = function () { empezar(+b.dataset.tam); };
     });
@@ -70,7 +106,8 @@ window.VistaRuta = (function () {
   }
 
   function empezar(tam){
-    Ruta.crear(tam);
+    if (!elegidos.length) return UI.tostada('Marca al menos un bloque', 'mal');
+    Ruta.crear(tam, elegidos);
     UI.tostada('Recorrido creado. Arturo te espera.', 'ok');
     menu();
   }
@@ -93,6 +130,15 @@ window.VistaRuta = (function () {
           casilla(f.tema, 'leer', '📖', f.leer.hecho, f.leer.sinTexto ? 'sin texto' : 'leer') +
           casilla(f.tema, 'preg', '📝', f.preg.hecho, f.preg.hechas + '/' + f.preg.meta) +
           casilla(f.tema, 'tarj', '⚡', f.tarj.hecho, f.tarj.hechas + '/' + f.tarj.meta)) +
+        /* Cerrado el tema se puede medir en caliente, sin esperar al
+           examen de la tanda. Si ya se hizo, se ve la nota. */
+        (f.completo
+          ? (Ruta.notaDeTema(f.tema) === null
+              ? '<button class="btn btn--sm btn--fantasma" data-examen="' + esc(f.tema) + '">Examinarme</button>'
+              : '<span class="chip ' + (Ruta.notaDeTema(f.tema) >= 60 ? 'chip--verde' : 'chip--sangria') +
+                '" data-examen="' + esc(f.tema) + '" style="cursor:pointer">' +
+                Ruta.notaDeTema(f.tema) + '%</span>')
+          : '') +
       '</div>';
     }).join('');
 
@@ -190,6 +236,10 @@ window.VistaRuta = (function () {
       };
     });
 
+    UI.$$('[data-examen]').forEach(function (b) {
+      b.onclick = function (e) { e.stopPropagation(); examenDeTema(b.dataset.examen); };
+    });
+
     const rep = document.getElementById('rutaRepasar');
     if (rep) rep.onclick = function () {
       const ids = {};
@@ -252,6 +302,35 @@ window.VistaRuta = (function () {
     const cs = Ruta.tarjetasDe(tema);
     if (!cs.length) return UI.tostada('Este tema todavía no tiene flashcards', 'mal');
     Flashcards.iniciar({ n:12, titulo:tema, ids: cs.map(function (c) { return c.id; }) });
+  }
+
+  /* Examen corto de UN tema, para medirse recien cerrado en vez de
+     esperar al de la tanda. No mueve el recorrido: solo deja nota y, si
+     se suspende, adelanta la entrada en la cola de repaso. */
+  function examenDeTema(tema){
+    const preguntas = Ruta.examenDeTema(tema);
+    if (!preguntas.length) return UI.tostada('Este tema no tiene preguntas para examinarte', 'mal');
+    const min = Ruta.minutosDeTema(tema);
+
+    UI.modal('<p class="eyebrow">Examen del tema</p>' +
+      '<h3 style="font-size:22px;margin:4px 0 10px">' + esc(tema) + '</h3>' +
+      '<p class="muted">' + preguntas.length + ' preguntas · ' + min + ' minutos. Con reloj y sin explicación hasta el final. Si sacas 60% o más queda cerrado; si no, te lo devuelvo mezclado más adelante.</p>' +
+      '<div class="row" style="margin-top:20px;gap:9px">' +
+      '<button class="btn btn--fantasma grow" onclick="this.closest(\'.velo\').remove()">Todavía no</button>' +
+      '<button class="btn grow" id="rutaEmpezarTema">Empezar</button></div>');
+
+    document.getElementById('rutaEmpezarTema').onclick = function () {
+      document.querySelector('.velo').remove();
+      Ruta.abrirHilo(tema);
+      Sesion.iniciar({
+        modo: 'examen',
+        titulo: tema,
+        preguntas: preguntas,
+        tiempoTotal: min * 60000,
+        etiqueta: 'Tema · ' + tema,
+        alTerminar: function (res) { Ruta.cerrarExamenDeTema(tema, res); }
+      });
+    };
   }
 
   function empezarSimulacro(){
@@ -318,5 +397,5 @@ window.VistaRuta = (function () {
     document.getElementById('rutaSimFinal').onclick = function () { App.ir('simulacro'); };
   }
 
-  return { menu: menu };
+  return { menu: menu, examenDeTema: examenDeTema };
 })();

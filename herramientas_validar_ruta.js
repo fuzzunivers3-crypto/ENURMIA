@@ -724,4 +724,85 @@ const html = Arturo.barra();
 ok(html.indexOf('arturo') >= 0, 'barra() devuelve la tira de Arturo');
 ok(html.indexOf('arturoSeguir') >= 0, 'barra() trae el boton de seguir');
 
+/* ============================================================
+   12. Elegir que bloques entran en el recorrido
+   ============================================================ */
+titulo('Bloques elegidos');
+
+const BL = Ruta.bloquesDisponibles();
+igual(BL.length, 4, 'ENURMIA tiene cuatro bloques');
+igual(BL.reduce(function (a, b) { return a + b.n; }, 0), 101, 'entre los cuatro suman 101 temas');
+
+reiniciar();
+const rTodo = Ruta.crear(5);
+igual(rTodo.orden.length, 101, 'sin elegir bloques entran los 101 temas');
+igual(rTodo.bloques.length, 4, 'sin elegir se guardan los cuatro bloques');
+
+reiniciar();
+const rPed = Ruta.crear(5, ['Pediatría']);
+igual(rPed.orden.length, 20, 'eligiendo solo Pediatria el recorrido trae sus 20 temas');
+igual(rPed.tandasN.reduce(function (a, c) { return a + c; }, 0), 20, 'las tandas suman los 20');
+igual(rPed.tandasN[0], 5, 'la primera tanda sigue siendo del tamano pedido');
+ok(rPed.orden.every(function (x) { return Ruta.temaPorNombre(x).bloque === 'Pediatría'; }),
+   'no se cuela ningun tema de otro bloque');
+igual(Ruta.temasNuevos().length, 0, 'los temas de bloques no elegidos no cuentan como nuevos');
+
+reiniciar();
+const rDos = Ruta.crear(4, ['Pediatría', 'Cirugía']);
+igual(rDos.orden.length, 39, 'con dos bloques entran sus 39 temas');
+/* El intercalado reparte en proporcion ENTRE LOS ELEGIDOS: 20 y 19 temas
+   es casi mitad y mitad, asi que los cuatro primeros no pueden ser todos
+   del mismo bloque. */
+const primeros4 = rDos.orden.slice(0, 4).map(function (x) { return Ruta.temaPorNombre(x).bloque; });
+igual(new Set(primeros4).size, 2, 'la primera tanda mezcla los dos bloques elegidos');
+
+reiniciar();
+const rNada = Ruta.crear(5, []);
+igual(rNada.orden.length, 101, 'elegir cero bloques equivale a elegirlos todos');
+
+/* ============================================================
+   13. Examinarse de un tema al cerrarlo
+   ============================================================ */
+titulo('Examen de un tema');
+
+reiniciar();
+Ruta.crear(5);
+const tx = Ruta.activa().orden[0];
+
+const ex = Ruta.examenDeTema(tx);
+ok(ex.length > 0, 'el examen de un tema trae preguntas');
+ok(ex.length <= 10, 'como mucho diez preguntas (salieron ' + ex.length + ')');
+const idsTema = {};
+Ruta.preguntasDe(tx).forEach(function (q) { idsTema[q.id] = 1; });
+ok(ex.every(function (q) { return idsTema[q.id]; }), 'todas las preguntas son del tema');
+const vistosEx = {};
+let dupsEx = 0;
+ex.forEach(function (q) { if (vistosEx[q.id]) dupsEx++; vistosEx[q.id] = 1; });
+igual(dupsEx, 0, 'el examen del tema no repite preguntas');
+ok(Ruta.minutosDeTema(tx) > 0, 'el examen del tema tiene tiempo asignado');
+
+/* Aprobarlo deja el tema marcado como solido y NO mueve la tanda. */
+const cursorAntes = Ruta.activa().cursor, tandaAntes = Ruta.activa().tanda;
+const bien = Ruta.cerrarExamenDeTema(tx, {
+  respuestas: ex.map(function (q) { return { qid:q.id, ok:true }; })
+});
+igual(bien.pct, 100, 'un examen perfecto da 100%');
+igual(bien.solido, true, 'con 100% el tema queda solido');
+igual(Ruta.activa().examenes[tx], 100, 'la nota del tema se guarda');
+igual(Ruta.activa().repaso.indexOf(tx), -1, 'un tema solido no entra en la cola de repaso');
+igual(Ruta.activa().cursor, cursorAntes, 'el examen de un tema no mueve el cursor');
+igual(Ruta.activa().tanda, tandaAntes, 'ni cambia la tanda en curso');
+
+/* Suspenderlo lo manda a la cola sin esperar al examen de la tanda. */
+reiniciar();
+Ruta.crear(5);
+const ty = Ruta.activa().orden[0];
+const ex2 = Ruta.examenDeTema(ty);
+const mal = Ruta.cerrarExamenDeTema(ty, {
+  respuestas: ex2.map(function (q) { return { qid:q.id, ok:false }; })
+});
+igual(mal.pct, 0, 'un examen fallado da 0%');
+igual(mal.solido, false, 'con 0% el tema no es solido');
+ok(Ruta.activa().repaso.indexOf(ty) >= 0, 'un tema suspendido entra en la cola de repaso');
+
 fin();

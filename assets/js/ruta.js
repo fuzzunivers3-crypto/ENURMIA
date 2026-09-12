@@ -163,9 +163,30 @@ window.Ruta = (function () {
      (j + 0.5) / n, y se ordena por esa clave. Eso reparte en proporcion
      en CUALQUIER prefijo, no solo al final, asi que hasta la primera
      tanda ya se parece al examen real. */
-  function ordenIntercalado(){
+  /* Los bloques que el estudiante puede meter en su recorrido. No todo el
+     mundo prepara el temario entero de golpe: hay quien viene a cerrar
+     Pediatria antes del examen y no quiere ver cardiologia por el medio. */
+  function bloquesDisponibles(){
+    return bloques().map(function (b) {
+      return { bloque: b.bloque, em: b.em, n: b.temas.length };
+    });
+  }
+
+  /* Una lista vacia o ausente significa "todos": es lo que quiere quien no
+     toca las casillas, y evita que un recorrido nazca sin temas. */
+  function normalizarBloques(elegidos){
+    const todos = bloques().map(function (b) { return b.bloque; });
+    if (!elegidos || !elegidos.length) return todos;
+    const validos = elegidos.filter(function (x) { return todos.indexOf(x) >= 0; });
+    return validos.length ? validos : todos;
+  }
+
+  function ordenIntercalado(elegidos){
     const marcas = [];
-    bloques().forEach(function (b, bi) {
+    const filtro = normalizarBloques(elegidos);
+    bloques().filter(function (b) {
+      return filtro.indexOf(b.bloque) >= 0;
+    }).forEach(function (b, bi) {
       const n = b.temas.length;
       b.temas.forEach(function (t, j) {
         marcas.push({ nombre: t.t, k: (j + 0.5) / n, bi: bi, j: j });
@@ -209,16 +230,19 @@ window.Ruta = (function () {
     return (d && d.ruta) ? d.ruta : null;
   }
 
-  function crear(tam){
+  function crear(tam, elegidos){
     const d = datos();
     if (!d) return null;
-    const orden = ordenIntercalado();
+    const bls = normalizarBloques(elegidos);
+    const orden = ordenIntercalado(bls);
     d.ruta = {
       v: 1,
       creado: Date.now(),
       tam: acotar(tam),
       vuelta: 1,
+      bloques: bls,
       orden: orden,
+      examenes: {},
       tandasN: repartirTandas(orden.length, tam),
       cursor: 0,
       tanda: 1,
@@ -461,6 +485,60 @@ window.Ruta = (function () {
     return barajar(salida).slice(0, n);
   }
 
+  /* ---------- examinarse de UN tema al cerrarlo ---------- */
+  /* Es opcional y no sustituye al examen de la tanda: sirve para medirse
+     en caliente, recien estudiado el tema, en vez de esperar a que la
+     tanda entera este hecha. Por eso no mueve el cursor ni cierra nada.
+     Lo que si hace es adelantar la reinyeccion: un tema que se suspende
+     aqui entra en la cola de repaso sin esperar al examen de la tanda. */
+  function examenDeTema(nombre){
+    const qs = preguntasDe(nombre);
+    if (!qs.length) return [];
+    const exp = qs.filter(function (q) { return !!q.exp; });
+    const sin = qs.filter(function (q) { return !q.exp; });
+    const n = Math.min(META_PREG, qs.length);
+    /* Se baraja dentro de una ventana corta para no perder el orden por
+       nivel que trae preguntasDe: primero las que tratan del tema. */
+    const pozo = barajar(exp.slice(0, Math.max(n * 2, 12)))
+                   .concat(exp.slice(Math.max(n * 2, 12)))
+                   .concat(barajar(sin));
+    return pozo.slice(0, n);
+  }
+
+  function minutosDeTema(nombre){
+    return Math.max(2, Math.round(examenDeTema(nombre).length * 1.2));
+  }
+
+  function cerrarExamenDeTema(nombre, resultado){
+    const r = activa();
+    if (!r) return null;
+    const resp = (resultado && resultado.respuestas) || [];
+    if (!resp.length) return { pct: 0, solido: false };
+
+    const pct = Math.round(
+      resp.filter(function (x) { return x.ok; }).length / resp.length * 100);
+    const solido = pct >= CORTE_FLOJO;
+
+    if (!r.examenes) r.examenes = {};
+    r.examenes[nombre] = pct;
+
+    if (solido){
+      const i = r.repaso.indexOf(nombre);
+      if (i >= 0) r.repaso.splice(i, 1);
+    } else if (r.repaso.indexOf(nombre) < 0){
+      r.repaso.push(nombre);
+    }
+    guardar();
+    return { pct: pct, solido: solido };
+  }
+
+  function notaDeTema(nombre){
+    const r = activa();
+    if (!r || !r.examenes) return null;
+    const n = r.examenes[nombre];
+    return (n === undefined) ? null : n;
+  }
+
   /* ---------- cerrar la tanda ---------- */
   /* `resultado` viene de la sesion: { respuestas:[{qid, ok}] }.
      La tanda se cierra SIEMPRE, saque lo que saque. Lo que cambia con un
@@ -553,7 +631,7 @@ window.Ruta = (function () {
     const r = activa();
     if (!r) return null;
     const flojos = r.repaso.filter(function (x) { return !!temaPorNombre(x); });
-    const resto = ordenIntercalado().filter(function (x) { return flojos.indexOf(x) < 0; });
+    const resto = ordenIntercalado(r.bloques).filter(function (x) { return flojos.indexOf(x) < 0; });
     const orden = flojos.concat(resto);
     r.vuelta += 1;
     r.orden = orden;
@@ -577,8 +655,12 @@ window.Ruta = (function () {
     if (!r) return [];
     const dentro = {};
     r.orden.forEach(function (x) { dentro[x] = 1; });
-    return temas().filter(function (t) { return !dentro[t.t]; })
-                  .map(function (t) { return t.t; });
+    /* Un tema de un bloque que el estudiante no eligio no es un tema
+       "nuevo" que le falte: es que no lo quiso. */
+    const suyos = normalizarBloques(r.bloques);
+    return temas().filter(function (t) {
+      return !dentro[t.t] && suyos.indexOf(t.bloque) >= 0;
+    }).map(function (t) { return t.t; });
   }
 
   function absorber(){
@@ -650,8 +732,11 @@ window.Ruta = (function () {
     simulacroDeTanda: simulacroDeTanda, minutosDeTanda: minutosDeTanda,
     tamanoSimulacro: tamanoSimulacro, _reparto: reparto,
     cerrarTanda: cerrarTanda, segundaVuelta: segundaVuelta,
+    examenDeTema: examenDeTema, minutosDeTema: minutosDeTema,
+    cerrarExamenDeTema: cerrarExamenDeTema, notaDeTema: notaDeTema,
     temasNuevos: temasNuevos, absorber: absorber,
     temas: temas, temaPorNombre: temaPorNombre, invalidar: invalidar,
+    bloquesDisponibles: bloquesDisponibles,
     preguntasDe: preguntasDe, tarjetasDe: tarjetasDe, claveApunte: claveApunte,
     _orden: ordenIntercalado, _tandas: repartirTandas
   };

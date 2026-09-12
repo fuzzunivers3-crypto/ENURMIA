@@ -202,6 +202,21 @@ window.Flashcards = (function () {
   /* ============================================================
      CIERRE
      ============================================================ */
+  /* Cerrado el tema, Arturo no decide por el estudiante: ofrece las dos
+     salidas que tiene sentido tomar ahi. */
+  function remateTema(tema){
+    const completo = Ruta.pasosDe(tema).completo;
+    if (!completo){
+      return Arturo.barra({ frase: Arturo.frase('tarj', { tema: tema }) });
+    }
+    return Arturo.barra({
+      frase: Arturo.frase('eligeTema', { tema: tema, tanda: Ruta.activa().tanda }),
+      boton: 'Siguiente tema',
+      boton2: 'Examinarme de este tema',
+      accion2: 'examenTema'
+    });
+  }
+
   function terminar(){
     if (!S) return App.ir('flashcards');
     const total = S.notas.length;
@@ -232,11 +247,7 @@ window.Flashcards = (function () {
         '<p class="muted" style="margin-top:10px;font-size:13px">Vencidas para mañana: ' + r.vencidas + '</p></div>' +
 
       (window.Ruta && Ruta.activa() && window.Arturo && Ruta.hilo() && Ruta.hilo().tema === S.titulo
-        ? '<div style="margin-bottom:18px">' +
-          Arturo.barra({ frase: Arturo.frase(
-            Ruta.pasosDe(S.titulo).completo ? 'cierraTema' : 'tarj',
-            { tema: S.titulo, tanda: Ruta.activa().tanda }) }) +
-          '</div>'
+        ? '<div style="margin-bottom:18px">' + remateTema(S.titulo) + '</div>'
         : '') +
 
       '<div class="row wrap" style="gap:9px">' +

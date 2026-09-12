@@ -792,3 +792,21 @@ button.chip.on{background:var(--carbon);color:#fff}
   .arturo{ flex-wrap:wrap }
   .arturo .btn{ width:100% }
 }
+
+/* ---------- casillas de bloque al armar el recorrido ---------- */
+.ruta__bloques{ display:grid; grid-template-columns:repeat(2,1fr); gap:9px }
+.ruta__bloque{
+  display:flex; align-items:center; gap:10px; text-align:left;
+  padding:12px 14px; border:1px solid var(--linea); border-radius:var(--r-sm);
+  background:var(--papel); cursor:pointer; font:inherit; color:inherit;
+}
+.ruta__bloque:hover{ border-color:var(--sangria) }
+.ruta__bloque--on{ border-color:var(--sangria); background:var(--sangria-luz) }
+.ruta__bloque__marca{
+  flex:none; width:20px; height:20px; border-radius:6px;
+  border:1.5px solid var(--linea); background:var(--papel);
+  display:flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:700; color:#fff;
+}
+.ruta__bloque--on .ruta__bloque__marca{ background:var(--sangria); border-color:var(--sangria) }
+@media (max-width:640px){ .ruta__bloques{ grid-template-columns:1fr } }
