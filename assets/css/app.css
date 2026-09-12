@@ -810,3 +810,13 @@ button.chip.on{background:var(--carbon);color:#fff}
 }
 .ruta__bloque--on .ruta__bloque__marca{ background:var(--sangria); border-color:var(--sangria) }
 @media (max-width:640px){ .ruta__bloques{ grid-template-columns:1fr } }
+
+/* ---------- Arturo reformula ---------- */
+.reexp{
+  margin-top:14px; padding:14px 16px;
+  border-left:3px solid var(--sangria); background:var(--hueso);
+  border-radius:var(--r-sm);
+}
+.reexp .eyebrow{ display:block; margin-bottom:6px }
+.reexp p{ margin:0; font-size:14px; line-height:1.55 }
+.reexp--vacio{ background:transparent; border-left-color:var(--linea); padding:10px 0 0 }

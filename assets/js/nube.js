@@ -235,8 +235,25 @@ window.Nube = (function () {
     return { ok:true, fila: data || null };
   }
 
+  /* ---------- Edge Functions ---------- */
+  /* El cliente de Supabase adjunta solo la sesion del estudiante, asi que
+     la funcion sabe quien llama sin que nosotros mandemos nada. */
+  async function invocar(nombre, cuerpo){
+    if (!iniciar()) throw new Error('sin-conexion');
+    const { data, error } = await cliente.functions.invoke(nombre, { body: cuerpo });
+    if (error){
+      /* Un 429 llega como error pero su cuerpo trae el motivo. */
+      try {
+        const t = await error.context.json();
+        if (t && t.error) return t;
+      } catch (e) {}
+      throw error;
+    }
+    return data;
+  }
+
   return { disponible, registrar, entrar, salir, usuario, recuperar, bajar, subir,
-           perfil, miSuscripcion,
+           perfil, miSuscripcion, invocar,
            registrarDesafio, configurarRanking, miRanking, clasificacion, mesActual,
            listarUsuarios, guardarSuscripcion, cambiarRol, progresoDe,
            URL_PROYECTO: URL_PROYECTO };

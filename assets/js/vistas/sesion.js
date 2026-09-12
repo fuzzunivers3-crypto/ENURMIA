@@ -234,6 +234,7 @@ window.Sesion = (function () {
           '<p>Esta pregunta viene de un examen real, con su respuesta oficial, pero aún no tiene la explicación redactada ni contrastada con bibliografía. La respuesta es fiable; el porqué está pendiente.</p></div>') +
       (p.clave ? '<div class="bloque bloque--clave"><span class="eyebrow">Dato clave</span><p>' + esc(p.clave) + '</p></div>' : '') +
       (descartes ? '<div class="bloque"><span class="eyebrow">Por qué no las otras</span><div class="descartes">' + descartes + '</div></div>' : '') +
+      bloqueReexplicar(p, ultimaElegida(p.id)) +
       (p.trampa ? '<div class="bloque bloque--trampa"><span class="eyebrow">La trampa de esta pregunta</span><p>' + esc(p.trampa) + '</p></div>' : '') +
       (p.dx && p.dx.length ? '<div class="bloque"><span class="eyebrow">Diagnósticos a considerar</span><p>' + p.dx.map(esc).join(' · ') + '</p></div>' : '') +
       (p.obj ? '<div class="bloque"><span class="eyebrow">Qué debes recordar</span><p>' + esc(p.obj) + '</p></div>' : '') +
@@ -478,6 +479,66 @@ window.Sesion = (function () {
       '</div>';
   }
 
+  /* ---------- "Aun no lo entiendo" ---------- */
+  /* Solo aparece si hay explicacion escrita que reformular y la funcion
+     esta disponible (ajuste activo, con internet, cuenta de nube y con
+     cuota). Si ya se pidio antes, se muestra lo guardado sin gastar. */
+  function bloqueReexplicar(p, elegida){
+    if (!window.ArturoIA || !p.exp) return '';
+    const ya = ArturoIA.guardada(p.id, elegida);
+    if (ya){
+      return '<div class="reexp" id="reexp-' + esc(p.id) + '">' +
+        '<span class="eyebrow">Arturo, de otra forma</span>' +
+        '<p>' + esc(ya) + '</p></div>';
+    }
+    if (!ArturoIA.disponible()) return '';
+    return '<div class="reexp reexp--vacio" id="reexp-' + esc(p.id) + '">' +
+      '<button class="btn btn--sm btn--fantasma" data-reexp="' + esc(p.id) +
+      '" data-elegida="' + (elegida === null || elegida === undefined ? '' : elegida) +
+      '">Aún no lo entiendo</button></div>';
+  }
+
+  /* Que marco el estudiante la ultima vez que vio esta pregunta. Sirve
+     igual dentro de una sesion en curso que revisandola despues, que es
+     lo que hace falta porque el bloque se pinta en los dos sitios. */
+  function ultimaElegida(qid){
+    const d = Almacen.datos();
+    if (!d || !d.respuestas) return null;
+    for (let i = d.respuestas.length - 1; i >= 0; i--){
+      if (d.respuestas[i].qid === qid) return d.respuestas[i].elegida;
+    }
+    return null;
+  }
+
+  /* Cablea los botones que haya en pantalla. Se llama despues de pintar. */
+  function engancharReexplicar(){
+    UI.$$('[data-reexp]').forEach(function (b) {
+      b.onclick = async function () {
+        const qid = b.dataset.reexp;
+        const cruda = b.dataset.elegida;
+        const elegida = cruda === '' ? null : +cruda;
+        const q = Motor.porId(qid);
+        if (!q) return;
+        const caja = document.getElementById('reexp-' + qid);
+        b.disabled = true;
+        b.textContent = 'Arturo lo está pensando…';
+        try {
+          const texto = await ArturoIA.reexplicar(q, elegida);
+          caja.classList.remove('reexp--vacio');
+          caja.innerHTML = '<span class="eyebrow">Arturo, de otra forma</span>' +
+                           '<p>' + esc(texto) + '</p>';
+        } catch (e) {
+          const m = e && e.message;
+          UI.tostada(m === 'sin-cuota'
+            ? 'Arturo ya no puede reformular más por hoy. Vuelve mañana.'
+            : 'Arturo no puede reformular ahora mismo.', 'mal');
+          if (m === 'sin-cuota') caja.remove();
+          else { b.disabled = false; b.textContent = 'Aún no lo entiendo'; }
+        }
+      };
+    });
+  }
+
   function terminar(porTiempo){
     detenerReloj();
     const res = S.respuestas;
@@ -633,9 +694,11 @@ window.Sesion = (function () {
       '<div class="bloque bloque--porque"><span class="eyebrow">Por qué</span><p>' + esc(p.exp) + '</p></div>' +
       '<div class="bloque bloque--clave"><span class="eyebrow">Dato clave</span><p>' + esc(p.clave) + '</p></div>' +
       (descartes ? '<div class="bloque"><span class="eyebrow">Por qué no las otras</span><div class="descartes">' + descartes + '</div></div>' : '') +
+      bloqueReexplicar(p, ultimaElegida(p.id)) +
       (p.trampa ? '<div class="bloque bloque--trampa"><span class="eyebrow">La trampa</span><p>' + esc(p.trampa) + '</p></div>' : '') +
       '<div class="bloque bloque--fuente"><span class="eyebrow">Bibliografía</span><p>' + esc(p.ref) + '</p></div>' +
       '<button class="btn btn--ancho" style="margin-top:16px" onclick="this.closest(\'.velo\').remove()">Cerrar</button>');
+    engancharReexplicar();
   }
 
   return { iniciar, salir, revisarPregunta };

@@ -720,6 +720,9 @@ window.Vistas = (function () {
           ' ya tienen explicación completa; el resto trae la respuesta oficial pero todavía no el porqué. ' +
           'No se incluye el bloque del examen FIR de farmacia, que quedó fuera por no ser materia del ENURM. ' +
           'Apágalo si prefieres estudiar solo con explicación completa.', a.bancoExtendido) +
+        conmutador('reexplicar', 'Arturo puede reformular',
+          'Cuando falles una pregunta y la explicación no te entre, puedes pedirle a Arturo que te la cuente de otra forma, partiendo solo de lo que ya está escrito para esa pregunta. Necesita internet y cuenta en la nube.',
+          a.reexplicar !== false) +
       '</div>' +
 
       '<div class="card" style="margin-bottom:16px" id="tarjetaSuscripcion"><span class="eyebrow">Tu suscripción</span>' +
