@@ -468,9 +468,13 @@ window.Sesion = (function () {
     const h = Ruta.hilo();
     if (!h || h.tema !== S.titulo) return '';
     const p = Ruta.pasosDe(h.tema);
-    const clave = p.preg.hecho ? 'resultadoAlto' : 'resultadoBajo';
+    const bien = p.preg.hecho;
+    const clave = bien ? 'resultadoAlto' : 'resultadoBajo';
     return '<div style="margin-bottom:18px">' +
-      Arturo.barra({ frase: Arturo.frase(clave, { tema:h.tema, pct:pct }) }) +
+      Arturo.barra(bien
+        ? { frase: Arturo.frase(clave, { tema:h.tema, pct:pct }) }
+        : { frase: Arturo.frase(clave, { tema:h.tema, pct:pct }),
+            boton: 'Volver al texto', accion: 'releer' }) +
       '</div>';
   }
 

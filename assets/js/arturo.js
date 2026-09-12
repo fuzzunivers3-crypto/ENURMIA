@@ -156,19 +156,50 @@ window.Arturo = (function () {
     const p = paso();
     const texto = op.frase || p.frase;
     const boton = op.boton === null ? null : (op.boton || p.boton);
+    const accion = op.accion || '';
     return '<div class="arturo">' +
         '<span class="arturo__sello">A</span>' +
         '<div class="arturo__texto">' +
           '<b>' + NOMBRE + '</b>' +
           '<p>' + esc(texto) + '</p>' +
         '</div>' +
-        (boton ? '<button class="btn btn--sm" id="arturoSeguir">' + esc(boton) + '</button>' : '') +
+        (boton ? '<button class="btn btn--sm" id="arturoSeguir" data-accion="' +
+                 esc(accion) + '">' + esc(boton) + '</button>' : '') +
       '</div>';
   }
 
   function enganchar(){
     const b = document.getElementById('arturoSeguir');
-    if (b) b.onclick = seguir;
+    if (!b) return;
+    const accion = b.getAttribute('data-accion') || '';
+    b.onclick = function () {
+      if (accion === 'cerrarLectura') return cerrarLectura();
+      if (accion === 'releer') return releer();
+      seguir();
+    };
+  }
+
+  /* Llegar al pie del texto ES haberlo leido. Sin esto la cadena se
+     rompe justo donde tiene que encadenar: Arturo dice "ahora las
+     preguntas" pero el paso siguiente sigue siendo leer, porque el
+     apunte no se marca solo, y el boton te devuelve al texto. */
+  function cerrarLectura(){
+    const h = Ruta.hilo();
+    if (h && window.Apuntes){
+      const k = Ruta.claveApunte(h.tema);
+      if (k) Apuntes.marcarLeido(k);
+    }
+    seguir();
+  }
+
+  /* Cuando las preguntas salen mal, el sitio al que hay que volver es el
+     texto, no otra tanda de preguntas. */
+  function releer(){
+    const h = Ruta.hilo();
+    const k = h ? Ruta.claveApunte(h.tema) : null;
+    if (!k) return App.ir('ruta');
+    App.ir('estudiar');
+    Apuntes.abrir(k);
   }
 
   /* ---------- el boton unico ---------- */
@@ -212,6 +243,7 @@ window.Arturo = (function () {
   return {
     NOMBRE: NOMBRE,
     paso: paso, frase: frase, barra: barra,
-    enganchar: enganchar, seguir: seguir
+    enganchar: enganchar, seguir: seguir,
+    cerrarLectura: cerrarLectura, releer: releer
   };
 })();

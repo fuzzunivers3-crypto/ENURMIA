@@ -147,7 +147,8 @@ window.Apuntes = (function () {
     const h = Ruta.hilo();
     if (!h || h.tema !== ap.tema) return '';
     return '<div style="margin-top:16px">' +
-      Arturo.barra({ frase: Arturo.frase('cierraLectura', { tema: ap.tema }) }) +
+      Arturo.barra({ frase: Arturo.frase('cierraLectura', { tema: ap.tema }),
+                     boton: 'Hacer las preguntas', accion: 'cerrarLectura' }) +
       '</div>';
   }
 
@@ -275,5 +276,5 @@ window.Apuntes = (function () {
     return hit ? hit.k : null;
   }
 
-  return { menu, abrir, claveDeTema, preguntasDe };
+  return { menu, abrir, claveDeTema, preguntasDe, marcarLeido };
 })();
