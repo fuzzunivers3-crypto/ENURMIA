@@ -23,14 +23,25 @@ ESTADO ACTUAL (12/09/2026)
   [x] Tabla `uso_ia` creada, con RLS y sin politicas
   [x] Funcion `arturo-reexplica` desplegada
   [x] IA_PROVEEDOR = gemini
-  [x] IA_MODELO    = gemini-2.0-flash
-  [ ] IA_CLAVE     <-- FALTA. La pone shael, no Claude.
+  [x] IA_MODELO    = gemini-3.6-flash
+  [x] IA_CLAVE     (la puso shael; Claude no la ve)
 
-Para ponerla: panel de Supabase -> Edge Functions -> Secrets ->
-New secret, con nombre IA_CLAVE y la clave de Google AI Studio.
+PROBADO DE PUNTA A PUNTA el 12/09/2026 con cuenta real: se contrasto la
+respuesta frase por frase contra el material escrito de la pregunta
+GO-001 (preeclampsia) y todo salia del caso, la clave, la explicacion,
+el descarte y la trampa. No invento ninguna dosis, que es justo donde
+habria sido peligroso.
 
-Hasta que este puesta, la funcion responde 502 y el boton avisa en una
-linea sin romper nada.
+DOS COSAS QUE COSTARON, por si vuelven a pasar:
+
+1. Sin cabeceras CORS el navegador no llega a la funcion. Manda una
+   peticion OPTIONS de sondeo antes de la real; hay que contestarla.
+
+2. gemini-2.0-flash ya no existe: Google respondio 404 diciendo que use
+   gemini-3.6-flash. Y con 400 tokens de salida la respuesta se cortaba a
+   media frase, porque los modelos nuevos gastan parte del presupuesto
+   razonando antes de escribir. Ahora son 2048; el limite real de
+   longitud lo pone el prompt, no ese numero.
 
 La tabla del contador
 ---------------------

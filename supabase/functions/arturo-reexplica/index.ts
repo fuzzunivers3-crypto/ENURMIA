@@ -24,11 +24,32 @@ Como escribes:
 - Maximo 110 palabras.
 - Escribes alrededor de "que hago con este paciente delante".`;
 
+/* El navegador manda una peticion OPTIONS de sondeo antes de la real, y
+   sin estas cabeceras la llamada nunca sale del navegador. El origen va
+   abierto porque quien protege esto es la sesion de Supabase, no de
+   donde venga la peticion: sin JWT valido no se pasa de la primera
+   comprobacion. */
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS'
+};
+
 function json(cuerpo: unknown, estado = 200){
   return new Response(JSON.stringify(cuerpo), {
     status: estado,
-    headers: { 'Content-Type': 'application/json' }
+    headers: Object.assign({ 'Content-Type': 'application/json' }, CORS)
   });
+}
+
+/* Lo que responde el proveedor cuando falla es util para diagnosticar,
+   pero puede traer de vuelta la URL con la clave dentro. Se censura
+   antes de que salga de aqui. */
+async function motivo(r: Response, clave: string): Promise<string> {
+  let t = '';
+  try { t = await r.text(); } catch { t = ''; }
+  if (clave) t = t.split(clave).join('***');
+  return t.replace(/\s+/g, ' ').slice(0, 300);
 }
 
 function armarPregunta(m: Record<string, unknown>): string {
@@ -67,13 +88,20 @@ async function llamar(sistema: string, pregunta: string): Promise<string> {
       body: JSON.stringify({
         system_instruction: { parts: [{ text: sistema }] },
         contents: [{ role: 'user', parts: [{ text: pregunta }] }],
-        generationConfig: { maxOutputTokens: 400, temperature: 0.7 }
+        /* Los modelos nuevos de Gemini gastan parte del presupuesto de
+           salida razonando antes de escribir, asi que 400 tokens se
+           agotaban a media frase. El limite real de longitud lo pone el
+           prompt (110 palabras), no este numero. */
+        generationConfig: { maxOutputTokens: 2048, temperature: 0.7 }
       })
     });
     if (r.status === 429) throw new Error('sin-cuota');
-    if (!r.ok) throw new Error('proveedor-' + r.status);
+    if (!r.ok) throw new Error('proveedor-' + r.status + ': ' + await motivo(r, clave));
     const j = await r.json();
-    return j?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    const cand = j?.candidates?.[0];
+    const txt = cand?.content?.parts?.[0]?.text ?? '';
+    if (!txt && cand?.finishReason) throw new Error('corte-' + cand.finishReason);
+    return txt;
   }
 
   if (proveedor === 'groq'){
@@ -90,7 +118,7 @@ async function llamar(sistema: string, pregunta: string): Promise<string> {
       })
     });
     if (r.status === 429) throw new Error('sin-cuota');
-    if (!r.ok) throw new Error('proveedor-' + r.status);
+    if (!r.ok) throw new Error('proveedor-' + r.status + ': ' + await motivo(r, clave));
     const j = await r.json();
     return j?.choices?.[0]?.message?.content ?? '';
   }
@@ -111,7 +139,7 @@ async function llamar(sistema: string, pregunta: string): Promise<string> {
       })
     });
     if (r.status === 429) throw new Error('sin-cuota');
-    if (!r.ok) throw new Error('proveedor-' + r.status);
+    if (!r.ok) throw new Error('proveedor-' + r.status + ': ' + await motivo(r, clave));
     const j = await r.json();
     const bloque = (j?.content || []).find((b: { type: string }) => b.type === 'text');
     return bloque?.text ?? '';
@@ -121,6 +149,7 @@ async function llamar(sistema: string, pregunta: string): Promise<string> {
 }
 
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return json({ error: 'metodo' }, 405);
 
   const admin = createClient(
@@ -135,10 +164,18 @@ Deno.serve(async (req) => {
   const user = quien?.user;
   if (!user) return json({ error: 'sin-sesion' }, 401);
 
-  /* 2. Suscripcion activa */
+  /* 2. Suscripcion activa DE VERDAD.
+        La columna `estado` puede seguir diciendo 'activa' con la fecha ya
+        pasada: nadie la cambia sola. El panel de administracion ya lo
+        corrige al mostrarla (vistas/admin.js, estadoReal) y aqui hay que
+        hacer lo mismo, porque si no un suscriptor vencido sigue gastando
+        la cuota gratuita que comparten todos. */
   const { data: sus } = await admin
-    .from('suscripciones').select('estado').eq('user_id', user.id).maybeSingle();
+    .from('suscripciones').select('estado, vence').eq('user_id', user.id).maybeSingle();
   if (!sus || sus.estado !== 'activa') return json({ error: 'sin-suscripcion' }, 403);
+  if (sus.vence && new Date(sus.vence).getTime() < Date.now()){
+    return json({ error: 'sin-suscripcion' }, 403);
+  }
 
   /* 3. Limite diario. El dia se cuenta en UTC, que es la fecha del
         servidor: para alguien en Republica Dominicana el contador se

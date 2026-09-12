@@ -381,6 +381,10 @@ window.Sesion = (function () {
         UI.tostada('Anotado. Lo verás en tu análisis de errores');
       };
     });
+
+    /* El boton de reformular se pinta en esta misma pantalla, al revelar
+       la respuesta, asi que hay que cablearlo aqui. */
+    engancharReexplicar();
   }
 
   function confirmar(){
