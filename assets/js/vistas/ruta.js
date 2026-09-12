@@ -25,6 +25,87 @@ window.VistaRuta = (function () {
      cuantas tandas salen. */
   let elegidos = null;
 
+  /* El tamano de tanda elegido, para que el selector pueda decir cuantas
+     tandas sale cada bloque antes de crear nada. */
+  let tamElegido = 5;
+  function tamActual(){ return tamElegido; }
+
+  /* El selector se usa en dos sitios: esta pantalla y el menu de
+     bienvenida de Inicio. Devuelve HTML; quien lo pinta cablea los
+     botones con engancharSelector. */
+  function selectorBloques(elegidosLista, tam){
+    const bls = Ruta.bloquesDisponibles();
+    const puestos = elegidosLista.filter(function (n) {
+      return bls.some(function (b) { return b.bloque === n; });
+    });
+
+    const filas = bls.map(function (b) {
+      const i = puestos.indexOf(b.bloque);
+      const on = i >= 0;
+      const tandas = Ruta._tandas(b.n, tam).length;
+      return '<div class="bl-fila' + (on ? ' bl-fila--on' : '') + '">' +
+        '<button class="bl-marca" data-bl="' + esc(b.bloque) + '">' +
+          (on ? (i + 1) : '') + '</button>' +
+        '<span style="font-size:18px">' + b.em + '</span>' +
+        '<span class="grow"><b>' + esc(b.bloque) + '</b>' +
+          '<small class="muted" style="display:block;font-size:12px">' +
+            b.n + ' temas · ' + tandas + ' tanda' + (tandas === 1 ? '' : 's') + '</small></span>' +
+        (on ? '<span class="bl-flechas">' +
+          '<button class="bl-mover" data-sube="' + esc(b.bloque) + '"' +
+            (i === 0 ? ' disabled' : '') + '>↑</button>' +
+          '<button class="bl-mover" data-baja="' + esc(b.bloque) + '"' +
+            (i === puestos.length - 1 ? ' disabled' : '') + '>↓</button>' +
+        '</span>' : '') +
+      '</div>';
+    }).join('');
+
+    const dentro = bls.filter(function (b) { return puestos.indexOf(b.bloque) >= 0; });
+    const temas = dentro.reduce(function (a, b) { return a + b.n; }, 0);
+    /* Las tandas se suman POR BLOQUE, que es como las reparte el
+       recorrido. Calcularlas sobre el total daria otra cifra en cuanto
+       los tamanos no cuadren, y el pie estaria mintiendo. */
+    const tandasTotal = dentro.reduce(function (a, b) {
+      return a + Ruta._tandas(b.n, tam).length;
+    }, 0);
+
+    return '<div class="bl-lista">' + filas + '</div>' +
+      '<p class="muted" style="margin-top:12px;font-size:13px">' +
+        (temas
+          ? 'Tu recorrido: <b>' + temas + ' temas</b> en <b>' + tandasTotal + ' tandas</b>, en ese orden.'
+          : 'Marca al menos un bloque.') + '</p>';
+  }
+
+  /* Cablea las casillas y las flechas. `lista` se modifica en sitio y
+     `repintar` vuelve a dibujar. */
+  function engancharSelector(lista, repintar){
+    UI.$$('[data-bl]').forEach(function (b) {
+      b.onclick = function () {
+        const n = b.dataset.bl;
+        const i = lista.indexOf(n);
+        if (i >= 0) lista.splice(i, 1); else lista.push(n);
+        repintar();
+      };
+    });
+    UI.$$('[data-sube]').forEach(function (b) {
+      b.onclick = function () {
+        const i = lista.indexOf(b.dataset.sube);
+        if (i > 0){
+          const t = lista[i - 1]; lista[i - 1] = lista[i]; lista[i] = t;
+          repintar();
+        }
+      };
+    });
+    UI.$$('[data-baja]').forEach(function (b) {
+      b.onclick = function () {
+        const i = lista.indexOf(b.dataset.baja);
+        if (i >= 0 && i < lista.length - 1){
+          const t = lista[i + 1]; lista[i + 1] = lista[i]; lista[i] = t;
+          repintar();
+        }
+      };
+    });
+  }
+
   function arranque(){
     const bls = Ruta.bloquesDisponibles();
     if (elegidos === null) elegidos = bls.map(function (b) { return b.bloque; });
@@ -45,23 +126,9 @@ window.VistaRuta = (function () {
       '</div>' +
 
       '<div class="card" style="margin-bottom:18px">' +
-        '<span class="eyebrow">Qué quieres estudiar</span>' +
-        '<p class="muted" style="margin:8px 0 14px;font-size:13.5px">Marca los bloques que entran en el recorrido. Si solo vas a por Pediatría, no tiene sentido que te aparezca cardiología por el medio.</p>' +
-        '<div class="ruta__bloques">' +
-          bls.map(function (b) {
-            const on = elegidos.indexOf(b.bloque) >= 0;
-            return '<button class="ruta__bloque' + (on ? ' ruta__bloque--on' : '') + '" ' +
-              'data-bloque="' + esc(b.bloque) + '">' +
-              '<span class="ruta__bloque__marca">' + (on ? '✓' : '') + '</span>' +
-              '<span style="font-size:18px">' + b.em + '</span>' +
-              '<span class="grow"><b>' + esc(b.bloque) + '</b>' +
-              '<small class="muted" style="display:block;font-size:12px">' + b.n + ' temas</small></span>' +
-              '</button>';
-          }).join('') +
-        '</div>' +
-        '<p class="muted" style="margin-top:12px;font-size:13px">' +
-          (total ? 'Entran <b>' + total + ' temas</b> en tu recorrido.'
-                 : 'Marca al menos un bloque.') + '</p>' +
+        '<span class="eyebrow">Qué quieres estudiar, y en qué orden</span>' +
+        '<p class="muted" style="margin:8px 0 14px;font-size:13.5px">Marca los bloques y ordénalos con las flechas. Cerrarás uno antes de pasar al siguiente. Fíjate en los números: Medicina Interna son 41 temas y Cirugía 19, así que el orden cambia mucho cuándo llegas a la primera puerta.</p>' +
+        selectorBloques(elegidos, tamActual()) +
       '</div>' +
 
       '<div class="card">' +
@@ -81,19 +148,13 @@ window.VistaRuta = (function () {
       '</div>' +
     '</div>';
 
-    UI.$$('[data-bloque]').forEach(function (b) {
-      b.onclick = function () {
-        const nom = b.dataset.bloque;
-        const i = elegidos.indexOf(nom);
-        if (i >= 0) elegidos.splice(i, 1); else elegidos.push(nom);
-        arranque();
-      };
-    });
+    engancharSelector(elegidos, arranque);
     UI.$$('[data-tam]').forEach(function (b) {
-      b.onclick = function () { empezar(+b.dataset.tam); };
+      b.onclick = function () { tamElegido = +b.dataset.tam; empezar(tamElegido); };
     });
     document.getElementById('rutaMedida').onclick = function () {
-      empezar(+document.getElementById('rutaTam').value);
+      tamElegido = +document.getElementById('rutaTam').value;
+      empezar(tamElegido);
     };
   }
 
@@ -397,5 +458,6 @@ window.VistaRuta = (function () {
     document.getElementById('rutaSimFinal').onclick = function () { App.ir('simulacro'); };
   }
 
-  return { menu: menu, examenDeTema: examenDeTema };
+  return { menu: menu, examenDeTema: examenDeTema,
+           selectorBloques: selectorBloques, engancharSelector: engancharSelector };
 })();

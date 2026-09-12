@@ -182,9 +182,9 @@ moverlas.
 con el tamaño de tanda elegido en ese momento:
 
 ```
-  1 ↑↓   🫀 Medicina Interna        41 temas · 9 tandas
+  1 ↑↓   🫀 Medicina Interna        41 temas · 8 tandas
   2 ↑↓   👶 Pediatría               20 temas · 4 tandas
-  ☐      🤰 Ginecología y Obstetricia   21 temas · 5 tandas
+  ☐      🤰 Ginecología y Obstetricia   21 temas · 4 tandas
   ☐      🔪 Cirugía                 19 temas · 4 tandas
 ```
 
@@ -269,6 +269,6 @@ Apagarlo quita las puertas de inmediato; el recorrido sigue marcando el avance.
 7. Con la norma apagada, `preguntasDisponibles()` devuelve el banco activo entero.
 8. `examenDeBloque` devuelve `min(40, explicadas del bloque)` sin repetir ids y
    todas del bloque.
-9. El selector calcula bien los temas y las tandas de cada bloque: 41 y 9 para
+9. El selector calcula bien los temas y las tandas de cada bloque: 41 y 8 para
    Medicina Interna con tandas de 5, 19 y 4 para Cirugía, y el total cuadra con
    la suma de los elegidos.
