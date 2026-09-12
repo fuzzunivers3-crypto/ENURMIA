@@ -16,3 +16,6 @@ lote_*.txt
 
 # Lanzadores locales (no deben acabar en la web publica)
 *.bat
+
+# archivos de trabajo de la CLI de Supabase
+supabase/.temp/
