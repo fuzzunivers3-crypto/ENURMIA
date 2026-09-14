@@ -68,6 +68,23 @@
         </button>
       </div>
 
+      <!-- UNIRMIA todavia no tiene banco suficiente para recibir estudiantes
+           reales: mientras se completa, este cartel sustituye por completo
+           el acceso (nada de Entrar/Crear cuenta) cuando esta seleccionada. -->
+      <div id="bloqueoUnirm" class="hidden" style="text-align:center;padding:18px 0 6px">
+        <div class="card card--sangria" style="padding:30px 24px">
+          <h2 style="margin:0 0 10px;font-size:24px">Estamos trabajando</h2>
+          <p style="margin:0;font-size:14.5px;opacity:.95;line-height:1.5">
+            UNIRMIA está en construcción: el banco de preguntas y los apuntes de los
+            cuatrimestres 7, 8 y 9 todavía se están completando. Por ahora no se puede
+            entrar ni crear cuenta aquí.
+          </p>
+          <p style="margin:14px 0 0;font-size:14.5px;opacity:.95">
+            Vuelve pronto, o entra a <b>ENURMIA</b> mientras tanto.
+          </p>
+        </div>
+      </div>
+
       <div class="pestanas" role="tablist">
         <button id="tabEntrar" class="on" role="tab">Entrar</button>
         <button id="tabCrear" role="tab">Crear cuenta</button>
@@ -121,7 +138,7 @@
         <div id="avisoCrear"></div>
       </form>
 
-      <p class="nota-privacidad">
+      <p class="nota-privacidad" id="notaPrivacidadPie">
         Tu cuenta la gestiona <b>Supabase</b> y tu progreso se guarda en la nube, cifrado en tránsito y
         visible solo para ti: la base de datos tiene una regla que impide que nadie lea la fila de otro.
         Mientras estudias todo sigue funcionando en este navegador, así que <b>puedes trabajar sin internet</b>;
@@ -183,6 +200,10 @@
   let programa = 'enurm';
   try { programa = localStorage.getItem('enurm.programa') === 'unirm' ? 'unirm' : 'enurm'; } catch (e) {}
 
+  /* UNIRMIA en construccion: bloquea el acceso por completo mientras esta
+     seleccionado. Cambiar a false el dia que haya banco suficiente. */
+  const UNIRM_BLOQUEADO = true;
+
   function pintarPrograma(){
     const t = TEXTOS[programa];
     document.getElementById('marcaRaiz').textContent = t.raiz;
@@ -190,11 +211,18 @@
     document.getElementById('lemaTitulo').innerHTML = t.titulo;
     document.getElementById('lemaTexto').textContent = t.texto;
     t.pilares.forEach((x, i) => { document.getElementById('pilar' + (i + 1)).textContent = x; });
-    document.title = t.raiz + 'IA — Entrar';
     const sub = fCrear.querySelector('p');
     if (sub) sub.textContent = t.crear;
     document.querySelectorAll('[data-programa]').forEach(b =>
       b.classList.toggle('on', b.dataset.programa === programa));
+
+    const bloqueado = programa === 'unirm' && UNIRM_BLOQUEADO;
+    document.getElementById('bloqueoUnirm').classList.toggle('hidden', !bloqueado);
+    $('.pestanas').classList.toggle('hidden', bloqueado);
+    fEntrar.classList.toggle('hidden', bloqueado || !tEntrar.classList.contains('on'));
+    fCrear.classList.toggle('hidden', bloqueado || !tCrear.classList.contains('on'));
+    document.getElementById('notaPrivacidadPie').classList.toggle('hidden', bloqueado);
+    document.title = bloqueado ? 'UNIRMIA — En construcción' : t.raiz + 'IA — Entrar';
   }
 
   document.querySelectorAll('[data-programa]').forEach(b => b.onclick = () => {
