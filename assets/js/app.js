@@ -53,6 +53,29 @@ window.App = (function () {
      repintado y un push se habria perdido. */
   let esAdmin = false;
 
+  /* ---------- membresia ----------
+     Pantallas que piden membresia al dia. Leer (estudiar, temario) y ver el
+     propio progreso quedan fuera a proposito: quien se quedo a medias
+     vuelve antes si puede seguir repasando que si se topa con una puerta.
+
+     OJO con lo que esto es y lo que no: es un freno de INTERFAZ. El banco
+     de preguntas viaja al navegador como archivos .js, asi que quien sepa
+     abrir la consola puede leerlo igual. Para que fuera una barrera de
+     verdad habria que servir las preguntas desde el servidor pidiendo la
+     sesion, y eso es rehacer como se carga el banco entero. */
+  const SOLO_CON_MEMBRESIA = new Set([
+    'simulacro','entrenar','clinica','flashcards','desafio','ruta','biblioteca',
+    'practicar','razonar'
+  ]);
+
+  /* Nace en 'desconocida' a proposito: hasta que el servidor conteste no se
+     bloquea nada. Si la respuesta no llega (sin internet, servidor caido) el
+     estudiante sigue trabajando. Es preferible dejar pasar a alguien vencido
+     que dejar fuera a quien si pago. */
+  let membresia = { estado:'desconocida', plan:null, vence:null };
+
+  function membresiaAlDia(){ return membresia.estado !== 'vencida'; }
+
   function menu(){
     const m = MENUS[Almacen.programa()] || MENUS.enurm;
     if (!esAdmin) return m;
@@ -76,6 +99,14 @@ window.App = (function () {
     actual = ruta.id;
     marcar();
     document.getElementById('vista').innerHTML = '';
+
+    if (SOLO_CON_MEMBRESIA.has(ruta.id) && !membresiaAlDia() && window.Vistas){
+      Vistas.membresiaVencida(membresia);
+      window.scrollTo({ top:0, behavior:'instant' in window ? 'instant' : 'auto' });
+      try { history.replaceState(null, '', '#' + ruta.id); } catch (e) {}
+      return;
+    }
+
     ruta.ver(param);
     window.scrollTo({ top:0, behavior:'instant' in window ? 'instant' : 'auto' });
     try { history.replaceState(null, '', '#' + ruta.id); } catch (e) {}
@@ -184,6 +215,41 @@ window.App = (function () {
      respuesta es 'admin' se anade la ruta y se repinta el armazon para
      que aparezca en el menu. Aunque alguien forzara la ruta a mano, el
      panel no le devolveria nada: el RLS decide, no esta pantalla. */
+  /* Igual que comprobarRol: el servidor contesta despues de que la pantalla
+     ya este puesta. Si resulta vencida y justo esta en una pantalla de
+     practica, se la cambia; si esta leyendo, no se le interrumpe. */
+  async function comprobarMembresia(){
+    const s = Almacen.sesion();
+    if (!s || !s.nube || !window.Nube || !Nube.disponible()) return;
+
+    let sus = null;
+    try { sus = await Nube.miSuscripcion(); } catch (e) { return; }
+    if (!sus) return;
+
+    /* Lo que manda es la FECHA, no la columna: la fila puede seguir diciendo
+       'activa' y haber vencido hace un mes. Se mira lo que es.
+
+       Se comparan fechas de CALENDARIO ('AAAA-MM-DD'), no instantes.
+       `vence` es un DATE de Postgres, sin hora. Convertirlo con new Date()
+       lo situa en medianoche UTC, y como Republica Dominicana va cuatro
+       horas por detras, a quien le vencia hoy se le cerraba la puerta a las
+       ocho de la noche, con su ultimo dia todavia sin terminar. Comparando
+       el texto de la fecha con el dia local, su ultimo dia le dura entero. */
+    const hoy = new Date();
+    const hoyLocal = hoy.getFullYear() + '-' +
+                     String(hoy.getMonth() + 1).padStart(2, '0') + '-' +
+                     String(hoy.getDate()).padStart(2, '0');
+    const vencidaPorFecha = sus.vence
+      ? String(sus.vence).slice(0, 10) < hoyLocal
+      : false;
+    const vencida = sus.estado !== 'activa' || vencidaPorFecha;
+
+    membresia = { estado: vencida ? 'vencida' : 'activa',
+                  plan: sus.plan, vence: sus.vence };
+
+    if (vencida && SOLO_CON_MEMBRESIA.has(actual)) ir(actual);
+  }
+
   async function comprobarRol(){
     const s = Almacen.sesion();
     if (!s || !s.nube || !window.Nube || !Nube.disponible()) return;
@@ -233,6 +299,7 @@ window.App = (function () {
     armazon();
     vigilarSincronizacion();
     comprobarRol();
+    comprobarMembresia();
     const hash = (location.hash || '').replace('#','');
     ir(RUTAS.some(r => r.id === hash) ? hash : 'inicio');
 

@@ -960,5 +960,86 @@ window.Vistas = (function () {
       (on ? 'Activado' : 'Desactivado') + '</button></div>';
   }
 
-  return { inicio, entrenar, simulacro, desafio, razonar, biblioteca, progreso, preparacion, ajustes, lanzarEntrenamiento };
+  /* ============================================================
+     MEMBRESÍA VENCIDA
+     Sale cuando se intenta entrar a una pantalla de práctica sin
+     membresía al día. Leer (Estudiar, Temario) sigue abierto a
+     propósito: quien se quedó a medias vuelve antes si puede seguir
+     repasando que si se encuentra una puerta cerrada.
+     ============================================================ */
+  const WHATSAPP = '18099991111';
+
+  function membresiaVencida(info){
+    const plan = (info && info.plan) || '';
+    const vence = info && info.vence
+      ? UI.fecha(new Date(info.vence).getTime()) : null;
+    const texto = encodeURIComponent(
+      'Hola, quiero renovar mi membresía de ' +
+      (Almacen.programa() === 'unirm' ? 'UNIRMIA' : 'ENURMIA') + '.\n\n' +
+      'Mi correo de la cuenta: ' + ((Almacen.sesion() || {}).correo || '') + '\n\n' +
+      '¿Me pasas el número de cuenta para hacer el pago?');
+
+    V().innerHTML =
+      '<div class="encabezado"><p class="eyebrow">Tu membresía</p>' +
+      '<h1>Se venció tu acceso a la práctica</h1>' +
+      '<p class="muted" style="max-width:62ch">' +
+        (vence ? 'Tu plan ' + esc(plan) + ' venció el ' + esc(vence) + '. ' : '') +
+        'Puedes seguir leyendo <b>Estudiar</b> y <b>Temario</b> con normalidad, y tu progreso ' +
+        'está intacto. Para volver a los simulacros, las preguntas y las flashcards, ' +
+        'renueva tu membresía.</p></div>' +
+
+      '<div class="card" style="padding:26px;max-width:620px">' +
+        '<b style="font-size:15px">Renovar por WhatsApp</b>' +
+        '<p class="muted" style="font-size:13.5px;margin:8px 0 18px">' +
+          'Escríbenos, te pasamos el número de cuenta y al confirmar el pago ' +
+          'recibes un código. Lo escribes aquí abajo y vuelves a entrar al instante.</p>' +
+
+        '<div class="row" style="gap:22px;align-items:flex-start;flex-wrap:wrap">' +
+          '<div class="grow" style="min-width:210px">' +
+            '<a class="btn btn--ancho" href="https://wa.me/' + WHATSAPP + '?text=' + texto +
+              '" target="_blank" rel="noopener" ' +
+              'style="background:#25D366;border-color:#25D366;color:#0B3D22">Abrir WhatsApp</a>' +
+            '<p class="muted" style="font-size:12px;margin-top:8px">Si estás en la computadora, ' +
+              'escanea el código con tu teléfono.</p>' +
+          '</div>' +
+          '<img src="assets/img/qr-whatsapp.png" alt="Código QR de WhatsApp" ' +
+            'style="width:128px;height:128px;border:1.5px solid var(--linea);border-radius:10px;padding:6px;background:#fff">' +
+        '</div>' +
+
+        '<div style="margin-top:22px;padding-top:20px;border-top:1px solid var(--linea)">' +
+          '<label for="codigoRenovar" style="display:block;font-size:12px;font-weight:800;margin-bottom:7px">' +
+            'Ya tengo mi código</label>' +
+          '<div class="row" style="gap:9px">' +
+            '<input id="codigoRenovar" class="grow" type="text" placeholder="ENUR-XXXXXXXX" ' +
+              'autocomplete="off" spellcheck="false" maxlength="20" ' +
+              'style="padding:12px 14px;border-radius:10px;border:1.5px solid var(--linea);font:inherit">' +
+            '<button class="btn" id="btnRenovar">Activar</button>' +
+          '</div>' +
+          '<div id="avisoRenovar"></div>' +
+        '</div>' +
+      '</div>';
+
+    const btn = document.getElementById('btnRenovar');
+    btn.onclick = async () => {
+      const cod = document.getElementById('codigoRenovar').value.trim();
+      const caja = document.getElementById('avisoRenovar');
+      if (cod.length < 6){
+        caja.innerHTML = '<div class="aviso">Escribe el código completo.</div>';
+        return;
+      }
+      btn.disabled = true; btn.textContent = 'Comprobando…';
+      let r = { ok:false, error:'No se pudo conectar.' };
+      try { r = await Nube.canjearCodigo(cod); } catch (e) {}
+      btn.disabled = false; btn.textContent = 'Activar';
+      if (!r.ok){
+        caja.innerHTML = '<div class="aviso">' + esc(r.error) + '</div>';
+        return;
+      }
+      caja.innerHTML = '<div class="aviso aviso--ok">Membresía activa. Recargando…</div>';
+      setTimeout(() => location.reload(), 900);
+    };
+  }
+
+  return { inicio, entrenar, simulacro, desafio, razonar, biblioteca, progreso,
+           preparacion, ajustes, lanzarEntrenamiento, membresiaVencida };
 })();
