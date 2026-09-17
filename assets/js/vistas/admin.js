@@ -17,7 +17,7 @@ window.Admin = (function () {
   let filas = [];
   let filtro = '';
 
-  const PLANES  = ['prueba','mensual','anual','cortesia'];
+  const PLANES  = ['prueba','mensual','trimestral','semestral','anual','cortesia'];
   const ESTADOS = ['activa','vencida','cancelada'];
 
   function fecha(t){
@@ -77,6 +77,107 @@ window.Admin = (function () {
     pintar();
   }
 
+  /* ============================================================
+     GENERADOR DE CÓDIGOS
+     Sustituye al SQL a mano: se elige el plan, se genera y queda un
+     botón que copia el mensaje entero listo para pegar en WhatsApp.
+     ============================================================ */
+  const PLANES_CODIGO = [
+    { id:'mensual',    meses:1,  nombre:'1 mes',    precio:450  },
+    { id:'trimestral', meses:3,  nombre:'3 meses',  precio:1200 },
+    { id:'semestral',  meses:6,  nombre:'6 meses',  precio:2500 },
+    { id:'anual',      meses:12, nombre:'12 meses', precio:4000 },
+    { id:'cortesia',   meses:1,  nombre:'Cortesía (1 mes)', precio:0 }
+  ];
+
+  /* Los codigos recien generados sobreviven al repintado: pintar() rehace
+     todo el HTML y se llama en cada tecla del buscador. Sin esto, generas
+     un codigo, empiezas a buscar a quien pago y lo pierdes de vista. */
+  let ultimos = null;   // { plan, codigos:[] }
+
+  function filaCodigo(c){
+    return '<div class="row" style="gap:9px;align-items:center;margin-bottom:8px">' +
+      '<code class="grow" style="font-size:16px;font-weight:800;letter-spacing:.06em;' +
+        'padding:10px 13px;background:var(--hueso-hondo);border-radius:9px">' + esc(c) + '</code>' +
+      '<button class="btn btn--sm" data-copiar="' + esc(c) + '">Copiar mensaje</button>' +
+    '</div>';
+  }
+
+  function generador(){
+    return '<div class="card" style="margin-bottom:18px">' +
+      '<b style="font-size:15px">Generar código de acceso</b>' +
+      '<p class="muted" style="font-size:13px;margin:6px 0 16px">' +
+        'Cuando confirmes un pago, genera el código aquí y envíalo. ' +
+        'Sirve una sola vez y queda registrado quién lo usó.</p>' +
+      '<div class="row wrap" style="gap:9px;align-items:center">' +
+        '<select id="codPlan" style="padding:11px 13px;border-radius:10px;' +
+          'border:1.5px solid var(--linea);font:inherit;background:var(--papel)">' +
+          PLANES_CODIGO.map(p => '<option value="' + p.id + '">' + esc(p.nombre) +
+            (p.precio ? ' — RD$' + p.precio.toLocaleString('es-DO') : '') + '</option>').join('') +
+        '</select>' +
+        '<input id="codCuantos" type="number" min="1" max="50" value="1" ' +
+          'style="width:76px;padding:11px 13px;border-radius:10px;border:1.5px solid var(--linea);font:inherit">' +
+        '<input id="codNota" type="text" placeholder="Nota (ej: pago de Juan, 17 sept)" ' +
+          'class="grow" style="min-width:180px;padding:11px 13px;border-radius:10px;' +
+          'border:1.5px solid var(--linea);font:inherit">' +
+        '<button class="btn" id="btnGenerar">Generar</button>' +
+      '</div>' +
+      '<div id="codSalida">' +
+        (ultimos ? '<div style="margin-top:16px;padding-top:15px;border-top:1px solid var(--linea)">' +
+                   ultimos.codigos.map(filaCodigo).join('') + '</div>' : '') +
+      '</div>' +
+    '</div>';
+  }
+
+  function engancharCopiar(){
+    UI.$$('[data-copiar]').forEach(b => b.onclick = async () => {
+      const cod = b.dataset.copiar;
+      const nombrePlan = (ultimos && ultimos.plan) ? ultimos.plan.nombre : '';
+      const msg = '¡Listo! Ya puedes activar tu membresía de ' +
+        (Almacen.programa() === 'unirm' ? 'UNIRMIA' : 'ENURMIA') + '.\n\n' +
+        'Tu código: ' + cod + '\n' +
+        (nombrePlan ? 'Plan: ' + nombrePlan + '\n' : '') + '\n' +
+        'Entra, elige "Ya pagué y tengo mi código" y escríbelo. ' +
+        'Tu acceso queda activo al instante.';
+      try {
+        await navigator.clipboard.writeText(msg);
+        b.textContent = 'Copiado ✓';
+        setTimeout(() => { b.textContent = 'Copiar mensaje'; }, 2000);
+      } catch (e) {
+        UI.tostada('No se pudo copiar. El código es ' + cod, 'mal');
+      }
+    });
+  }
+
+  function engancharGenerador(){
+    engancharCopiar();
+    const btn = document.getElementById('btnGenerar');
+    if (!btn) return;
+    btn.onclick = async () => {
+      const id = document.getElementById('codPlan').value;
+      const plan = PLANES_CODIGO.find(p => p.id === id);
+      const cuantos = Math.max(1, Math.min(50, +document.getElementById('codCuantos').value || 1));
+      const nota = document.getElementById('codNota').value.trim();
+      const salida = document.getElementById('codSalida');
+
+      btn.disabled = true; btn.textContent = 'Generando…';
+      let r = { ok:false, error:'No se pudo conectar.' };
+      try { r = await Nube.generarCodigos(plan.id, plan.meses, cuantos, nota); } catch (e) {}
+      btn.disabled = false; btn.textContent = 'Generar';
+
+      if (!r.ok){
+        salida.innerHTML = '<div class="aviso" style="margin-top:14px">' + esc(r.error) + '</div>';
+        return;
+      }
+
+      ultimos = { plan, codigos: r.codigos };
+      salida.innerHTML =
+        '<div style="margin-top:16px;padding-top:15px;border-top:1px solid var(--linea)">' +
+        r.codigos.map(filaCodigo).join('') + '</div>';
+      engancharCopiar();
+    };
+  }
+
   function resumen(){
     const total = filas.length;
     const activos = filas.filter(f => estadoReal(f) === 'activa').length;
@@ -129,6 +230,7 @@ window.Admin = (function () {
       '<p class="muted">Cada fila es una cuenta real. Los cambios de suscripción se aplican al instante.</p></div>' +
 
       resumen() +
+      generador() +
 
       '<div class="card">' +
         '<div class="row" style="gap:10px;margin-bottom:12px">' +
@@ -153,6 +255,7 @@ window.Admin = (function () {
     document.getElementById('recargar').onclick = () => cargar();
     UI.$$('[data-editar]').forEach(b => b.onclick = () => editar(b.dataset.editar));
     UI.$$('[data-ver]').forEach(b => b.onclick = () => verDatos(b.dataset.ver));
+    engancharGenerador();
   }
 
   /* ============================================================

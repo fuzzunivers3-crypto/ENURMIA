@@ -176,6 +176,20 @@ window.Nube = (function () {
     return { ok:true, plan: data && data.plan, vence: data && data.vence };
   }
 
+  /* Generar codigos (solo admin: la funcion del servidor lo comprueba y
+     lanza excepcion si no lo eres, asi que esto no se puede forzar desde
+     la consola del navegador). */
+  async function generarCodigos(plan, meses, cuantos, nota){
+    if (!iniciar()) return { ok:false, error:'Sin conexión.' };
+    const { data, error } = await cliente.rpc('generar_codigos', {
+      p_plan: plan, p_meses: meses, p_cuantos: cuantos || 1, p_nota: nota || null
+    });
+    if (error) return { ok:false, error: legible(error) };
+    // La funcion devuelve un setof text: llega como array de strings u objetos
+    const codigos = (data || []).map(x => (typeof x === 'string' ? x : x.generar_codigos));
+    return { ok:true, codigos };
+  }
+
   /* ---------- ranking de desafios ----------
      Aparecer en la clasificacion es OPCIONAL y esta apagado de fabrica:
      la columna `publico` nace en false y solo la cambia el propio
@@ -294,7 +308,7 @@ window.Nube = (function () {
   }
 
   return { disponible, registrar, entrar, salir, usuario, recuperar, bajar, subir,
-           perfil, miSuscripcion, abrirPrueba, canjearCodigo, invocar,
+           perfil, miSuscripcion, abrirPrueba, canjearCodigo, generarCodigos, invocar,
            registrarDesafio, configurarRanking, miRanking, clasificacion, mesActual,
            listarUsuarios, guardarSuscripcion, cambiarRol, progresoDe,
            URL_PROYECTO: URL_PROYECTO };
