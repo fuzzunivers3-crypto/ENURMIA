@@ -56,23 +56,23 @@
 
   /* Panel de membresia. Tapa la pantalla entera: la eleccion es el unico
      paso que queda y no conviene que compita con nada de detras. */
-  .velo{
+  .membresia-velo{
     position:fixed; inset:0; z-index:90;
     display:grid; place-items:center; padding:24px;
     background:rgba(22,16,15,.62); backdrop-filter:blur(3px);
     overflow-y:auto;
   }
-  .velo__caja{
+  .membresia-velo__caja{
     width:100%; max-width:470px; background:var(--papel, #fff);
     border-radius:18px; padding:30px 28px;
     box-shadow:0 24px 70px rgba(0,0,0,.34);
     animation:subir .22s ease-out;
   }
   @keyframes subir{ from{ opacity:0; transform:translateY(14px); } }
-  .velo__caja h2{ font-size:25px; font-weight:800; line-height:1.15; }
-  .velo__sub{ color:var(--tinta-60); font-size:13.5px; margin:8px 0 22px; }
-  .velo__pie{ font-size:12.5px; color:var(--tinta-60); margin-top:20px; text-align:center; }
-  .velo__volver{
+  .membresia-velo__caja h2{ font-size:25px; font-weight:800; line-height:1.15; }
+  .membresia-velo__sub{ color:var(--tinta-60); font-size:13.5px; margin:8px 0 22px; }
+  .membresia-velo__pie{ font-size:12.5px; color:var(--tinta-60); margin-top:20px; text-align:center; }
+  .membresia-velo__volver{
     background:none; border:none; padding:0; margin-bottom:14px;
     font:inherit; font-size:13px; font-weight:700; color:var(--sangria-vivo);
     cursor:pointer;
@@ -94,8 +94,8 @@
   .btn--wa:hover{ background:#1FBA59; border-color:#1FBA59; }
 
   @media (max-width:520px){
-    .velo{ padding:14px; }
-    .velo__caja{ padding:24px 20px; }
+    .membresia-velo{ padding:14px; }
+    .membresia-velo__caja{ padding:24px 20px; }
     .pago{ grid-template-columns:1fr; gap:22px; }
     .pago__qr{ max-width:190px; }
   }
@@ -230,14 +230,14 @@
      pagina, no dentro del formulario, porque tiene que tapar la pantalla
      entera. Dos pasos: elegir plan, y si es de pago, pagar y activar.
      ============================================================ -->
-<div id="modalPlanes" class="velo hidden" role="dialog" aria-modal="true"
+<div id="modalPlanes" class="membresia-velo hidden" role="dialog" aria-modal="true"
      aria-labelledby="modalTitulo">
-  <div class="velo__caja">
+  <div class="membresia-velo__caja">
 
     <!-- PASO 1: elegir -->
     <div id="pasoElegir">
       <h2 id="modalTitulo">Elige cómo empezar</h2>
-      <p class="velo__sub">Tu cuenta ya está creada. Solo falta decidir con qué acceso entras.</p>
+      <p class="membresia-velo__sub">Tu cuenta ya está creada. Solo falta decidir con qué acceso entras.</p>
 
       <button type="button" class="plan plan--gratis" data-plan="prueba">
         <span class="plan__nom">Probar gratis<small>3 días completos, sin tarjeta</small></span>
@@ -265,7 +265,7 @@
 
       <div id="avisoPlan"></div>
 
-      <p class="velo__pie">
+      <p class="membresia-velo__pie">
         ¿Ya pagaste y tienes tu código?
         <a href="#" id="abrirCanje">Actívalo aquí</a>
       </p>
@@ -273,9 +273,9 @@
 
     <!-- PASO 2: pagar y activar -->
     <div id="pasoPagar" class="hidden">
-      <button type="button" class="velo__volver" id="volverPlanes">← Ver los planes</button>
+      <button type="button" class="membresia-velo__volver" id="volverPlanes">← Ver los planes</button>
       <h2>Activa tu membresía</h2>
-      <p class="velo__sub">Plan elegido: <b id="planElegido"></b></p>
+      <p class="membresia-velo__sub">Plan elegido: <b id="planElegido"></b></p>
 
       <div class="pago">
         <div class="pago__col">
@@ -488,7 +488,7 @@
   function verPaso(cual){
     $('#pasoElegir').classList.toggle('hidden', cual !== 'elegir');
     $('#pasoPagar').classList.toggle('hidden', cual !== 'pagar');
-    $('.velo__caja').scrollTop = 0;
+    $('.membresia-velo__caja').scrollTop = 0;
   }
 
   document.querySelectorAll('.plan').forEach(b => b.onclick = async () => {
