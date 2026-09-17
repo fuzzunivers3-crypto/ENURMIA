@@ -314,6 +314,11 @@
 <script>
 (function(){
   const $ = s => document.querySelector(s);
+  /* El correo lo escribe quien se registra y luego se pinta con innerHTML.
+     Esta pantalla no carga ui.js, asi que lleva su propio escapador. */
+  const esc = t => String(t == null ? '' : t)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   const fEntrar = $('#formEntrar'), fCrear = $('#formCrear');
   const tEntrar = $('#tabEntrar'), tCrear = $('#tabCrear');
   const hayNube = !!(window.Nube && Nube.disponible());
@@ -555,11 +560,18 @@
     const r = await Nube.registrar(correo, clave, nombre, programa);
     if (!r.ok){ ocupado(fCrear, false); return aviso($('#avisoCrear'), r.error); }
 
+    /* Con la confirmacion por correo activada, aqui todavia no hay sesion,
+       asi que no se puede abrir la prueba ni canjear nada: el panel de
+       planes no cabe en este momento. Se le dice lo que falta y lo que
+       viene despues, para que no parezca que el proceso se corto a medias.
+       Al entrar ya confirmado, fEntrar detecta que no tiene suscripcion y
+       le muestra el panel entonces. */
     if (r.confirmar){
       ocupado(fCrear, false);
       return aviso($('#avisoCrear'),
-        'Cuenta de <b>' + TEXTOS[programa].raiz + 'IA</b> creada. Te enviamos un correo a <b>' + correo +
-        '</b>: abre el enlace para confirmarla y luego entra desde la pestaña <b>Entrar</b>.', true);
+        '<b>Ya casi.</b> Te enviamos un correo a <b>' + esc(correo) + '</b>. ' +
+        'Abre el enlace para confirmar tu cuenta y vuelve a entrar aquí: ' +
+        'al hacerlo eliges tu acceso, y puedes empezar con <b>3 días gratis</b>.', true);
     }
     await sincronizarAlEntrar(r.usuario, correo);
     ocupado(fCrear, false);

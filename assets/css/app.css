@@ -181,7 +181,11 @@ button.chip.on{background:var(--carbon);color:#fff}
   background:#fff;color:var(--sangria);font-size:19px;flex:none;
   box-shadow:0 3px 0 rgba(0,0,0,.18);
 }
-.acceso__lema{margin-top:auto;max-width:520px;position:relative;z-index:1}
+/* Centrado en el espacio libre, no pegado al fondo. Con margin-top:auto a
+   secas el lema se iba abajo del todo y en pantallas altas quedaba en la
+   esquina inferior con un hueco enorme sobre el. Con auto arriba Y abajo
+   se reparte el sobrante por igual. */
+.acceso__lema{margin-top:auto;margin-bottom:auto;max-width:520px;position:relative;z-index:1}
 .acceso__lema h1{font-size:clamp(34px,4.4vw,58px);font-weight:800;letter-spacing:-.04em}
 .acceso__lema h1 em{font-style:normal;color:#F0B8C0;position:relative;white-space:nowrap}
 .acceso__lema p{margin-top:16px;font-size:16px;color:rgba(255,255,255,.72);max-width:420px}
