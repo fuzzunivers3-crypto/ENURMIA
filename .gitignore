@@ -9,6 +9,11 @@ ABRIR ENURM.bat
 NUBE_SUPABASE.txt
 REVISION_FIR.txt
 
+# Migraciones SQL: describen entera la logica de cobro y de los codigos
+# de activacion. Los codigos siguen siendo inadivinables sin esto, pero
+# no hay ninguna razon para publicar el diseno del sistema de pago.
+MIGRACION_*.sql
+
 # Carpetas de trabajo
 _PUBLICAR_WEB/
 graphify-out/
