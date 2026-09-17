@@ -135,6 +135,47 @@ window.Nube = (function () {
     return data || null;
   }
 
+  /* ---------- membresia ----------
+     Las dos entran por funciones del servidor (SECURITY DEFINER), no por
+     un update normal. La tabla de codigos no deja leerse desde el cliente:
+     si dejara, cualquiera listaria los codigos sin usar y se activaria
+     gratis. Ver MIGRACION_MEMBRESIAS.sql. */
+
+  async function abrirPrueba(){
+    if (!iniciar()) return { ok:false, error:'Sin conexión.' };
+    const u = await usuario(); if (!u) return { ok:false, error:'No hay sesión en la nube.' };
+    const { data, error } = await cliente.rpc('abrir_prueba');
+    if (error) return { ok:false, error: legible(error) };
+    if (data && data.ok === false){
+      const porque = {
+        sin_sesion: 'No hay sesión en la nube.',
+        ya_tuvo:    'Esta cuenta ya usó su prueba gratis.'
+      };
+      return { ok:false, error: porque[data.motivo] || 'No se pudo abrir la prueba.',
+               motivo: data.motivo, vence: data.vence };
+    }
+    return { ok:true, plan:(data && data.plan) || 'prueba', vence: data && data.vence };
+  }
+
+  async function canjearCodigo(codigo){
+    if (!iniciar()) return { ok:false, error:'Sin conexión.' };
+    const u = await usuario(); if (!u) return { ok:false, error:'No hay sesión en la nube.' };
+    const { data, error } = await cliente.rpc('canjear_codigo', { p_codigo: String(codigo || '') });
+    if (error) return { ok:false, error: legible(error) };
+    if (data && data.ok === false){
+      const porque = {
+        sin_sesion:  'No hay sesión en la nube.',
+        formato:     'Ese código está incompleto. Revísalo y vuelve a escribirlo.',
+        inexistente: 'Ese código no existe. Comprueba que lo copiaste bien.',
+        usado:       'Ese código ya se usó en otra cuenta.',
+        ya_aplicado: 'Ese código ya está aplicado en tu cuenta.'
+      };
+      return { ok:false, error: porque[data.motivo] || 'No se pudo canjear el código.',
+               motivo: data.motivo };
+    }
+    return { ok:true, plan: data && data.plan, vence: data && data.vence };
+  }
+
   /* ---------- ranking de desafios ----------
      Aparecer en la clasificacion es OPCIONAL y esta apagado de fabrica:
      la columna `publico` nace en false y solo la cambia el propio
@@ -253,7 +294,7 @@ window.Nube = (function () {
   }
 
   return { disponible, registrar, entrar, salir, usuario, recuperar, bajar, subir,
-           perfil, miSuscripcion, invocar,
+           perfil, miSuscripcion, abrirPrueba, canjearCodigo, invocar,
            registrarDesafio, configurarRanking, miRanking, clasificacion, mesActual,
            listarUsuarios, guardarSuscripcion, cambiarRol, progresoDe,
            URL_PROYECTO: URL_PROYECTO };

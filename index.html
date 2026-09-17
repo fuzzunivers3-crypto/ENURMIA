@@ -24,6 +24,81 @@
     background:color-mix(in srgb, var(--acento, #6E0F1F) 8%, transparent);
   }
   @media (max-width:420px){ .selector-programa{ grid-template-columns:1fr; } }
+
+  /* Planes. Mismo lenguaje que el selector de arriba: fila con borde que
+     se enciende al pasar por encima. El precio va a la derecha y alineado
+     entre todos para que la comparacion se lea de un vistazo. */
+  .plan{
+    display:flex; align-items:center; justify-content:space-between; gap:14px;
+    width:100%; padding:14px 16px; margin-bottom:9px; border-radius:12px;
+    cursor:pointer; font:inherit; text-align:left; color:inherit;
+    border:1.5px solid var(--linea, rgba(0,0,0,.12)); background:transparent;
+    transition:border-color .15s, background .15s, transform .12s;
+  }
+  .plan:hover{ border-color:var(--sangria-vivo); transform:translateY(-1px); }
+  .plan__nom{ display:flex; flex-direction:column; gap:2px; font-size:14.5px; font-weight:800; }
+  .plan__nom small{ font-size:11.5px; font-weight:600; opacity:.62; letter-spacing:0; }
+  .plan__nom b{
+    font-size:10px; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--quirofano); margin-left:6px;
+  }
+  .plan__precio{ font-size:16px; font-weight:800; white-space:nowrap; }
+  .plan--gratis{ border-color:var(--quirofano); background:var(--quirofano-luz); }
+  .plan--gratis:hover{ border-color:var(--quirofano); }
+  .plan--mejor{ border-color:var(--sangria-vivo); }
+  .plan__sep{
+    display:flex; align-items:center; gap:10px;
+    margin:16px 0 12px; font-size:11.5px; opacity:.55;
+  }
+  .plan__sep::before, .plan__sep::after{
+    content:''; flex:1; height:1px; background:var(--linea, rgba(0,0,0,.12));
+  }
+
+  /* Panel de membresia. Tapa la pantalla entera: la eleccion es el unico
+     paso que queda y no conviene que compita con nada de detras. */
+  .velo{
+    position:fixed; inset:0; z-index:90;
+    display:grid; place-items:center; padding:24px;
+    background:rgba(22,16,15,.62); backdrop-filter:blur(3px);
+    overflow-y:auto;
+  }
+  .velo__caja{
+    width:100%; max-width:470px; background:var(--papel, #fff);
+    border-radius:18px; padding:30px 28px;
+    box-shadow:0 24px 70px rgba(0,0,0,.34);
+    animation:subir .22s ease-out;
+  }
+  @keyframes subir{ from{ opacity:0; transform:translateY(14px); } }
+  .velo__caja h2{ font-size:25px; font-weight:800; line-height:1.15; }
+  .velo__sub{ color:var(--tinta-60); font-size:13.5px; margin:8px 0 22px; }
+  .velo__pie{ font-size:12.5px; color:var(--tinta-60); margin-top:20px; text-align:center; }
+  .velo__volver{
+    background:none; border:none; padding:0; margin-bottom:14px;
+    font:inherit; font-size:13px; font-weight:700; color:var(--sangria-vivo);
+    cursor:pointer;
+  }
+
+  /* Dos caminos para pagar: el boton sirve en telefono, el QR en
+     computadora, donde wa.me suele abrir una pagina inutil. */
+  .pago{ display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:start; }
+  .pago__col{ display:flex; flex-direction:column; gap:9px; }
+  .pago__col--qr{ text-align:center; }
+  .pago__paso{ font-size:12.5px; font-weight:800; }
+  .pago__nota{ font-size:11.5px; color:var(--tinta-60); line-height:1.35; }
+  .pago__qr{
+    width:100%; max-width:150px; height:auto; margin:0 auto; display:block;
+    border:1.5px solid var(--linea, rgba(0,0,0,.12)); border-radius:10px; padding:7px;
+    background:#fff;
+  }
+  .btn--wa{ background:#25D366; border-color:#25D366; color:#0B3D22; }
+  .btn--wa:hover{ background:#1FBA59; border-color:#1FBA59; }
+
+  @media (max-width:520px){
+    .velo{ padding:14px; }
+    .velo__caja{ padding:24px 20px; }
+    .pago{ grid-template-columns:1fr; gap:22px; }
+    .pago__qr{ max-width:190px; }
+  }
 </style>
 </head>
 <body>
@@ -148,6 +223,87 @@
     </div>
   </section>
 </main>
+
+<!-- ============================================================
+     PANEL DE MEMBRESIA
+     Sale por encima de todo al terminar de crear la cuenta. Va a nivel de
+     pagina, no dentro del formulario, porque tiene que tapar la pantalla
+     entera. Dos pasos: elegir plan, y si es de pago, pagar y activar.
+     ============================================================ -->
+<div id="modalPlanes" class="velo hidden" role="dialog" aria-modal="true"
+     aria-labelledby="modalTitulo">
+  <div class="velo__caja">
+
+    <!-- PASO 1: elegir -->
+    <div id="pasoElegir">
+      <h2 id="modalTitulo">Elige cómo empezar</h2>
+      <p class="velo__sub">Tu cuenta ya está creada. Solo falta decidir con qué acceso entras.</p>
+
+      <button type="button" class="plan plan--gratis" data-plan="prueba">
+        <span class="plan__nom">Probar gratis<small>3 días completos, sin tarjeta</small></span>
+        <span class="plan__precio">RD$0</span>
+      </button>
+
+      <div class="plan__sep"><span>o elige tu membresía</span></div>
+
+      <button type="button" class="plan" data-plan="mensual" data-meses="1" data-precio="450">
+        <span class="plan__nom">1 mes<small>RD$450 al mes</small></span>
+        <span class="plan__precio">RD$450</span>
+      </button>
+      <button type="button" class="plan" data-plan="trimestral" data-meses="3" data-precio="1200">
+        <span class="plan__nom">3 meses<small>RD$400 al mes · ahorras RD$150</small></span>
+        <span class="plan__precio">RD$1,200</span>
+      </button>
+      <button type="button" class="plan" data-plan="semestral" data-meses="6" data-precio="2500">
+        <span class="plan__nom">6 meses<small>RD$417 al mes · ahorras RD$200</small></span>
+        <span class="plan__precio">RD$2,500</span>
+      </button>
+      <button type="button" class="plan plan--mejor" data-plan="anual" data-meses="12" data-precio="4000">
+        <span class="plan__nom">12 meses <b>mejor precio</b><small>RD$333 al mes · ahorras RD$1,400</small></span>
+        <span class="plan__precio">RD$4,000</span>
+      </button>
+
+      <div id="avisoPlan"></div>
+
+      <p class="velo__pie">
+        ¿Ya pagaste y tienes tu código?
+        <a href="#" id="abrirCanje">Actívalo aquí</a>
+      </p>
+    </div>
+
+    <!-- PASO 2: pagar y activar -->
+    <div id="pasoPagar" class="hidden">
+      <button type="button" class="velo__volver" id="volverPlanes">← Ver los planes</button>
+      <h2>Activa tu membresía</h2>
+      <p class="velo__sub">Plan elegido: <b id="planElegido"></b></p>
+
+      <div class="pago">
+        <div class="pago__col">
+          <p class="pago__paso"><b>1.</b> Escríbenos por WhatsApp</p>
+          <a class="btn btn--ancho btn--wa" id="btnWhatsApp" href="#" target="_blank"
+             rel="noopener">Abrir WhatsApp</a>
+          <p class="pago__nota">Te pasamos el número de cuenta para el pago.</p>
+        </div>
+
+        <div class="pago__col pago__col--qr">
+          <p class="pago__paso">¿Estás en la computadora?</p>
+          <img src="assets/img/qr-whatsapp.png" alt="Código QR para escribirnos por WhatsApp"
+               class="pago__qr" width="480" height="480">
+          <p class="pago__nota">Escanéalo con la cámara de tu teléfono.</p>
+        </div>
+      </div>
+
+      <div class="campo" style="margin-top:20px">
+        <label for="codigoAcceso"><b>2.</b> Escribe aquí el código que te enviemos</label>
+        <input id="codigoAcceso" type="text" placeholder="ENUR-XXXXXXXX"
+               autocomplete="off" spellcheck="false" maxlength="20">
+      </div>
+      <button class="btn btn--lg btn--ancho" type="button" id="btnCanjear">Activar mi membresía</button>
+      <div id="avisoCanje"></div>
+    </div>
+
+  </div>
+</div>
 
 <div class="tostadas" id="tostadas"></div>
 
@@ -305,6 +461,84 @@
     setTimeout(() => location.href = 'app.html', 900);
   }
 
+  /* ---------- planes y membresia ----------
+     El numero va aqui, en un solo sitio, para poder cambiarlo sin buscar
+     por todo el archivo. Formato de wa.me: pais + numero, sin signos. */
+  const WHATSAPP = '18099991111';
+
+  const NOMBRE_PLAN = { mensual:'1 mes', trimestral:'3 meses',
+                        semestral:'6 meses', anual:'12 meses' };
+
+  function verPlanes(){
+    $('#modalPlanes').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function correoEnUso(){
+    return ($('#u2').value.trim() || $('#u1').value.trim()).toLowerCase();
+  }
+
+  function textoWhatsApp(plan, precio){
+    return 'Hola, quiero activar mi membresía de ' + TEXTOS[programa].raiz + 'IA.\n\n' +
+           'Plan: ' + (NOMBRE_PLAN[plan] || plan) + ' — RD$' + precio + '\n' +
+           'Mi correo de la cuenta: ' + correoEnUso() + '\n\n' +
+           '¿Me pasas el número de cuenta para hacer el pago?';
+  }
+
+  function verPaso(cual){
+    $('#pasoElegir').classList.toggle('hidden', cual !== 'elegir');
+    $('#pasoPagar').classList.toggle('hidden', cual !== 'pagar');
+    $('.velo__caja').scrollTop = 0;
+  }
+
+  document.querySelectorAll('.plan').forEach(b => b.onclick = async () => {
+    const plan = b.dataset.plan;
+
+    if (plan === 'prueba'){
+      b.disabled = true;
+      aviso($('#avisoPlan'), 'Abriendo tu prueba…', true);
+      const r = await Nube.abrirPrueba();
+      b.disabled = false;
+      if (!r.ok){
+        // Si ya la gastó no la dejamos encallada: lo que necesita es pagar,
+        // y lo tiene justo delante.
+        return aviso($('#avisoPlan'), r.error + ' Elige una membresía para continuar.');
+      }
+      return pasar($('#avisoPlan'), 'Tienes 3 días completos. Entrando…');
+    }
+
+    $('#planElegido').textContent =
+      (NOMBRE_PLAN[plan] || plan) + ' — RD$' + Number(b.dataset.precio).toLocaleString('es-DO');
+    $('#btnWhatsApp').href = 'https://wa.me/' + WHATSAPP + '?text=' +
+                             encodeURIComponent(textoWhatsApp(plan, b.dataset.precio));
+    verPaso('pagar');
+  });
+
+  $('#volverPlanes').onclick = () => verPaso('elegir');
+
+  $('#abrirCanje').onclick = e => {
+    e.preventDefault();
+    $('#planElegido').textContent = 'el que ya pagaste';
+    $('#btnWhatsApp').href = 'https://wa.me/' + WHATSAPP;
+    verPaso('pagar');
+    $('#codigoAcceso').focus();
+  };
+
+  $('#btnCanjear').onclick = async () => {
+    const codigo = $('#codigoAcceso').value.trim();
+    if (codigo.length < 6) return aviso($('#avisoCanje'), 'Escribe el código completo.');
+
+    const b = $('#btnCanjear');
+    b.disabled = true; b.textContent = 'Comprobando…';
+    const r = await Nube.canjearCodigo(codigo);
+    b.disabled = false; b.textContent = 'Activar mi membresía';
+
+    if (!r.ok) return aviso($('#avisoCanje'), r.error);
+    pasar($('#avisoCanje'), 'Membresía activa hasta el ' +
+          new Date(r.vence + 'T00:00:00').toLocaleDateString('es-DO',
+            { day:'numeric', month:'long', year:'numeric' }) + '. Entrando…');
+  };
+
   /* ---------- crear cuenta ---------- */
   fCrear.onsubmit = async e => {
     e.preventDefault();
@@ -327,9 +561,10 @@
         'Cuenta de <b>' + TEXTOS[programa].raiz + 'IA</b> creada. Te enviamos un correo a <b>' + correo +
         '</b>: abre el enlace para confirmarla y luego entra desde la pestaña <b>Entrar</b>.', true);
     }
-    const msg = await sincronizarAlEntrar(r.usuario, correo);
+    await sincronizarAlEntrar(r.usuario, correo);
     ocupado(fCrear, false);
-    pasar($('#avisoCrear'), msg || 'Cuenta creada. Entrando…');
+    // La cuenta ya existe y la sesion esta abierta; ahora elige acceso.
+    verPlanes();
   };
 
   /* ---------- entrar ---------- */
@@ -346,6 +581,14 @@
 
     const msg = await sincronizarAlEntrar(r.usuario, correo);
     ocupado(fEntrar, false);
+
+    /* Quien nunca eligio acceso (cuentas anteriores a los planes, o quien
+       cerro la pestana en esta pantalla) ve los planes en vez de entrar a
+       secas. Si ya tiene suscripcion, aunque este vencida, pasa: el
+       bloqueo por vencimiento se decide dentro de la app, no aqui. */
+    const sus = await Nube.miSuscripcion();
+    if (!sus) return verPlanes();
+
     pasar($('#avisoEntrar'), msg);
   };
 
