@@ -49,18 +49,20 @@ window.Almacen = (function () {
   /* ---------- estado inicial de un estudiante ---------- */
   function datosNuevos(nombre) {
     return {
-      perfil: { nombre: nombre, creado: Date.now(), cuatrimestre: null },
+      perfil: { nombre: nombre, creado: Date.now(), cuatrimestre: null, materiasUnirm: [] },
       respuestas: [],           // historial completo
       srs: {},                  // repeticion espaciada por pregunta
       marcadas: [],             // preguntas marcadas para revisar
       simulacros: [],           // resultados de examenes completos
-      casos: {},                // casos clinicos y pacientes virtuales
+      casos: {},                // casos clinicos y pacientes virtuales (ENURMIA)
+      casosUnirm: {},           // casos practicos paso a paso (UNIRMIA)
       srsTarjetas: {},          // repeticion espaciada de las flashcards
       tarjetas: { vistas:0, sesiones:0 },
       apuntes: {},              // temas leidos en la seccion Estudiar
       racha: { dias: 0, ultimo: null },
       desafios: { mejor: 0, mejorMes: 0, mes: null, partidas: 0 },
       material: [],             // apuntes que sube el propio estudiante
+      indice: { filas: [] },     // filas de la calculadora de indice (UNIRMIA): materia libre, creditos, nota
       medallas: [],
       plan: null,               // plan de estudio de 7 dias (retirado de la interfaz)
       ruta: null,               // el recorrido guiado del temario (ver assets/js/ruta.js)
@@ -259,23 +261,55 @@ window.Almacen = (function () {
     return v;
   }
 
-  /* En que cuatrimestre va el estudiante de UNIRMIA. Decide que preguntas
-     le tocan: el pensum de la universidad mete asignaturas distintas en el 7, el 8
-     y el 9, y mezclarlas seria hacerle estudiar lo que todavia no ha visto
-     o lo que ya dejo atras. En ENURMIA no se usa. */
-  function cuatrimestre() {
+  /* Que materias de UNIRMIA tiene activas el estudiante. Decide que
+     preguntas le tocan: el pensum de la universidad mete asignaturas
+     distintas en el 7, el 8 y el 9, y mezclarlas seria hacerle estudiar lo
+     que todavia no ha visto o lo que ya dejo atras. En ENURMIA no se usa.
+
+     Reemplaza al viejo "un solo cuatrimestre elegido": ahora el estudiante
+     arma su propia lista, marcando un cuatrimestre entero de una vez (ver
+     abrirSelectorMaterias en vistas/paneles.js) o agregando materias
+     sueltas de cuatrimestres distintos si le conviene (por ejemplo, si va
+     repitiendo una sola materia de un cuatrimestre anterior). Se guarda
+     como nombres de materia -- los mismos que usan TEMARIO.bloque y el
+     campo `esp` de cada pregunta -- no como numeros de cuatrimestre,
+     porque la lista ya no tiene por que corresponder a uno solo. */
+  function materiasUnirm() {
     const d = datos();
-    const n = d && d.perfil ? +d.perfil.cuatrimestre : 0;
-    return (n === 7 || n === 8 || n === 9) ? n : null;
+    if (!d || !d.perfil) return [];
+    if (!Array.isArray(d.perfil.materiasUnirm)) {
+      // Migracion silenciosa: cuentas de antes de este cambio tenian un
+      // solo cuatrimestre elegido. Se convierte una vez a la lista nueva.
+      const c = +d.perfil.cuatrimestre;
+      const info = (window.UNIRM_CUATRIMESTRES || {})[c];
+      d.perfil.materiasUnirm = info ? info.asignaturas.map(a => a.nombre) : [];
+      guardar();
+    }
+    return d.perfil.materiasUnirm;
   }
 
-  function fijarCuatrimestre(n) {
-    const v = +n;
-    if (v !== 7 && v !== 8 && v !== 9) return null;
-    const d = datos(); if (!d) return null;
-    d.perfil.cuatrimestre = v;
+  function fijarMateriasUnirm(lista) {
+    const d = datos(); if (!d) return [];
+    const limpio = Array.from(new Set((lista || []).filter(Boolean)));
+    d.perfil.materiasUnirm = limpio;
     guardar();
-    return v;
+    return limpio;
+  }
+
+  function materiaActivaUnirm(nombre) {
+    return materiasUnirm().indexOf(nombre) >= 0;
+  }
+
+  /* A que cuatrimestre pertenece una materia de UNIRMIA, y cuantos
+     creditos vale ahi -- una busqueda inversa sobre UNIRM_CUATRIMESTRES,
+     que esta organizado al reves (por cuatrimestre, no por materia). */
+  function infoMateriaUnirm(nombre) {
+    const todo = window.UNIRM_CUATRIMESTRES || {};
+    for (const c in todo) {
+      const a = (todo[c].asignaturas || []).find(x => x.nombre === nombre);
+      if (a) return { cuatri: +c, cr: a.cr, cod: a.cod, ciclo: todo[c].ciclo };
+    }
+    return null;
   }
 
   /* ---------- marcas del modo desafio ----------
@@ -340,7 +374,8 @@ window.Almacen = (function () {
     usuarios, registrar, entrar, salir, sesion, cambiarClave,
     datos, guardar, reiniciarProgreso, exportar, importar,
     tocarRacha, hoyISO,
-    programa, fijarPrograma, cuatrimestre, fijarCuatrimestre, registrarDesafio,
+    programa, fijarPrograma, materiasUnirm, fijarMateriasUnirm, materiaActivaUnirm,
+    infoMateriaUnirm, registrarDesafio,
     // puente con la nube
     abrirSesionNube, adoptar, peso, mejorLocal, sincronizarYa, sync, alSincronizar
   };

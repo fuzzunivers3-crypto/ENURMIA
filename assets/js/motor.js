@@ -40,25 +40,29 @@ window.Motor = (function () {
   /* La distribucion de un simulacro depende del programa.
 
      ENURMIA reparte por especialidad, calibrado al peso real del ENURM.
-     UNIRMIA no puede hacer eso: un estudiante de cuatrimestre 7 no tiene
-     nada que hacer con preguntas de farmacologia, que es del 9. Asi que
-     reparte por ASIGNATURA dentro de SU cuatrimestre, y con el peso en
-     creditos que le da el pensum: Anatomia I son 6 creditos de 28, o sea
-     que le tocan 6 de cada 28 preguntas. */
+     UNIRMIA no puede hacer eso: un estudiante que solo activo materias del
+     7mo no tiene nada que hacer con preguntas de farmacologia, que es del
+     9no. Asi que reparte por MATERIA ACTIVA (la lista que el propio
+     estudiante armo, ver Almacen.materiasUnirm, que puede mezclar mas de
+     un cuatrimestre), con el peso en creditos que le da el pensum:
+     Anatomia I son 6 creditos de 28 en su cuatrimestre, asi que pesa 6
+     unidades frente a las demas materias activas, sin importar de que
+     cuatrimestre vengan. */
   function distribucion(){
     if (programaActivo() !== 'unirm') return DISTRIBUCION;
-    const c = (window.UNIRM_CUATRIMESTRES || {})[cuatrimestreActivo()];
-    if (!c) return DISTRIBUCION;
-    const total = c.asignaturas.reduce((a, x) => a + x.cr, 0) || 1;
-    const m = {};
-    c.asignaturas.forEach(x => { m[x.nombre] = x.cr / total; });
-    return m;
-  }
-
-  function cuatrimestreActivo(){
-    const d = datos();
-    const n = d && d.perfil ? +d.perfil.cuatrimestre : 0;
-    return (n === 7 || n === 8 || n === 9) ? n : 7;
+    const activas = (window.Almacen && Almacen.materiasUnirm) ? Almacen.materiasUnirm() : [];
+    if (!activas.length) return {};
+    const pesos = {};
+    let total = 0;
+    activas.forEach(nombre => {
+      const info = (window.Almacen && Almacen.infoMateriaUnirm) ? Almacen.infoMateriaUnirm(nombre) : null;
+      const cr = info ? info.cr : 1;
+      pesos[nombre] = cr;
+      total += cr;
+    });
+    if (!total) return {};
+    Object.keys(pesos).forEach(k => { pesos[k] = pesos[k] / total; });
+    return pesos;
   }
 
   /* ---------- acceso al banco ----------
@@ -72,20 +76,33 @@ window.Motor = (function () {
      hace una busqueda lineal por cada pregunta de una sesion) y filtrar
      cinco mil objetos cada vez se notaria. La memoria se invalida sola si
      cambia el programa o si entra otro archivo de banco. */
-  let bcLista = null, bcPrograma = null, bcLargo = -1;
+  let bcLista = null, bcPrograma = null, bcLargo = -1, bcMaterias = '\0';
 
   function programaActivo(){
     return (window.Almacen && Almacen.programa) ? Almacen.programa() : 'enurm';
   }
 
+  /* En UNIRMIA el banco no es "todas las preguntas de programa unirm":
+     es solo las de las materias que el propio estudiante activo (ver
+     Almacen.materiasUnirm). Sin materias elegidas, el banco esta VACIO a
+     proposito -- igual que antes de elegir cuatrimestre, no hay nada
+     sensato que mostrar todavia -- en vez de enseñar las 24 materias
+     mezcladas, que era lo que pasaba antes de este cambio. */
   function banco(){
     const todo = window.BANCO || [];
     const p = programaActivo();
-    if (bcLista && bcPrograma === p && bcLargo === todo.length) return bcLista;
-    bcPrograma = p; bcLargo = todo.length;
-    bcLista = (p === 'unirm')
-      ? todo.filter(q => q.programa === 'unirm')
-      : todo.filter(q => q.programa !== 'unirm');
+    const clave = p === 'unirm' && window.Almacen && Almacen.materiasUnirm
+      ? Almacen.materiasUnirm().slice().sort().join('|') : '';
+    if (bcLista && bcPrograma === p && bcLargo === todo.length && bcMaterias === clave) return bcLista;
+    bcPrograma = p; bcLargo = todo.length; bcMaterias = clave;
+    if (p === 'unirm'){
+      const activas = clave ? clave.split('|') : [];
+      bcLista = activas.length
+        ? todo.filter(q => q.programa === 'unirm' && activas.indexOf(q.esp) >= 0)
+        : [];
+    } else {
+      bcLista = todo.filter(q => q.programa !== 'unirm');
+    }
     return bcLista;
   }
 
@@ -569,7 +586,7 @@ window.Motor = (function () {
     resumen, serieDiaria, erroresPorTipo, patronDeError, fragilidad,
     nivel, medallas, revisarMedallas, preparacion, proximaAccion, generarPlan,
     guardarSimulacro, alternarMarcada, estaMarcada, analizarDefensa,
-    TIPOS_ERROR, NIVELES, DISTRIBUCION, programaActivo, distribucion, cuatrimestreActivo
+    TIPOS_ERROR, NIVELES, DISTRIBUCION, programaActivo, distribucion
   };
 })();
 

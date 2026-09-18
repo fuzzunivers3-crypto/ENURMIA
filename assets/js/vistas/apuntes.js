@@ -21,11 +21,15 @@ window.Apuntes = (function () {
   function todos(){
     const prog = Almacen.programa();
     const todo = window.APUNTES || {};
+    const activas = prog === 'unirm' ? Almacen.materiasUnirm() : null;
     const out = {};
     Object.keys(todo).forEach(k => {
       const a = todo[k];
       const suyo = (a.programa === 'unirm');
-      if (prog === 'unirm' ? suyo : !suyo) out[k] = a;
+      if (prog === 'unirm' ? suyo : !suyo){
+        if (activas && activas.indexOf(a.bloque) < 0) return;
+        out[k] = a;
+      }
     });
     return out;
   }

@@ -151,7 +151,7 @@ window.Vistas = (function () {
     };
     UI.$$('[data-esp]').forEach(el => el.onclick = () => App.ir('entrenar', { esp: el.dataset.esp }));
     UI.$$('[data-atajo]').forEach(el => el.onclick = () => App.ir(el.dataset.atajo));
-    engancharCuatri(inicio);
+    engancharMaterias(inicio);
     if (window.Ruta && Ruta.activa() && window.Arturo) Arturo.enganchar();
 
     /* Lo primero que ve un estudiante nuevo: organizar su estudio. Solo
@@ -159,6 +159,14 @@ window.Vistas = (function () {
     if (window.Ruta && !Ruta.activa() && !d.ajustes.bienvenidaVista &&
         window.VistaRuta && Almacen.programa() !== 'unirm'){
       setTimeout(bienvenida, 350);
+    }
+
+    /* El mismo ejercicio, version UNIRMIA: elegir materias en vez de
+       armar un recorrido. Sale una sola vez, y solo si todavia no eligio
+       ninguna materia (si ya tiene, tarjetaUnirm() de arriba ya se lo
+       esta mostrando, no hace falta el modal encima). */
+    if (Almacen.programa() === 'unirm' && !Almacen.materiasUnirm().length && !d.ajustes.bienvenidaVista){
+      setTimeout(bienvenidaUnirm, 350);
     }
 
     setTimeout(() => UI.$$('.barra i').forEach(b => b.style.width = b.style.width), 30);
@@ -218,44 +226,130 @@ window.Vistas = (function () {
     pintar();
   }
 
-  /* Lo primero que necesita saber UNIRMIA es en que cuatrimestre va el
-     estudiante. No es un adorno: el pensum de la universidad mete asignaturas
-     distintas en el 7, el 8 y el 9, y de ahi sale que preguntas le tocan y
-     como se reparte su simulacro. Hasta que no lo diga, no hay nada
-     sensato que ensenarle, asi que se pregunta arriba del todo. */
+  /* Lo primero que necesita saber UNIRMIA es que materias tiene activas el
+     estudiante. No es un adorno: el pensum de la universidad mete
+     asignaturas distintas en el 7, el 8 y el 9, y de ahi sale que
+     preguntas le tocan y como se reparte su simulacro. Hasta que no elija
+     al menos una, no hay nada sensato que ensenarle, asi que se pregunta
+     arriba del todo.
+
+     A diferencia de la version vieja (un solo cuatrimestre a la vez), aqui
+     el estudiante arma su propia lista: puede marcar un cuatrimestre
+     entero de un tiron o combinar materias sueltas de cuatrimestres
+     distintos (por ejemplo, si va repitiendo una sola materia atrasada).
+     El picker completo vive en abrirSelectorMaterias(), mas abajo, porque
+     con 24 materias no cabe bien dentro de esta tarjeta. */
   function tarjetaUnirm(vacio){
-    const c = Almacen.cuatrimestre();
-    if (!c){
+    const activas = Almacen.materiasUnirm();
+    if (!activas.length){
       return '<div class="card card--carbon" style="margin-bottom:18px">' +
         '<span class="eyebrow" style="color:rgba(255,255,255,.45)">Antes de empezar</span>' +
-        '<h3 style="font-size:22px;margin-top:6px">¿En qué cuatrimestre vas?</h3>' +
+        '<h3 style="font-size:22px;margin-top:6px">¿Qué materias vas a estudiar?</h3>' +
         '<p style="color:rgba(255,255,255,.72);font-size:14px;margin-top:6px">' +
-        'De esto depende qué asignaturas te tocan. Lo puedes cambiar después en Ajustes.</p>' +
-        '<div class="row wrap" style="gap:9px;margin-top:14px">' +
-        [7, 8, 9].map(n => '<button class="btn btn--claro" data-cuatri="' + n + '">Cuatrimestre ' + n + '</button>').join('') +
-        '</div></div>';
+        'Puedes marcar un cuatrimestre completo o combinar materias sueltas. Lo puedes cambiar cuando quieras.</p>' +
+        '<button class="btn btn--claro" id="btnElegirMaterias" style="margin-top:14px">Elegir materias</button>' +
+        '</div>';
     }
-    const info = (window.UNIRM_CUATRIMESTRES || {})[c];
-    const lista = info ? info.asignaturas.map(a =>
-      '<span class="chip">' + esc(a.nombre) + '</span>').join(' ') : '';
+    const porCuatri = {};
+    activas.forEach(nombre => {
+      const info = Almacen.infoMateriaUnirm(nombre);
+      const c = info ? info.cuatri : 0;
+      (porCuatri[c] = porCuatri[c] || []).push(nombre);
+    });
+    const resumen = Object.keys(porCuatri).sort((a, b) => +a - +b).map(c =>
+      '<div style="margin-top:10px"><span class="eyebrow" style="font-size:11px">Cuatrimestre ' + c + '</span>' +
+      '<div class="row wrap" style="gap:6px;margin-top:5px">' +
+        porCuatri[c].map(n => '<span class="chip">' + esc(n) + '</span>').join('') +
+      '</div></div>'
+    ).join('');
     return '<div class="card card--yodo" style="margin-bottom:18px">' +
-      '<div class="row-b"><span class="eyebrow">' + esc(info ? info.nombre : 'Cuatrimestre ' + c) + ' · ' +
-        esc(info ? info.ciclo : '') + '</span>' +
-        '<button class="btn btn--sm btn--fantasma" data-cuatri="0">Cambiar</button></div>' +
-      '<div class="row wrap" style="gap:6px;margin-top:12px">' + lista + '</div>' +
-      (vacio ? '<p style="margin-top:12px;font-size:13.5px">Todavía no hay preguntas cargadas de estas asignaturas. ' +
+      '<div class="row-b"><span class="eyebrow">' + activas.length + ' materia' + (activas.length === 1 ? '' : 's') +
+        ' activa' + (activas.length === 1 ? '' : 's') + '</span>' +
+        '<button class="btn btn--sm btn--fantasma" id="btnElegirMaterias">Cambiar</button></div>' +
+      resumen +
+      (vacio ? '<p style="margin-top:12px;font-size:13.5px">Todavía no hay preguntas cargadas de alguna de estas materias. ' +
         'La plataforma está lista y el pensum también; falta escribir el banco. ' +
-        'Mientras tanto las pantallas de estudio aparecerán vacías.</p>' : '') +
+        'Mientras tanto esas pantallas de estudio aparecerán vacías.</p>' : '') +
       '</div>';
   }
 
-  function engancharCuatri(repintar){
-    UI.$$('[data-cuatri]').forEach(b => b.onclick = () => {
-      const n = +b.dataset.cuatri;
-      if (n === 0){ Almacen.datos().perfil.cuatrimestre = null; Almacen.guardar(); }
-      else Almacen.fijarCuatrimestre(n);
-      repintar();
+  function engancharMaterias(repintar){
+    const b = document.getElementById('btnElegirMaterias');
+    if (b) b.onclick = () => abrirSelectorMaterias(repintar);
+  }
+
+  /* El picker completo: un bloque por cuatrimestre (con boton para
+     marcar/quitar todas sus materias de una vez) y un checkbox por
+     materia individual. Se abre desde Inicio (primera vez o "Cambiar") y
+     desde Ajustes. */
+  function htmlSelectorMaterias(seleccionActual, primeraVez){
+    const todo = window.UNIRM_CUATRIMESTRES || {};
+    const marcado = {};
+    seleccionActual.forEach(n => { marcado[n] = true; });
+    const secciones = Object.keys(todo).sort((a, b) => +a - +b).map(c => {
+      const info = todo[c];
+      return '<div class="card" style="margin-bottom:12px;padding:14px" data-cuatri-box="' + c + '">' +
+        '<div class="row-b" style="margin-bottom:8px">' +
+          '<b style="font-size:14px">' + esc(info.nombre) + ' · ' + esc(info.ciclo) + '</b>' +
+          '<button type="button" class="btn btn--sm btn--fantasma" data-todo-cuatri="' + c + '">Marcar / quitar todo</button>' +
+        '</div>' +
+        '<div style="display:flex;flex-direction:column;gap:7px">' +
+        info.asignaturas.map(a =>
+          '<label class="row" style="gap:8px;align-items:center;font-size:13.5px;cursor:pointer">' +
+            '<input type="checkbox" data-materia="' + esc(a.nombre) + '"' + (marcado[a.nombre] ? ' checked' : '') + '>' +
+            '<span class="grow">' + esc(a.nombre) + '</span>' +
+            '<span class="muted mono" style="font-size:11.5px">' + a.cr + ' cr</span>' +
+          '</label>').join('') +
+        '</div></div>';
+    }).join('');
+
+    return (primeraVez
+        ? '<p class="eyebrow">Antes de empezar</p>' +
+          '<h3 style="font-size:24px;margin:4px 0 10px">¿Qué materias vas a estudiar?</h3>' +
+          '<p class="muted" style="margin-bottom:16px">Marca las que estás cursando este cuatrimestre. ' +
+          'De ahí sale qué preguntas te tocan en Temario, Entrenar, Simulacro, Biblioteca y Casos. Lo puedes cambiar cuando quieras.</p>'
+        : '<h3 style="font-size:21px;margin-bottom:6px">Elige tus materias</h3>' +
+          '<p class="muted" style="font-size:13.5px;margin-bottom:16px">Marca las que estás cursando o quieres repasar. ' +
+          'Puedes tomar un cuatrimestre completo o combinar materias sueltas, y cambiarlo cuando quieras.</p>') +
+      '<div style="max-height:50vh;overflow-y:auto;padding-right:4px">' + secciones + '</div>' +
+      '<div class="row" style="margin-top:14px;gap:9px">' +
+        (primeraVez
+          ? '<button type="button" class="btn btn--fantasma grow" id="msDespues">Lo haré después</button>'
+          : '<button type="button" class="btn btn--fantasma grow" onclick="this.closest(\'.velo\').remove()">Cancelar</button>') +
+        '<button type="button" class="btn grow" id="guardarMaterias">Guardar</button>' +
+      '</div>';
+  }
+
+  function abrirSelectorMaterias(alGuardar, primeraVez){
+    UI.modal(htmlSelectorMaterias(Almacen.materiasUnirm(), primeraVez));
+    UI.$$('[data-todo-cuatri]').forEach(b => b.onclick = () => {
+      const caja = b.closest('[data-cuatri-box]');
+      const checks = UI.$$('input[data-materia]', caja);
+      const todasMarcadas = checks.every(c => c.checked);
+      checks.forEach(c => { c.checked = !todasMarcadas; });
     });
+    document.getElementById('guardarMaterias').onclick = () => {
+      const elegidas = UI.$$('[data-materia]').filter(i => i.checked).map(i => i.dataset.materia);
+      Almacen.fijarMateriasUnirm(elegidas);
+      if (primeraVez){ Almacen.datos().ajustes.bienvenidaVista = true; Almacen.guardar(); }
+      document.querySelector('.velo').remove();
+      if (alGuardar) alGuardar();
+    };
+    const despues = document.getElementById('msDespues');
+    if (despues) despues.onclick = () => {
+      Almacen.datos().ajustes.bienvenidaVista = true;
+      Almacen.guardar();
+      document.querySelector('.velo').remove();
+    };
+  }
+
+  /* El mismo ejercicio de bienvenida() de ENURMIA, pero para elegir
+     materias en vez de armar un recorrido: sale solo, una vez, la primera
+     vez que un estudiante de UNIRMIA entra a Inicio sin materias
+     elegidas. "Lo hare despues" lo despacha sin forzar nada (igual que
+     en ENURMIA), asi que no vuelve a salir aunque siga sin elegir. */
+  function bienvenidaUnirm(){
+    abrirSelectorMaterias(inicio, true);
   }
 
   function atajo(em, titulo, texto, destino, cls){
@@ -502,9 +596,10 @@ window.Vistas = (function () {
      se pueda reconocer la respuesta sin haberla razonado.
      ============================================================ */
   function razonar(){
-    const c = Almacen.cuatrimestre();
-    const info = (window.UNIRM_CUATRIMESTRES || {})[c];
-    const asigs = info ? info.asignaturas : [];
+    const asigs = Almacen.materiasUnirm().map(nombre => {
+      const info = Almacen.infoMateriaUnirm(nombre);
+      return { nombre, cr: info ? info.cr : 0 };
+    });
     const hay = {};
     Motor.bancoActivo().forEach(q => { hay[q.esp] = (hay[q.esp] || 0) + 1; });
 
@@ -536,9 +631,9 @@ window.Vistas = (function () {
       (asigs.length
         ? '<span class="eyebrow">Elige asignatura</span>' +
           '<div class="rejilla rejilla--3" style="margin:12px 0 18px">' + fichas + '</div>'
-        : '<div class="card card--yodo" style="margin-bottom:18px"><p>Dime primero en qué cuatrimestre vas, en Inicio.</p></div>') +
+        : '<div class="card card--yodo" style="margin-bottom:18px"><p>Elige primero tus materias, en Inicio.</p></div>') +
 
-      '<button class="btn btn--lg" id="btnRazonarTodo">Razonar con todo mi cuatrimestre →</button>' +
+      '<button class="btn btn--lg" id="btnRazonarTodo">Razonar con todas mis materias →</button>' +
     '</div>';
 
     UI.$$('[data-razon]').forEach(b => b.onclick = () => lanzarRazonar(b.dataset.razon));
@@ -584,6 +679,15 @@ window.Vistas = (function () {
       '</div>' +
 
       '<p class="muted" style="font-size:13.5px">Hay ' + dificiles + ' preguntas de dificultad alta o muy alta en el banco.</p>' +
+
+      '<div class="card card--lila" style="margin-top:18px">' +
+        '<div class="row-b" style="flex-wrap:wrap;gap:10px"><div>' +
+          '<span class="eyebrow">Nuevo</span>' +
+          '<h3 style="font-size:19px;margin-top:4px">Duelo en vivo contra un compañero</h3>' +
+          '<p class="muted" style="font-size:13.5px;margin-top:4px">Las mismas preguntas, al mismo tiempo, con el marcador del otro en vivo. Se juega por código, no contra desconocidos.</p>' +
+        '</div><span style="font-size:30px">🤺</span></div>' +
+        '<button class="btn btn--sm" id="btnDuelo" style="margin-top:12px">Ir a Duelo en vivo</button>' +
+      '</div>' +
     '</div>';
 
     UI.$$('[data-reto]').forEach(b => b.onclick = () => {
@@ -592,6 +696,7 @@ window.Vistas = (function () {
       if (!preguntas.length) return UI.tostada('No hay preguntas disponibles', 'mal');
       Sesion.iniciar({ modo:'desafio', titulo:'Desafío', preguntas, tiempoPregunta:60000, vidas:3 });
     });
+    document.getElementById('btnDuelo').onclick = () => App.ir('duelo');
   }
 
   /* ============================================================
@@ -819,6 +924,17 @@ window.Vistas = (function () {
         '</div>' +
       '</div>' +
 
+      (Almacen.programa() === 'unirm'
+        ? '<div class="card" style="margin-bottom:16px"><span class="eyebrow">Tus materias</span>' +
+          '<p class="muted" style="margin:8px 0 12px;font-size:13.5px">' +
+          (Almacen.materiasUnirm().length
+            ? Almacen.materiasUnirm().length + ' materia' + (Almacen.materiasUnirm().length === 1 ? '' : 's') + ' activa' + (Almacen.materiasUnirm().length === 1 ? '' : 's') + '. Esto controla qué ves en Temario, Estudiar, Entrenar, Simulacro, Biblioteca y Casos.'
+            : 'Todavía no has elegido materias.') +
+          '</p>' +
+          '<button class="btn btn--sm" id="btnCambiarMaterias">Elegir materias</button>' +
+        '</div>'
+        : '') +
+
       '<div class="card" style="margin-bottom:16px"><span class="eyebrow">Cómo quieres entrenar</span>' +
         conmutador('pedirConfianza', 'Preguntar mi nivel de confianza', 'Antes de confirmar, declaras qué tan seguro estás. Acertar con poca seguridad se trata como conocimiento frágil.', a.pedirConfianza) +
         conmutador('defenderRespuesta', 'Pedirme que defienda mi respuesta', 'Escribes tu razonamiento antes de ver el resultado y recibes análisis del argumento, no solo del acierto.', a.defenderRespuesta) +
@@ -831,8 +947,9 @@ window.Vistas = (function () {
         conmutador('porBloques', 'Estudiar por bloques en orden',
           'Eliges los bloques y su orden, y no pasas al siguiente hasta cerrar el anterior con sus temas hechos y su examen aprobado. Al apagarlo desaparecen los candados y entras a lo que quieras; tu avance se sigue registrando igual.',
           a.porBloques !== false) +
-        conmutador('reexplicar', 'Arturo puede reformular',
-          'Cuando falles una pregunta y la explicación no te entre, puedes pedirle a Arturo que te la cuente de otra forma, partiendo solo de lo que ya está escrito para esa pregunta. Necesita internet y cuenta en la nube.',
+        conmutador('reexplicar', Arturo.nombre() + ' puede reformular',
+          'Cuando falles una pregunta y la explicación no te entre, puedes pedirle a ' + Arturo.nombre() +
+          ' que te la cuente de otra forma, partiendo solo de lo que ya está escrito para esa pregunta. Necesita internet y cuenta en la nube.',
           a.reexplicar !== false) +
       '</div>' +
 
@@ -857,6 +974,9 @@ window.Vistas = (function () {
     '</div>';
 
     pintarSuscripcion();
+
+    const btnMaterias = document.getElementById('btnCambiarMaterias');
+    if (btnMaterias) btnMaterias.onclick = () => abrirSelectorMaterias(ajustes);
 
     UI.$$('[data-ajuste]').forEach(b => b.onclick = () => {
       const k = b.dataset.ajuste;

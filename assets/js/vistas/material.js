@@ -166,9 +166,7 @@ window.Material = (function () {
   /* ---------- pantalla ---------- */
   function menu(){
     const lista = docs();
-    const c = Almacen.cuatrimestre();
-    const info = (window.UNIRM_CUATRIMESTRES || {})[c];
-    const asigs = info ? info.asignaturas.map(a => a.nombre) : [];
+    const asigs = Almacen.materiasUnirm();
 
     const fichas = lista.map(d => {
       const n = generarTarjetas(d).length;

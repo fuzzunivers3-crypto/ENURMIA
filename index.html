@@ -143,23 +143,6 @@
         </button>
       </div>
 
-      <!-- UNIRMIA todavia no tiene banco suficiente para recibir estudiantes
-           reales: mientras se completa, este cartel sustituye por completo
-           el acceso (nada de Entrar/Crear cuenta) cuando esta seleccionada. -->
-      <div id="bloqueoUnirm" class="hidden" style="text-align:center;padding:18px 0 6px">
-        <div class="card card--sangria" style="padding:30px 24px">
-          <h2 style="margin:0 0 10px;font-size:24px">Estamos trabajando</h2>
-          <p style="margin:0;font-size:14.5px;opacity:.95;line-height:1.5">
-            UNIRMIA está en construcción: el banco de preguntas y los apuntes de los
-            cuatrimestres 7, 8 y 9 todavía se están completando. Por ahora no se puede
-            entrar ni crear cuenta aquí.
-          </p>
-          <p style="margin:14px 0 0;font-size:14.5px;opacity:.95">
-            Vuelve pronto, o entra a <b>ENURMIA</b> mientras tanto.
-          </p>
-        </div>
-      </div>
-
       <div class="pestanas" role="tablist">
         <button id="tabEntrar" class="on" role="tab">Entrar</button>
         <button id="tabCrear" role="tab">Crear cuenta</button>
@@ -246,22 +229,7 @@
 
       <div class="plan__sep"><span>o elige tu membresía</span></div>
 
-      <button type="button" class="plan" data-plan="mensual" data-meses="1" data-precio="450">
-        <span class="plan__nom">1 mes<small>RD$450 al mes</small></span>
-        <span class="plan__precio">RD$450</span>
-      </button>
-      <button type="button" class="plan" data-plan="trimestral" data-meses="3" data-precio="1200">
-        <span class="plan__nom">3 meses<small>RD$400 al mes · ahorras RD$150</small></span>
-        <span class="plan__precio">RD$1,200</span>
-      </button>
-      <button type="button" class="plan" data-plan="semestral" data-meses="6" data-precio="2500">
-        <span class="plan__nom">6 meses<small>RD$417 al mes · ahorras RD$200</small></span>
-        <span class="plan__precio">RD$2,500</span>
-      </button>
-      <button type="button" class="plan plan--mejor" data-plan="anual" data-meses="12" data-precio="4000">
-        <span class="plan__nom">12 meses <b>mejor precio</b><small>RD$333 al mes · ahorras RD$1,400</small></span>
-        <span class="plan__precio">RD$4,000</span>
-      </button>
+      <div id="planesPago"></div>
 
       <div id="avisoPlan"></div>
 
@@ -361,9 +329,42 @@
   let programa = 'enurm';
   try { programa = localStorage.getItem('enurm.programa') === 'unirm' ? 'unirm' : 'enurm'; } catch (e) {}
 
-  /* UNIRMIA en construccion: bloquea el acceso por completo mientras esta
-     seleccionado. Cambiar a false el dia que haya banco suficiente. */
-  const UNIRM_BLOQUEADO = true;
+  /* Definido aqui arriba (antes de pintarPrograma) a proposito: pintarPrograma()
+     se llama mas abajo en este mismo script, ANTES de llegar a donde antes
+     vivian estas constantes, y una `const` no esta disponible hasta que su
+     propia linea se ejecuta (a diferencia de una `function`, que si sube
+     entera). Referenciar PRECIOS desde pintarPlanes() con la declaracion
+     todavia mas abajo tiraba "Cannot access before initialization". */
+  const NOMBRE_PLAN = { mensual:'1 mes', trimestral:'3 meses',
+                        semestral:'6 meses', anual:'12 meses' };
+
+  /* UNIRMIA cuesta menos que ENURMIA: son publicos distintos (estudiante
+     de universidad vs. residente que ya trabaja) y bancos de tamano
+     distinto. Una sola tabla aqui, no dos formularios de precios
+     duplicados: pintarPlanes() rehace los botones de #planesPago cada vez
+     que cambia el programa elegido. */
+  const PRECIOS = {
+    enurm: { mensual:450, trimestral:1200, semestral:2500, anual:4000 },
+    unirm: { mensual:250, trimestral:700,  semestral:1200, anual:2000 }
+  };
+  const MESES_PLAN = { mensual:1, trimestral:3, semestral:6, anual:12 };
+
+  function pintarPlanes(){
+    const precios = PRECIOS[programa] || PRECIOS.enurm;
+    const base = precios.mensual;
+    $('#planesPago').innerHTML = ['mensual','trimestral','semestral','anual'].map(id => {
+      const precio = precios[id], meses = MESES_PLAN[id];
+      const porMes = Math.round(precio / meses);
+      const ahorra = base * meses - precio;
+      const mejor = id === 'anual';
+      const nota = 'RD$' + porMes + ' al mes' + (ahorra > 0 ? ' · ahorras RD$' + ahorra.toLocaleString('es-DO') : '');
+      return '<button type="button" class="plan' + (mejor ? ' plan--mejor' : '') +
+        '" data-plan="' + id + '" data-meses="' + meses + '" data-precio="' + precio + '">' +
+        '<span class="plan__nom">' + esc(NOMBRE_PLAN[id]) + (mejor ? ' <b>mejor precio</b>' : '') +
+        '<small>' + nota + '</small></span>' +
+        '<span class="plan__precio">RD$' + precio.toLocaleString('es-DO') + '</span></button>';
+    }).join('');
+  }
 
   function pintarPrograma(){
     const t = TEXTOS[programa];
@@ -376,14 +377,8 @@
     if (sub) sub.textContent = t.crear;
     document.querySelectorAll('[data-programa]').forEach(b =>
       b.classList.toggle('on', b.dataset.programa === programa));
-
-    const bloqueado = programa === 'unirm' && UNIRM_BLOQUEADO;
-    document.getElementById('bloqueoUnirm').classList.toggle('hidden', !bloqueado);
-    $('.pestanas').classList.toggle('hidden', bloqueado);
-    fEntrar.classList.toggle('hidden', bloqueado || !tEntrar.classList.contains('on'));
-    fCrear.classList.toggle('hidden', bloqueado || !tCrear.classList.contains('on'));
-    document.getElementById('notaPrivacidadPie').classList.toggle('hidden', bloqueado);
-    document.title = bloqueado ? 'UNIRMIA — En construcción' : t.raiz + 'IA — Entrar';
+    document.title = t.raiz + 'IA — Entrar';
+    pintarPlanes();
   }
 
   document.querySelectorAll('[data-programa]').forEach(b => b.onclick = () => {
@@ -468,11 +463,10 @@
 
   /* ---------- planes y membresia ----------
      El numero va aqui, en un solo sitio, para poder cambiarlo sin buscar
-     por todo el archivo. Formato de wa.me: pais + numero, sin signos. */
+     por todo el archivo. Formato de wa.me: pais + numero, sin signos.
+     (NOMBRE_PLAN, PRECIOS, MESES_PLAN y pintarPlanes viven mas arriba,
+     junto a pintarPrograma, que los necesita desde su primera llamada.) */
   const WHATSAPP = '18099991111';
-
-  const NOMBRE_PLAN = { mensual:'1 mes', trimestral:'3 meses',
-                        semestral:'6 meses', anual:'12 meses' };
 
   function verPlanes(){
     $('#modalPlanes').classList.remove('hidden');
@@ -496,7 +490,9 @@
     $('.membresia-velo__caja').scrollTop = 0;
   }
 
-  document.querySelectorAll('.plan').forEach(b => b.onclick = async () => {
+  $('#pasoElegir').addEventListener('click', async e => {
+    const b = e.target.closest('.plan');
+    if (!b) return;
     const plan = b.dataset.plan;
 
     if (plan === 'prueba'){

@@ -11,22 +11,28 @@ window.App = (function () {
      y malo para ellos. */
   const PANTALLAS = {
     inicio:      { em:'🏠', nombre:'Inicio',         ver: p => Vistas.inicio(p) },
-    ruta:        { em:'👨‍⚕️', nombre:'Arturo',         ver: p => VistaRuta.menu(p) },
+    ruta:        { em:'👨‍⚕️', nombre:'Arturo',         ver: p => VistaRuta.menu(p) }, // en UNIRMIA se ve como R2D2, ver nombrePantalla()/emojiPantalla()
     simulacro:   { em:'📝', nombre:'Simulacro',      ver: p => Vistas.simulacro(p) },
     estudiar:    { em:'📖', nombre:'Estudiar',       ver: p => Apuntes.menu(p) },
     temario:     { em:'🗂️', nombre:'Temario',        ver: p => Temario.menu(p) },
     entrenar:    { em:'🧠', nombre:'Entrenar',       ver: p => Vistas.entrenar(p) },
     practicar:   { em:'🧠', nombre:'Practicar',      ver: p => Vistas.entrenar(p) },
     clinica:     { em:'🩺', nombre:'Clínica',        ver: p => Clinica.menu(p) },
+    casos:       { em:'🧬', nombre:'Casos',          ver: p => CasosUnirm.menu(p) },
     flashcards:  { em:'⚡', nombre:'Flashcards',     ver: p => Flashcards.menu(p) },
     material:    { em:'📎', nombre:'Mi material',    ver: p => Material.menu(p) },
     razonar:     { em:'🔍', nombre:'Razonar',        ver: p => Vistas.razonar(p) },
     desafio:     { em:'⚔️', nombre:'Desafío',        ver: p => Vistas.desafio(p) },
+    duelo:       { em:'🤺', nombre:'Duelo en vivo',  ver: p => Duelo.menu(p) },
     ranking:     { em:'🏆', nombre:'Clasificación',  ver: () => Ranking.menu() },
     biblioteca:  { em:'📚', nombre:'Biblioteca',     ver: p => Vistas.biblioteca(p) },
+    examinar:    { em:'🧾', nombre:'Examinar',       ver: p => Examinar.menu(p) },
+    indice:      { em:'🧮', nombre:'Índice',         ver: () => Indice.menu() },
+    proximos:    { em:'🎓', nombre:'Próximos cursos', ver: () => Proximos.menu() },
     progreso:    { em:'📊', nombre:'Progreso',       ver: p => Vistas.progreso(p) },
     preparacion: { em:'🎓', nombre:'¿Estoy listo?',  ver: p => Vistas.preparacion(p) },
     ajustes:     { em:'⚙️', nombre:'Ajustes',        ver: p => Vistas.ajustes(p) },
+    soporte:     { em:'💬', nombre:'Te escuchamos',  ver: () => Soporte.menu() },
     admin:       { em:'🛡️', nombre:'Administración', ver: () => Admin.menu() }
   };
 
@@ -38,13 +44,13 @@ window.App = (function () {
   const MENUS = {
     enurm: {
       arriba: ['inicio','ruta','simulacro','estudiar','temario','entrenar','clinica','flashcards','desafio','ranking','biblioteca'],
-      abajo:  ['progreso','preparacion','ajustes'],
+      abajo:  ['progreso','preparacion','ajustes','soporte'],
       movil:  ['inicio','ruta','estudiar','flashcards','progreso']
     },
     unirm: {
-      arriba: ['inicio','estudiar','temario','flashcards','material','practicar','razonar','desafio','ranking'],
-      abajo:  ['progreso','ajustes'],
-      movil:  ['inicio','estudiar','flashcards','practicar','progreso']
+      arriba: ['inicio','ruta','simulacro','temario','entrenar','biblioteca','casos','desafio','examinar','indice','proximos'],
+      abajo:  ['progreso','ajustes','soporte'],
+      movil:  ['inicio','ruta','entrenar','examinar','progreso']
     }
   };
 
@@ -65,7 +71,7 @@ window.App = (function () {
      sesion, y eso es rehacer como se carga el banco entero. */
   const SOLO_CON_MEMBRESIA = new Set([
     'simulacro','entrenar','clinica','flashcards','desafio','ruta','biblioteca',
-    'practicar','razonar'
+    'practicar','razonar','examinar','casos','duelo'
   ]);
 
   /* Nace en 'desconocida' a proposito: hasta que el servidor conteste no se
@@ -92,10 +98,20 @@ window.App = (function () {
   let RUTAS = rutas();
   let actual = 'inicio';
 
+  /* Varias pantallas navegan directo a un id con App.ir('estudiar'),
+     App.ir('ranking'), App.ir('flashcards')... sin pasar por el menu (Temario
+     al abrir un apunte, el cierre de Desafio, Flashcards al volver de una
+     tanda por tema). Si ese id no esta en el menu del programa activo,
+     antes caia en RUTAS[0] (Inicio) SIN AVISAR: parecia que el boton no
+     hacia nada. Como PANTALLAS tiene la definicion de toda pantalla que
+     existe en la app, cualquier id valido se puede abrir aunque no tenga
+     boton en el riel; solo se pierde el resaltado, no la funcion. */
   function ir(id, param){
-    const ruta = RUTAS.find(r => r.id === id) || RUTAS[0];
+    const ruta = RUTAS.find(r => r.id === id)
+      || (PANTALLAS[id] ? Object.assign({ id }, PANTALLAS[id]) : RUTAS[0]);
     if (window.Sesion) Sesion.salir();
     if (window.Flashcards) Flashcards.salir();
+    if (window.Duelo) Duelo.salir();
     actual = ruta.id;
     marcar();
     document.getElementById('vista').innerHTML = '';
@@ -119,9 +135,22 @@ window.App = (function () {
 
   function marcaPrograma(){ return Almacen.programa() === 'unirm' ? 'UNIRMIA' : 'ENURMIA'; }
 
+  /* La pantalla 'ruta' es el unico caso donde el nombre y el emoji del
+     menu dependen del programa: Arturo en ENURMIA, R2D2 en UNIRMIA. El
+     resto de PANTALLAS es fijo, asi que estas dos funciones solo
+     resuelven ese caso y devuelven el valor de siempre para todo lo
+     demas. */
+  function nombrePantalla(id){
+    if (id === 'ruta' && window.Arturo) return Arturo.nombre();
+    return PANTALLAS[id].nombre;
+  }
+  function emojiPantalla(id){
+    if (id === 'ruta' && window.Arturo) return Arturo.nombre() === 'R2D2' ? '🤖' : PANTALLAS[id].em;
+    return PANTALLAS[id].em;
+  }
+
   function boton(id){
-    const x = PANTALLAS[id];
-    return '<button class="rail__link" data-ruta="' + id + '"><span class="em">' + x.em + '</span>' + esc(x.nombre) + '</button>';
+    return '<button class="rail__link" data-ruta="' + id + '"><span class="em">' + emojiPantalla(id) + '</span>' + esc(nombrePantalla(id)) + '</button>';
   }
 
   function armazon(){
@@ -161,10 +190,9 @@ window.App = (function () {
     '</main>' +
 
     '<nav class="movil">' +
-      menu().movil.map(id => {
-        const x = PANTALLAS[id];
-        return '<button data-ruta="' + id + '" title="' + esc(x.nombre) + '">' + x.em + '</button>';
-      }).join('') +
+      menu().movil.map(id =>
+        '<button data-ruta="' + id + '" title="' + esc(nombrePantalla(id)) + '">' + emojiPantalla(id) + '</button>'
+      ).join('') +
     '</nav>';
 
     UI.$$('[data-ruta]').forEach(b => b.onclick = () => ir(b.dataset.ruta));

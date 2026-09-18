@@ -24,8 +24,13 @@ window.Temario = (function () {
 
   function bloques(){
     const prog = Almacen.programa();
-    return (window.TEMARIO || []).filter(b =>
+    let lista = (window.TEMARIO || []).filter(b =>
       prog === 'unirm' ? b.programa === 'unirm' : b.programa !== 'unirm');
+    if (prog === 'unirm'){
+      const activas = Almacen.materiasUnirm();
+      lista = lista.filter(b => activas.indexOf(b.bloque) >= 0);
+    }
+    return lista;
   }
 
   function estadoTema(tema){
