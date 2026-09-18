@@ -290,6 +290,108 @@ window.Nube = (function () {
     return { ok:true, fila: data || null };
   }
 
+  /* ---------- examenes generados por IA ----------
+     La fila la crea la Edge Function `examinar-generar` (con service_role,
+     tras cobrar la cuota). Desde aqui solo se lista, se guarda el ultimo
+     intento y se borra la propia: la politica RLS ya limita todo esto al
+     user_id de quien pregunta. */
+  async function misExamenes(){
+    if (!iniciar()) return { ok:false, error:'Sin conexión.', filas:[] };
+    const u = await usuario(); if (!u) return { ok:false, error:'No hay sesión en la nube.', filas:[] };
+    const { data, error } = await cliente.from('examenes_generados')
+      .select('id, titulo, programa, preguntas, creado, ultimo_intento')
+      .eq('user_id', u.id).order('creado', { ascending:false });
+    if (error) return { ok:false, error: legible(error), filas:[] };
+    return { ok:true, filas: data || [] };
+  }
+
+  async function guardarIntentoExamen(id, intento){
+    if (!iniciar()) return { ok:false, error:'Sin conexión.' };
+    const { error } = await cliente.from('examenes_generados')
+      .update({ ultimo_intento: intento }).eq('id', id);
+    if (error) return { ok:false, error: legible(error) };
+    return { ok:true };
+  }
+
+  async function borrarExamen(id){
+    if (!iniciar()) return { ok:false, error:'Sin conexión.' };
+    const { error } = await cliente.from('examenes_generados').delete().eq('id', id);
+    if (error) return { ok:false, error: legible(error) };
+    return { ok:true };
+  }
+
+  /* ---------- tickets ("Te escuchamos") ----------
+     La fila la crea la Edge Function `ticket-crear` (service_role): asi
+     el aviso por correo sale siempre que se guarda un ticket. Desde aqui
+     solo se lee lo propio (o todo, si es admin) y se responde (solo
+     admin), igual que examenes_generados. */
+  async function crearTicket(op){
+    return invocar('ticket-crear', op);
+  }
+
+  async function misTickets(){
+    if (!iniciar()) return { ok:false, error:'Sin conexión.', filas:[] };
+    const u = await usuario(); if (!u) return { ok:false, error:'No hay sesión en la nube.', filas:[] };
+    const { data, error } = await cliente.from('tickets')
+      .select('id, programa, tipo, asunto, mensaje, estado, respuesta, creado, respondido_en')
+      .eq('user_id', u.id).order('creado', { ascending:false });
+    if (error) return { ok:false, error: legible(error), filas:[] };
+    return { ok:true, filas: data || [] };
+  }
+
+  async function listarTickets(){
+    if (!iniciar()) return { ok:false, error:'Sin conexión.', filas:[] };
+    const { data, error } = await cliente.from('tickets')
+      .select('*').order('creado', { ascending:false });
+    if (error) return { ok:false, error: legible(error), filas:[] };
+    return { ok:true, filas: data || [] };
+  }
+
+  async function responderTicket(id, respuesta, estado){
+    if (!iniciar()) return { ok:false, error:'Sin conexión.' };
+    const cambios = { estado: estado || 'respondido', respondido_en: new Date().toISOString() };
+    if (respuesta !== undefined) cambios.respuesta = respuesta;
+    const { error } = await cliente.from('tickets').update(cambios).eq('id', id);
+    if (error) return { ok:false, error: legible(error) };
+    return { ok:true };
+  }
+
+  /* ---------- "Próximos cursos" (UNIRMIA) ----------
+     Cursos, certificados y diplomados que publica el admin. El RLS ya
+     filtra: un estudiante solo ve `activo=true`, el admin los ve todos
+     (para poder reactivar uno viejo sin tener que volver a escribirlo). */
+  async function eventosUnirm(){
+    if (!iniciar()) return { ok:false, error:'Sin conexión.', filas:[] };
+    const { data, error } = await cliente.from('eventos_unirm')
+      .select('*').order('fecha', { ascending:true, nullsFirst:false });
+    if (error) return { ok:false, error: legible(error), filas:[] };
+    return { ok:true, filas: data || [] };
+  }
+
+  async function guardarEventoUnirm(evento){
+    if (!iniciar()) return { ok:false, error:'Sin conexión.' };
+    const { error } = await cliente.from('eventos_unirm').upsert(evento);
+    if (error) return { ok:false, error: legible(error) };
+    return { ok:true };
+  }
+
+  async function borrarEventoUnirm(id){
+    if (!iniciar()) return { ok:false, error:'Sin conexión.' };
+    const { error } = await cliente.from('eventos_unirm').delete().eq('id', id);
+    if (error) return { ok:false, error: legible(error) };
+    return { ok:true };
+  }
+
+  /* ---------- canal en vivo (Duelo) ----------
+     Sin RLS de por medio: quien conoce el nombre del canal (el codigo del
+     duelo) puede unirse. Aceptable aqui porque no viaja nada sensible, solo
+     el progreso de un juego entre dos personas que ya se pusieron de
+     acuerdo por fuera (WhatsApp, etc.) para compartirse el codigo. */
+  function canal(nombre, opciones){
+    if (!iniciar()) return null;
+    return cliente.channel(nombre, opciones);
+  }
+
   /* ---------- Edge Functions ---------- */
   /* El cliente de Supabase adjunta solo la sesion del estudiante, asi que
      la funcion sabe quien llama sin que nosotros mandemos nada. */
@@ -311,5 +413,8 @@ window.Nube = (function () {
            perfil, miSuscripcion, abrirPrueba, canjearCodigo, generarCodigos, invocar,
            registrarDesafio, configurarRanking, miRanking, clasificacion, mesActual,
            listarUsuarios, guardarSuscripcion, cambiarRol, progresoDe,
+           misExamenes, guardarIntentoExamen, borrarExamen, canal,
+           crearTicket, misTickets, listarTickets, responderTicket,
+           eventosUnirm, guardarEventoUnirm, borrarEventoUnirm,
            URL_PROYECTO: URL_PROYECTO };
 })();

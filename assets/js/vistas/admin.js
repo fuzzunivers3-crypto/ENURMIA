@@ -60,6 +60,8 @@ window.Admin = (function () {
         '<div class="card"><p class="muted">Cargando usuarios…</p></div>' +
       '</div>';
     cargar();
+    cargarTickets();
+    cargarEventos();
   }
 
   async function cargar(){
@@ -78,22 +80,242 @@ window.Admin = (function () {
   }
 
   /* ============================================================
+     TICKETS ("Te escuchamos")
+     Se cargan aparte de los usuarios: son datos distintos y no hay
+     que bloquear la tabla de suscripciones mientras llegan. Si
+     todavia no llegaron cuando pintar() corre por primera vez, la
+     tarjeta sale vacia y se rellena sola en cuanto cargarTickets()
+     termine (vuelve a llamar pintar()).
+     ============================================================ */
+  let ticketsAdmin = null;
+  const TICKET_TIPO_TXT = { problema:'🐛 Problema', recomendacion:'💡 Recomendación' };
+  const TICKET_ESTADO_CLASE = { abierto:'chip--yodo', respondido:'chip--verde', cerrado:'chip--carbon' };
+
+  async function cargarTickets(){
+    const r = await Nube.listarTickets();
+    ticketsAdmin = r.ok ? r.filas : [];
+    pintar();
+  }
+
+  function tarjetaTickets(){
+    if (ticketsAdmin === null){
+      return '<div class="card" style="margin-bottom:18px"><b style="font-size:15px">Te escuchamos</b>' +
+        '<p class="muted" style="margin-top:8px">Cargando tickets…</p></div>';
+    }
+    const abiertos = ticketsAdmin.filter(t => t.estado === 'abierto');
+    const resto = ticketsAdmin.filter(t => t.estado !== 'abierto');
+    const lista = abiertos.concat(resto).slice(0, 12);
+
+    return '<div class="card" style="margin-bottom:18px">' +
+      '<div class="row-b" style="margin-bottom:6px"><b style="font-size:15px">Te escuchamos</b>' +
+      '<span class="chip' + (abiertos.length ? ' chip--yodo' : '') + '">' + abiertos.length + ' sin responder</span></div>' +
+      '<p class="muted" style="font-size:13px;margin-bottom:12px">Problemas y recomendaciones que mandan los estudiantes, de los dos programas.</p>' +
+      (lista.length
+        ? '<div style="display:flex;flex-direction:column;gap:8px">' + lista.map(t =>
+            '<div class="row-b" style="padding:9px 0;border-bottom:1px solid var(--linea)">' +
+              '<span class="grow">' +
+                '<b style="font-size:13.5px">' + esc(t.asunto) + '</b>' +
+                '<br><small class="muted">' + esc(TICKET_TIPO_TXT[t.tipo] || t.tipo) + ' · ' +
+                  esc(t.programa === 'unirm' ? 'UNIRMIA' : 'ENURMIA') + ' · ' + esc(t.nombre || t.correo || '—') + '</small>' +
+              '</span>' +
+              '<span class="chip ' + (TICKET_ESTADO_CLASE[t.estado] || '') + '">' + esc(t.estado) + '</span> ' +
+              '<button class="btn btn--sm" data-ticket="' + esc(t.id) + '">Ver</button>' +
+            '</div>').join('') + '</div>'
+        : '<p class="muted">Todavía no ha llegado ninguno.</p>') +
+    '</div>';
+  }
+
+  function engancharTickets(){
+    UI.$$('[data-ticket]').forEach(b => b.onclick = () => abrirTicket(b.dataset.ticket));
+  }
+
+  function abrirTicket(id){
+    const t = (ticketsAdmin || []).find(x => x.id === id); if (!t) return;
+    UI.modal(
+      '<h3 style="font-size:19px;margin-bottom:4px">' + esc(t.asunto) + '</h3>' +
+      '<p class="muted" style="font-size:12.5px;margin-bottom:14px">' +
+        esc(TICKET_TIPO_TXT[t.tipo] || t.tipo) + ' · ' + esc(t.programa === 'unirm' ? 'UNIRMIA' : 'ENURMIA') +
+        ' · ' + esc(t.nombre || '—') + (t.correo ? ' · ' + esc(t.correo) : '') + '</p>' +
+      '<div class="bloque" style="margin-bottom:14px"><p>' + esc(t.mensaje) + '</p></div>' +
+      '<div class="campo"><label>Tu respuesta (opcional, la ve el estudiante en su cuenta)</label>' +
+        '<textarea id="tkRespuesta" rows="4" style="width:100%;font:inherit;padding:11px;border-radius:10px;' +
+        'border:1.5px solid var(--linea);resize:vertical">' + esc(t.respuesta || '') + '</textarea></div>' +
+      '<div class="campo"><label>Estado</label><select id="tkEstado">' +
+        ['abierto','respondido','cerrado'].map(s => '<option value="' + s + '"' +
+          (t.estado === s ? ' selected' : '') + '>' + s + '</option>').join('') +
+      '</select></div>' +
+      '<button class="btn btn--ancho" id="tkGuardar">Guardar</button>' +
+      '<div id="tkAvisoAdmin"></div>'
+    );
+    document.getElementById('tkGuardar').onclick = async () => {
+      const btn = document.getElementById('tkGuardar');
+      btn.disabled = true; btn.textContent = 'Guardando…';
+      const respuesta = document.getElementById('tkRespuesta').value.trim();
+      const estado = document.getElementById('tkEstado').value;
+      const r = await Nube.responderTicket(t.id, respuesta, estado);
+      if (!r.ok){
+        btn.disabled = false; btn.textContent = 'Guardar';
+        return document.getElementById('tkAvisoAdmin').innerHTML = '<div class="aviso">' + esc(r.error) + '</div>';
+      }
+      UI.tostada('Ticket actualizado', 'bien');
+      document.querySelector('.velo, .modal__velo, [data-velo]')?.remove();
+      cargarTickets();
+    };
+  }
+
+  /* ============================================================
+     PRÓXIMOS CURSOS (UNIRMIA)
+     Publicar, editar, desactivar y borrar cursos/certificados/
+     diplomados que ve el estudiante en su propia pantalla
+     "Próximos cursos". Igual que con tickets, se carga aparte de
+     la tabla de usuarios.
+     ============================================================ */
+  let eventosAdmin = null;
+  const EVENTO_TIPO = ['curso','certificado','diplomado'];
+  const EVENTO_TIPO_TXT = { curso:'📚 Curso', certificado:'🏅 Certificado', diplomado:'🎓 Diplomado' };
+
+  async function cargarEventos(){
+    const r = await Nube.eventosUnirm();
+    eventosAdmin = r.ok ? r.filas : [];
+    pintar();
+  }
+
+  function tarjetaEventos(){
+    if (eventosAdmin === null){
+      return '<div class="card" style="margin-bottom:18px"><b style="font-size:15px">Próximos cursos (UNIRMIA)</b>' +
+        '<p class="muted" style="margin-top:8px">Cargando…</p></div>';
+    }
+    const lista = eventosAdmin.slice().sort((a, b) => (b.activo ? 1 : 0) - (a.activo ? 1 : 0));
+
+    return '<div class="card" style="margin-bottom:18px">' +
+      '<div class="row-b" style="margin-bottom:10px"><b style="font-size:15px">Próximos cursos (UNIRMIA)</b>' +
+      '<button class="btn btn--sm" id="btnNuevoEvento">Publicar uno nuevo</button></div>' +
+      (lista.length
+        ? '<div style="display:flex;flex-direction:column;gap:8px">' + lista.map(e =>
+            '<div class="row-b" style="padding:9px 0;border-bottom:1px solid var(--linea);' +
+              (e.activo ? '' : 'opacity:.5') + '">' +
+              '<span class="grow"><b style="font-size:13.5px">' + esc(e.titulo) + '</b>' +
+                '<br><small class="muted">' + esc(EVENTO_TIPO_TXT[e.tipo] || e.tipo) +
+                (e.fecha ? ' · ' + esc(e.fecha) : '') + (e.activo ? '' : ' · desactivado') + '</small></span>' +
+              '<button class="btn btn--sm btn--fantasma" data-evento="' + esc(e.id) + '">Editar</button>' +
+            '</div>').join('') + '</div>'
+        : '<p class="muted">Todavía no has publicado nada.</p>') +
+    '</div>';
+  }
+
+  function formularioEvento(e){
+    e = e || {};
+    return '<h3 style="font-size:20px;margin-bottom:14px">' + (e.id ? 'Editar' : 'Publicar') + ' curso</h3>' +
+      '<div class="campo"><label>Tipo</label><select id="evTipo">' +
+        EVENTO_TIPO.map(t => '<option value="' + t + '"' + (e.tipo === t ? ' selected' : '') + '>' +
+          esc(EVENTO_TIPO_TXT[t]) + '</option>').join('') +
+      '</select></div>' +
+      '<div class="campo"><label>Título</label><input id="evTitulo" maxlength="120" value="' + esc(e.titulo || '') + '"></div>' +
+      '<div class="campo"><label>Descripción (opcional)</label>' +
+        '<textarea id="evDescripcion" rows="3" style="width:100%;font:inherit;padding:11px;border-radius:10px;' +
+        'border:1.5px solid var(--linea);resize:vertical">' + esc(e.descripcion || '') + '</textarea></div>' +
+      '<div class="campo"><label>Fecha (opcional)</label><input id="evFecha" type="date" value="' + esc(e.fecha || '') + '"></div>' +
+      '<div class="campo"><label>Enlace (opcional, WhatsApp, formulario, etc.)</label>' +
+        '<input id="evEnlace" type="url" placeholder="https://…" value="' + esc(e.enlace || '') + '"></div>' +
+      '<label class="row" style="gap:8px;align-items:center;margin:4px 0 16px;cursor:pointer">' +
+        '<input type="checkbox" id="evActivo"' + (e.activo === false ? '' : ' checked') + '>' +
+        '<span>Visible para los estudiantes</span></label>' +
+      '<div class="row" style="gap:9px">' +
+        '<button class="btn btn--ancho" id="evGuardar">Guardar</button>' +
+        (e.id ? '<button class="btn btn--fantasma" id="evBorrar">Borrar</button>' : '') +
+      '</div>' +
+      '<div id="evAviso"></div>';
+  }
+
+  function abrirEvento(id){
+    const e = id ? (eventosAdmin || []).find(x => x.id === id) : null;
+    UI.modal(formularioEvento(e));
+
+    document.getElementById('evGuardar').onclick = async () => {
+      const btn = document.getElementById('evGuardar');
+      const titulo = document.getElementById('evTitulo').value.trim();
+      if (!titulo) return document.getElementById('evAviso').innerHTML = '<div class="aviso">Ponle un título.</div>';
+
+      /* Solo http(s): el estudiante ve este enlace como un <a href>, asi
+         que un esquema como javascript: se ejecutaria al hacer clic. */
+      const enlace = document.getElementById('evEnlace').value.trim();
+      if (enlace && !/^https?:\/\//i.test(enlace))
+        return document.getElementById('evAviso').innerHTML = '<div class="aviso">El enlace debe empezar con http:// o https://</div>';
+
+      btn.disabled = true; btn.textContent = 'Guardando…';
+      const datos = {
+        tipo: document.getElementById('evTipo').value,
+        titulo,
+        descripcion: document.getElementById('evDescripcion').value.trim() || null,
+        fecha: document.getElementById('evFecha').value || null,
+        enlace: enlace || null,
+        activo: document.getElementById('evActivo').checked
+      };
+      if (e && e.id) datos.id = e.id;
+
+      const r = await Nube.guardarEventoUnirm(datos);
+      if (!r.ok){
+        btn.disabled = false; btn.textContent = 'Guardar';
+        return document.getElementById('evAviso').innerHTML = '<div class="aviso">' + esc(r.error) + '</div>';
+      }
+      UI.tostada('Publicado', 'bien');
+      document.querySelector('.velo, .modal__velo, [data-velo]')?.remove();
+      cargarEventos();
+    };
+
+    const btnBorrar = document.getElementById('evBorrar');
+    if (btnBorrar) btnBorrar.onclick = async () => {
+      btnBorrar.disabled = true; btnBorrar.textContent = 'Borrando…';
+      const r = await Nube.borrarEventoUnirm(e.id);
+      if (!r.ok){
+        btnBorrar.disabled = false; btnBorrar.textContent = 'Borrar';
+        return document.getElementById('evAviso').innerHTML = '<div class="aviso">' + esc(r.error) + '</div>';
+      }
+      UI.tostada('Borrado', 'bien');
+      document.querySelector('.velo, .modal__velo, [data-velo]')?.remove();
+      cargarEventos();
+    };
+  }
+
+  function engancharEventos(){
+    const nuevo = document.getElementById('btnNuevoEvento');
+    if (nuevo) nuevo.onclick = () => abrirEvento(null);
+    UI.$$('[data-evento]').forEach(b => b.onclick = () => abrirEvento(b.dataset.evento));
+  }
+
+  /* ============================================================
      GENERADOR DE CÓDIGOS
      Sustituye al SQL a mano: se elige el plan, se genera y queda un
      botón que copia el mensaje entero listo para pegar en WhatsApp.
      ============================================================ */
-  const PLANES_CODIGO = [
-    { id:'mensual',    meses:1,  nombre:'1 mes',    precio:450  },
-    { id:'trimestral', meses:3,  nombre:'3 meses',  precio:1200 },
-    { id:'semestral',  meses:6,  nombre:'6 meses',  precio:2500 },
-    { id:'anual',      meses:12, nombre:'12 meses', precio:4000 },
-    { id:'cortesia',   meses:1,  nombre:'Cortesía (1 mes)', precio:0 }
-  ];
+  /* UNIRMIA cuesta menos que ENURMIA (publico y banco distintos): el
+     precio de aqui es solo informativo (ni se guarda ni se valida en la
+     base de datos, `generar_codigos` solo recibe plan+meses), asi que
+     el generador deja elegir para cual de los dos se esta cobrando en
+     vez de asumir el programa de la cuenta del admin. */
+  const PLANES_CODIGO_POR_PROGRAMA = {
+    enurm: [
+      { id:'mensual',    meses:1,  nombre:'1 mes',    precio:450  },
+      { id:'trimestral', meses:3,  nombre:'3 meses',  precio:1200 },
+      { id:'semestral',  meses:6,  nombre:'6 meses',  precio:2500 },
+      { id:'anual',      meses:12, nombre:'12 meses', precio:4000 },
+      { id:'cortesia',   meses:1,  nombre:'Cortesía (1 mes)', precio:0 }
+    ],
+    unirm: [
+      { id:'mensual',    meses:1,  nombre:'1 mes',    precio:250  },
+      { id:'trimestral', meses:3,  nombre:'3 meses',  precio:700  },
+      { id:'semestral',  meses:6,  nombre:'6 meses',  precio:1200 },
+      { id:'anual',      meses:12, nombre:'12 meses', precio:2000 },
+      { id:'cortesia',   meses:1,  nombre:'Cortesía (1 mes)', precio:0 }
+    ]
+  };
 
-  /* Los codigos recien generados sobreviven al repintado: pintar() rehace
-     todo el HTML y se llama en cada tecla del buscador. Sin esto, generas
-     un codigo, empiezas a buscar a quien pago y lo pierdes de vista. */
-  let ultimos = null;   // { plan, codigos:[] }
+  /* Los codigos recien generados y el programa elegido sobreviven al
+     repintado: pintar() rehace todo el HTML y se llama en cada tecla del
+     buscador. Sin esto, generas un codigo, empiezas a buscar a quien
+     pago y lo pierdes de vista. */
+  let ultimos = null;      // { plan, codigos:[] }
+  let progGenerador = Almacen.programa();
 
   function filaCodigo(c){
     return '<div class="row" style="gap:9px;align-items:center;margin-bottom:8px">' +
@@ -104,15 +326,22 @@ window.Admin = (function () {
   }
 
   function generador(){
+    const planes = PLANES_CODIGO_POR_PROGRAMA[progGenerador];
     return '<div class="card" style="margin-bottom:18px">' +
       '<b style="font-size:15px">Generar código de acceso</b>' +
-      '<p class="muted" style="font-size:13px;margin:6px 0 16px">' +
+      '<p class="muted" style="font-size:13px;margin:6px 0 12px">' +
         'Cuando confirmes un pago, genera el código aquí y envíalo. ' +
         'Sirve una sola vez y queda registrado quién lo usó.</p>' +
+      '<div class="row wrap" style="gap:6px;margin-bottom:12px">' +
+        '<button type="button" class="chip' + (progGenerador === 'enurm' ? ' on' : '') +
+          '" data-prog-gen="enurm">ENURMIA</button>' +
+        '<button type="button" class="chip' + (progGenerador === 'unirm' ? ' on' : '') +
+          '" data-prog-gen="unirm">UNIRMIA</button>' +
+      '</div>' +
       '<div class="row wrap" style="gap:9px;align-items:center">' +
         '<select id="codPlan" style="padding:11px 13px;border-radius:10px;' +
           'border:1.5px solid var(--linea);font:inherit;background:var(--papel)">' +
-          PLANES_CODIGO.map(p => '<option value="' + p.id + '">' + esc(p.nombre) +
+          planes.map(p => '<option value="' + p.id + '">' + esc(p.nombre) +
             (p.precio ? ' — RD$' + p.precio.toLocaleString('es-DO') : '') + '</option>').join('') +
         '</select>' +
         '<input id="codCuantos" type="number" min="1" max="50" value="1" ' +
@@ -134,7 +363,7 @@ window.Admin = (function () {
       const cod = b.dataset.copiar;
       const nombrePlan = (ultimos && ultimos.plan) ? ultimos.plan.nombre : '';
       const msg = '¡Listo! Ya puedes activar tu membresía de ' +
-        (Almacen.programa() === 'unirm' ? 'UNIRMIA' : 'ENURMIA') + '.\n\n' +
+        (progGenerador === 'unirm' ? 'UNIRMIA' : 'ENURMIA') + '.\n\n' +
         'Tu código: ' + cod + '\n' +
         (nombrePlan ? 'Plan: ' + nombrePlan + '\n' : '') + '\n' +
         'Entra, elige "Ya pagué y tengo mi código" y escríbelo. ' +
@@ -151,11 +380,16 @@ window.Admin = (function () {
 
   function engancharGenerador(){
     engancharCopiar();
+    UI.$$('[data-prog-gen]').forEach(b => b.onclick = () => {
+      progGenerador = b.dataset.progGen;
+      ultimos = null;
+      pintar();
+    });
     const btn = document.getElementById('btnGenerar');
     if (!btn) return;
     btn.onclick = async () => {
       const id = document.getElementById('codPlan').value;
-      const plan = PLANES_CODIGO.find(p => p.id === id);
+      const plan = PLANES_CODIGO_POR_PROGRAMA[progGenerador].find(p => p.id === id);
       const cuantos = Math.max(1, Math.min(50, +document.getElementById('codCuantos').value || 1));
       const nota = document.getElementById('codNota').value.trim();
       const salida = document.getElementById('codSalida');
@@ -230,6 +464,8 @@ window.Admin = (function () {
       '<p class="muted">Cada fila es una cuenta real. Los cambios de suscripción se aplican al instante.</p></div>' +
 
       resumen() +
+      tarjetaTickets() +
+      tarjetaEventos() +
       generador() +
 
       '<div class="card">' +
@@ -256,6 +492,8 @@ window.Admin = (function () {
     UI.$$('[data-editar]').forEach(b => b.onclick = () => editar(b.dataset.editar));
     UI.$$('[data-ver]').forEach(b => b.onclick = () => verDatos(b.dataset.ver));
     engancharGenerador();
+    engancharTickets();
+    engancharEventos();
   }
 
   /* ============================================================
