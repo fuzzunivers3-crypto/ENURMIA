@@ -113,11 +113,12 @@ window.VistaRuta = (function () {
     const total = bls.filter(function (b) { return elegidos.indexOf(b.bloque) >= 0; })
                      .reduce(function (a, b) { return a + b.n; }, 0);
     const p = Arturo.paso();
+    const nombre = Arturo.nombre();
 
     V().innerHTML =
     '<div class="escalona" style="max-width:900px">' +
       '<div class="encabezado"><p class="eyebrow">Tu profesor</p>' +
-      '<h1>Arturo te lleva el estudio</h1>' +
+      '<h1>' + esc(nombre) + ' te lleva el estudio</h1>' +
       '<p>' + esc(p.frase) + '</p></div>' +
 
       '<div class="card card--sangria" style="margin-bottom:18px">' +
@@ -128,7 +129,7 @@ window.VistaRuta = (function () {
 
       '<div class="card" style="margin-bottom:18px">' +
         '<span class="eyebrow">Qué quieres estudiar, y en qué orden</span>' +
-        '<p class="muted" style="margin:8px 0 14px;font-size:13.5px">Marca los bloques y ordénalos con las flechas. Cerrarás uno antes de pasar al siguiente. Fíjate en los números: Medicina Interna son 41 temas y Cirugía 19, así que el orden cambia mucho cuándo llegas a la primera puerta.</p>' +
+        '<p class="muted" style="margin:8px 0 14px;font-size:13.5px">Marca los bloques y ordénalos con las flechas. Cerrarás uno antes de pasar al siguiente. Fíjate en los números de cada bloque: el orden cambia mucho cuándo llegas a la primera puerta.</p>' +
         selectorBloques(elegidos, tamActual()) +
       '</div>' +
 
@@ -170,7 +171,7 @@ window.VistaRuta = (function () {
   function empezar(tam){
     if (!elegidos.length) return UI.tostada('Marca al menos un bloque', 'mal');
     Ruta.crear(tam, elegidos);
-    UI.tostada('Recorrido creado. Arturo te espera.', 'ok');
+    UI.tostada('Recorrido creado. ' + Arturo.nombre() + ' te espera.', 'ok');
     menu();
   }
 

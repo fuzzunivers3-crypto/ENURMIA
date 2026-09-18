@@ -30,18 +30,29 @@ window.Ruta = (function () {
   /* Se filtra por programa aqui y no al cargar el archivo para que
      cambiar de programa se note sin recargar la pagina, igual que hace
      la vista del Temario. */
+  /* En UNIRMIA, ademas de filtrar por programa, solo entran los bloques
+     (materias) que el estudiante activo eligio: el mismo criterio que ya
+     aplican Temario, Apuntes y Casos, para que la ruta no le arme un
+     recorrido con materias que todavia no esta cursando. */
   function bloques(){
     const prog = Almacen.programa();
-    return (window.TEMARIO || []).filter(function (b) {
+    let lista = (window.TEMARIO || []).filter(function (b) {
       return prog === 'unirm' ? b.programa === 'unirm' : b.programa !== 'unirm';
     });
+    if (prog === 'unirm' && window.Almacen && Almacen.materiasUnirm){
+      const activas = Almacen.materiasUnirm();
+      lista = lista.filter(function (b) { return activas.indexOf(b.bloque) >= 0; });
+    }
+    return lista;
   }
 
-  let cTemas = null, cProg = null;
+  let cTemas = null, cProg = null, cMaterias = '\0';
   function temas(){
     const p = Almacen.programa();
-    if (cTemas && cProg === p) return cTemas;
-    cProg = p;
+    const clave = (p === 'unirm' && window.Almacen && Almacen.materiasUnirm)
+      ? Almacen.materiasUnirm().slice().sort().join('|') : '';
+    if (cTemas && cProg === p && cMaterias === clave) return cTemas;
+    cProg = p; cMaterias = clave;
     cTemas = [];
     bloques().forEach(function (b) {
       b.temas.forEach(function (t) {

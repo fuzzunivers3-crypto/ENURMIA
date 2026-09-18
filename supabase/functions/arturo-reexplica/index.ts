@@ -11,18 +11,37 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const TOPE_DIA = 20;
 const TOPE_MATERIAL = 6144;
 
-const SISTEMA = `Eres Arturo, profesor clinico. Un estudiante de medicina no entendio una explicacion y te pide que se la cuentes de otra forma.
-
-Reglas que no puedes romper:
+/* Mismo companero, dos personas: Arturo para ENURMIA (residencia,
+   siempre hay un paciente detras) y R2D2 para UNIRMIA (7mo y 8vo son
+   ciencias basicas -- anatomia, bioquimica, histologia -- sin caso
+   clinico detras la mayoria de las veces, asi que el remate clinico de
+   Arturo no encaja ahi). El programa lo manda el cliente (arturo-ia.js);
+   si no llega nada, se asume ENURMIA, que es el comportamiento de
+   siempre. */
+function sistemaPara(programa: string): string {
+  const reglas = `Reglas que no puedes romper:
 - Explica UNICAMENTE con el material que viene abajo. No anadas datos, cifras, dosis ni criterios que no esten ahi.
 - Si lo que pregunta no se puede contestar con ese material, dilo en una frase y remitelo a la bibliografia que se te da.
-- No repitas la explicacion original con otras palabras sueltas: cambia el angulo. Si la original iba por el mecanismo, ve por el caso; si iba por el caso, ve por lo que decide la conducta.
+- No repitas la explicacion original con otras palabras sueltas: cambia el angulo.
 
 Como escribes:
 - Espanol, de tu, frases cortas, prosa seguida.
 - Nada de listas, titulos ni negritas.
-- Maximo 110 palabras.
+- Maximo 110 palabras.`;
+
+  if (programa === 'unirm') {
+    return `Eres R2D2, tutor de estudiantes de los primeros cuatrimestres de medicina. Un estudiante no entendio una explicacion y te pide que se la cuentes de otra forma.
+
+${reglas}
+- Escribes alrededor de "por que es asi y para que sirve entenderlo". No fuerces un paciente ni una conducta clinica: en anatomia, bioquimica, histologia o fisiologia casi nunca hay uno detras. Si el material si es un caso clinico (semiologia, fisiopatologia), entonces si conviene ir por ahi.`;
+  }
+
+  return `Eres Arturo, profesor clinico. Un estudiante de medicina no entendio una explicacion y te pide que se la cuentes de otra forma.
+
+${reglas}
+- Si la original iba por el mecanismo, ve por el caso; si iba por el caso, ve por lo que decide la conducta.
 - Escribes alrededor de "que hago con este paciente delante".`;
+}
 
 /* El navegador manda una peticion OPTIONS de sondeo antes de la real, y
    sin estas cabeceras la llamada nunca sale del navegador. El origen va
@@ -188,9 +207,11 @@ Deno.serve(async (req) => {
 
   /* 4. El cuerpo */
   let material: Record<string, unknown>;
+  let programa = 'enurm';
   try {
     const cuerpo = await req.json();
     material = cuerpo?.material;
+    programa = cuerpo?.programa === 'unirm' ? 'unirm' : 'enurm';
   } catch { return json({ error: 'material' }, 400); }
   if (!material || typeof material !== 'object') return json({ error: 'material' }, 400);
   if (JSON.stringify(material).length > TOPE_MATERIAL) return json({ error: 'material' }, 413);
@@ -199,7 +220,7 @@ Deno.serve(async (req) => {
   /* 5. El modelo */
   let texto = '';
   try {
-    texto = await llamar(SISTEMA, armarPregunta(material));
+    texto = await llamar(sistemaPara(programa), armarPregunta(material));
   } catch (e) {
     const msg = (e as Error).message;
     if (msg === 'sin-cuota') return json({ error: 'sin-cuota' }, 429);

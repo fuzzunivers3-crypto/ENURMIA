@@ -262,7 +262,13 @@ window.Sesion = (function () {
 
     let cuerpo;
     if (paso.tipo === 'dx'){
-      const opciones = (p.dx && p.dx.length ? p.dx : ['Sin diferenciales cargados']).slice().sort(() => Math.random() - 0.5);
+      /* No todas las preguntas traen `dx` curado a mano (es un campo aparte
+         de las opciones de respuesta, pensado para dar mas candidatos de
+         los que caben en 4 opciones). Cuando falta -- el banco importado y
+         TODO el banco de UNIRMIA no lo tienen todavia -- se usan las
+         propias opciones de la pregunta: siguen siendo candidatos reales
+         sobre los que razonar, y asi el paso nunca se queda sin opciones. */
+      const opciones = (p.dx && p.dx.length ? p.dx : p.ops).slice().sort(() => Math.random() - 0.5);
       S.dxMostrados = opciones;
       cuerpo = '<div class="dx-lista">' + opciones.map((d, k) =>
         '<button class="dx" data-dx="' + k + '"><span class="dx__marca">✓</span><span>' + esc(d) + '</span></button>').join('') + '</div>';
@@ -492,7 +498,7 @@ window.Sesion = (function () {
     const ya = ArturoIA.guardada(p.id, elegida);
     if (ya){
       return '<div class="reexp" id="reexp-' + esc(p.id) + '">' +
-        '<span class="eyebrow">Arturo, de otra forma</span>' +
+        '<span class="eyebrow">' + esc(Arturo.nombre()) + ', de otra forma</span>' +
         '<p>' + esc(ya) + '</p></div>';
     }
     if (!ArturoIA.disponible()) return '';
@@ -524,18 +530,19 @@ window.Sesion = (function () {
         const q = Motor.porId(qid);
         if (!q) return;
         const caja = document.getElementById('reexp-' + qid);
+        const n = Arturo.nombre();
         b.disabled = true;
-        b.textContent = 'Arturo lo está pensando…';
+        b.textContent = n + ' lo está pensando…';
         try {
           const texto = await ArturoIA.reexplicar(q, elegida);
           caja.classList.remove('reexp--vacio');
-          caja.innerHTML = '<span class="eyebrow">Arturo, de otra forma</span>' +
+          caja.innerHTML = '<span class="eyebrow">' + esc(n) + ', de otra forma</span>' +
                            '<p>' + esc(texto) + '</p>';
         } catch (e) {
           const m = e && e.message;
           UI.tostada(m === 'sin-cuota'
-            ? 'Arturo ya no puede reformular más por hoy. Vuelve mañana.'
-            : 'Arturo no puede reformular ahora mismo.', 'mal');
+            ? n + ' ya no puede reformular más por hoy. Vuelve mañana.'
+            : n + ' no puede reformular ahora mismo.', 'mal');
           if (m === 'sin-cuota') caja.remove();
           else { b.disabled = false; b.textContent = 'Aún no lo entiendo'; }
         }

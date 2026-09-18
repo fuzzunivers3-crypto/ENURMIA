@@ -113,7 +113,7 @@ window.ArturoIA = (function () {
     if (!material) throw new Error('sin-material');
     if (pesa(material) > TOPE_MATERIAL) throw new Error('material-grande');
 
-    const r = await Nube.invocar(FUNCION, { material: material });
+    const r = await Nube.invocar(FUNCION, { material: material, programa: Almacen.programa() });
 
     if (r && r.error === 'sin-cuota'){ sinCuota = true; throw new Error('sin-cuota'); }
     if (!r || !r.texto) throw new Error('sin-respuesta');

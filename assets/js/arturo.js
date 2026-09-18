@@ -15,7 +15,16 @@
    ============================================================ */
 window.Arturo = (function () {
 
-  const NOMBRE = 'Arturo';
+  /* El mismo companero, dos nombres: Arturo en ENURMIA (profesor clinico
+     de residencia) y R2D2 en UNIRMIA. Es una funcion y no una constante
+     porque el programa puede confirmarse tarde (el servidor responde
+     despues de que la pantalla ya este puesta), igual que en el resto
+     de la app. Este modulo tiene que poder cargarse en Node para
+     validarlo, y alli no hay Almacen: se cae a 'Arturo' por defecto. */
+  function nombre(){
+    if (window.Almacen && Almacen.programa) return Almacen.programa() === 'unirm' ? 'R2D2' : 'Arturo';
+    return 'Arturo';
+  }
 
   /* Este modulo tiene que poder cargarse en Node para validarlo, y alli
      no hay UI. Por eso el escapado se resuelve en cada llamada y no en
@@ -26,12 +35,14 @@ window.Arturo = (function () {
   }
 
   /* ---------- el texto ----------
-     {tema} {tanda} {tandas} {repaso} {pct} {meta} se rellenan solos. */
+     {tema} {tanda} {tandas} {repaso} {pct} {meta} {nombre} se rellenan
+     solos. Solo sinruta se nombra a si mismo: el resto ya habla en
+     segunda persona sin decir su nombre, asi que no hace falta tocarlo. */
   const FRASES = {
     sinruta: [
-      'Soy Arturo. Si me dejas, te llevo el estudio: escogemos cuantos temas quieres llevar a la vez y los vamos cerrando con examen hasta acabar el temario.',
+      'Soy {nombre}. Si me dejas, te llevo el estudio: escogemos cuantos temas quieres llevar a la vez y los vamos cerrando con examen hasta acabar el temario.',
       'Estudiar a saltos cansa y no cunde. Arma tu recorrido y yo te digo cada dia que toca, sin que tengas que decidirlo tu.',
-      'Aqui hay 101 temas. Los vamos a ir cerrando por tandas, y cada tanda termina con un examen de lo que acabas de estudiar. Empecemos.'
+      'Vamos a organizar todo el temario por tandas, y cada tanda termina con un examen de lo que acabas de estudiar. Empecemos.'
     ],
     leer: [
       'Empezamos por el texto de {tema}. Leelo entero, sin saltar las cajas: ahi esta lo que decide la conducta.',
@@ -115,7 +126,6 @@ window.Arturo = (function () {
   };
 
   const BOTONES = {
-    sinruta:   'Empezar con Arturo',
     leer:      'Leer el tema',
     preg:      'Hacer las preguntas',
     tarj:      'Pasar las tarjetas',
@@ -151,14 +161,15 @@ window.Arturo = (function () {
       pct: (p.pct === null || p.pct === undefined) ? '' : p.pct,
       tanda: r ? r.tanda : 0,
       tandas: r ? r.tandasN.length : 0,
-      repaso: r ? r.repaso.length : 0
+      repaso: r ? r.repaso.length : 0,
+      nombre: nombre()
     };
     return {
       tipo: p.tipo,
       tema: p.tema || null,
       titulo: TITULOS[p.tipo] || '',
       frase: frase(p.tipo, ctx),
-      boton: BOTONES[p.tipo] || 'Seguir'
+      boton: p.tipo === 'sinruta' ? ('Empezar con ' + nombre()) : (BOTONES[p.tipo] || 'Seguir')
     };
   }
 
@@ -169,13 +180,15 @@ window.Arturo = (function () {
   function barra(op){
     op = op || {};
     const p = paso();
+    const n = nombre();
     const texto = op.frase || p.frase;
     const boton = op.boton === null ? null : (op.boton || p.boton);
     const accion = op.accion || '';
+    const sello = n === 'R2D2' ? '🤖' : n.charAt(0);
     return '<div class="arturo">' +
-        '<span class="arturo__sello">A</span>' +
+        '<span class="arturo__sello">' + esc(sello) + '</span>' +
         '<div class="arturo__texto">' +
-          '<b>' + NOMBRE + '</b>' +
+          '<b>' + esc(n) + '</b>' +
           '<p>' + esc(texto) + '</p>' +
         '</div>' +
         (boton ? '<button class="btn btn--sm" id="arturoSeguir" data-accion="' +
@@ -273,7 +286,7 @@ window.Arturo = (function () {
   }
 
   return {
-    NOMBRE: NOMBRE,
+    nombre: nombre,
     paso: paso, frase: frase, barra: barra,
     enganchar: enganchar, seguir: seguir,
     cerrarLectura: cerrarLectura, releer: releer,
