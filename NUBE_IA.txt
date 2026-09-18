@@ -77,3 +77,55 @@ Si un dia deja de responder, comprobar con:
 
 Si la respuesta no llega como candidates[0].content.parts[0].text, hay
 que ajustar SOLO la rama `gemini` de llamar() en index.ts.
+
+
+================================================
+EXAMINAR - genera un examen del documento subido
+================================================
+
+Que hace
+--------
+En UNIRMIA (pantalla "Examinar"), el estudiante sube un PDF o Word propio.
+El navegador extrae el texto (pdf.js / mammoth.js, cargados de un CDN solo
+cuando se abre esa pantalla) y ESE texto, ya extraido, se manda a la Edge
+Function `examinar-generar`, que le pide al modelo un examen de opcion
+multiple sacado unicamente de ese material: enunciado, 4 opciones, la
+correcta, por que lo es, por que fallan las otras, la trampa y, si el
+tema es clinico, una consideracion clinica basica y bien establecida.
+
+Comparte proveedor y clave con Arturo (misma funcion `llamar()`, mismo
+patron), pero NO comparte cupo: generar un examen pesa mucho mas por
+llamada que una reformulacion de 110 palabras.
+
+Por que el "ref" no lo escribe el modelo
+-----------------------------------------
+Séria una bibliografia inventada y este banco no tiene forma de
+contrastarla contra nada. La fuente que se guarda es honesta: "Tu
+documento: «titulo»", con un aviso de que es generado automaticamente.
+
+ESTADO ACTUAL (18/09/2026)
+---------------------------
+  [x] MIGRACION_EXAMINAR.sql corrida en Supabase (tablas
+      `examenes_generados` y `examinar_uso`, RLS verificada)
+  [x] Funcion `examinar-generar` desplegada
+  [x] IA_PROVEEDOR / IA_MODELO / IA_CLAVE ya existen (los usa Arturo,
+      se reutilizan tal cual: no hizo falta una clave nueva)
+
+TODAVIA PENDIENTE: probar de punta a punta con una cuenta UNIRMIA real
+(subir un documento de verdad, generar el examen, leer cada pregunta
+contra el material), igual que se hizo con Arturo el 12/09/2026. Eso no
+se puede automatizar desde aqui: hace falta una cuenta con membresia
+activa y un documento real.
+
+Cuota: 3 examenes generados al dia por estudiante, en su propia tabla
+`examinar_uso` (no la comparte con `uso_ia` de Arturo). Tope de material:
+45.000 caracteres del texto extraido (el resto se recorta); menos de 400
+caracteres y la funcion lo rechaza por corto.
+
+Desplegar
+---------
+  npx --yes supabase@latest functions deploy examinar-generar --project-ref msxvpyddpqxmnhosgxnw
+
+Pendiente de probar de punta a punta con cuenta real, igual que se hizo
+con Arturo el 12/09/2026: subir un documento de verdad, generar el
+examen y contrastar cada pregunta contra el material.

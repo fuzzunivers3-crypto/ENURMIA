@@ -11,7 +11,7 @@ window.APUNTES = Object.assign(window.APUNTES || {}, {
 
 /* ==================== ANATOMIA I ==================== */
 'plexo-braquial': {
-  tema:'Plexo braquial y nervios del miembro superior',
+  tema:'Plexo braquial y nervios del brazo',
   bloque:'Anatomía I', programa:'unirm', cuatri:7, min:9,
   idea:'El tema donde más gente se pierde intentando memorizar un diagrama. Se entiende mucho mejor al revés: cada nervio tiene un recorrido, y del recorrido salen la lesión típica y el gesto que no se puede hacer.',
   claves:['plexo braquial','nervio radial','nervio mediano','nervio cubital','nervio axilar','mano péndula'],
@@ -59,7 +59,7 @@ window.APUNTES = Object.assign(window.APUNTES || {}, {
 },
 
 'osteologia-miembro-superior': {
-  tema:'Huesos del miembro superior',
+  tema:'Miembro superior: huesos',
   bloque:'Anatomía I', programa:'unirm', cuatri:7, min:7,
   idea:'Los huesos se memorizan rápido y se olvidan igual de rápido. Lo que se queda es lo que tiene consecuencia: qué se rompe, por dónde, y qué nervio o arteria va pegado a ese sitio.',
   claves:['clavícula','escápula','húmero','radio','cúbito','carpo','cuello quirúrgico'],

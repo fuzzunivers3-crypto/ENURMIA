@@ -12,6 +12,10 @@
 
    El orden de los bloques sigue el peso en creditos, que es lo
    que de verdad indica cuanto tiempo va a pedir cada una.
+
+   AMPLIADO 18/09/2026: se agregaron temas reales del pensum que
+   faltaban. No se toco ningun tema existente, solo se sumaron al
+   final de cada bloque.
    ============================================================ */
 window.TEMARIO = (window.TEMARIO || []).concat([
 
@@ -30,7 +34,14 @@ window.TEMARIO = (window.TEMARIO || []).concat([
     {t:'Retroperitoneo: riñón y suprarrenal', claves:['riñón','uréter','suprarrenal','retroperitoneo','pelvis renal']},
     {t:'Pelvis y periné', claves:['pelvis','periné','vejiga','recto','útero','próstata','suelo pélvico']},
     {t:'Cabeza y cuello: triángulos y glándulas', claves:['triángulo cervical','tiroides','parótida','carótida','yugular']},
-    {t:'Pares craneales', claves:['par craneal','trigémino','facial','vago','oculomotor','hipogloso']}
+    {t:'Pares craneales', claves:['par craneal','trigémino','facial','vago','oculomotor','hipogloso']},
+    {t:'Sistema nervioso autónomo: anatomía visceral', claves:['cadena simpática','ganglio paravertebral','nervio vago','plexo celíaco']},
+    {t:'Anatomía de la mama', claves:['glándula mamaria','ligamento de Cooper','drenaje linfático de la mama','cuadrante mamario']},
+    {t:'Genitales femeninos: anatomía interna', claves:['útero','trompa uterina','ovario','ligamento ancho','vagina']},
+    {t:'Genitales masculinos: anatomía interna', claves:['testículo','conducto deferente','vesícula seminal','próstata','epidídimo']},
+    {t:'Diafragma y sus orificios', claves:['diafragma','hiato esofágico','orificio de la vena cava','hiato aórtico']},
+    {t:'Grandes vasos retroperitoneales', claves:['aorta abdominal','vena cava inferior','arteria mesentérica','tronco celíaco']},
+    {t:'Drenaje linfático visceral', claves:['ganglio linfático visceral','cisterna del quilo','conducto torácico','drenaje linfático abdominal']}
   ]
 },
 
@@ -49,7 +60,13 @@ window.TEMARIO = (window.TEMARIO || []).concat([
     {t:'Manejo tubular y concentración de orina', claves:['túbulo proximal','asa de Henle','contracorriente','ADH','aldosterona']},
     {t:'Equilibrio ácido-base', claves:['acidosis','alcalosis','bicarbonato','compensación','anión gap']},
     {t:'Fisiología digestiva', claves:['secreción gástrica','bilis','peristaltismo','absorción','enzimas pancreáticas']},
-    {t:'Introducción a la endocrinología', claves:['hormona','eje hipotálamo hipófisis','retroalimentación','receptor hormonal']}
+    {t:'Introducción a la endocrinología', claves:['hormona','eje hipotálamo hipófisis','retroalimentación','receptor hormonal']},
+    {t:'Curva de función ventricular y contractilidad', claves:['contractilidad','curva de Frank-Starling','inotropismo','ley del corazón']},
+    {t:'Circulación coronaria y regional', claves:['circulación coronaria','autorregulación del flujo','reserva coronaria','flujo regional']},
+    {t:'Volúmenes y capacidades pulmonares', claves:['volumen corriente','capacidad vital','volumen residual','espirometría']},
+    {t:'Fisiología del ejercicio', claves:['adaptación cardiovascular al ejercicio','consumo de oxígeno máximo','umbral anaeróbico']},
+    {t:'Motilidad gastrointestinal y esfínteres', claves:['esfínter esofágico','esfínter pilórico','complejo motor migratorio','reflejo gastrocólico']},
+    {t:'Micción y función vesical', claves:['reflejo miccional','vejiga','esfínter uretral','control voluntario de la micción']}
   ]
 },
 
@@ -66,7 +83,10 @@ window.TEMARIO = (window.TEMARIO || []).concat([
     {t:'Metabolismo de aminoácidos y ciclo de la urea', claves:['transaminación','desaminación','amoniaco','ciclo de la urea','glutamina']},
     {t:'Metabolismo de nucleótidos', claves:['purina','pirimidina','ácido úrico','salvamento','gota']},
     {t:'Integración metabólica y hormonas', claves:['integración metabólica','insulina','glucagón','cortisol','estado alimentado']},
-    {t:'Vitaminas y coenzimas', claves:['vitamina','coenzima','hidrosoluble','liposoluble','deficiencia']}
+    {t:'Vitaminas y coenzimas', claves:['vitamina','coenzima','hidrosoluble','liposoluble','deficiencia']},
+    {t:'Metabolismo del hemo y bilirrubina', claves:['hemo','bilirrubina indirecta','bilirrubina directa','ictericia','porfiria']},
+    {t:'Lipoproteínas y transporte de lípidos', claves:['quilomicrón','LDL','HDL','VLDL','apolipoproteína']},
+    {t:'Metabolismo del etanol', claves:['alcohol deshidrogenasa','acetaldehído','NADH hepático','hipoglucemia por alcohol']}
   ]
 },
 
@@ -84,7 +104,11 @@ window.TEMARIO = (window.TEMARIO || []).concat([
     {t:'Alteraciones cromosómicas numéricas', claves:['trisomía','monosomía','no disyunción','Down','Turner','Klinefelter']},
     {t:'Alteraciones estructurales y mosaicismo', claves:['translocación','deleción','inversión','mosaicismo','Robertsoniana']},
     {t:'Herencia multifactorial y farmacogenética', claves:['multifactorial','umbral','heredabilidad','farmacogenética']},
-    {t:'Diagnóstico genético y consejo', claves:['diagnóstico prenatal','cariotipo','FISH','consejo genético','cribado']}
+    {t:'Diagnóstico genético y consejo', claves:['diagnóstico prenatal','cariotipo','FISH','consejo genético','cribado']},
+    {t:'Epigenética básica', claves:['metilación del ADN','acetilación de histonas','herencia epigenética','expresión génica']},
+    {t:'Enfermedades por expansión de repeticiones', claves:['tripletes repetidos','Huntington','X frágil','anticipación génica']},
+    {t:'Impronta genómica', claves:['impronta genómica','disomía uniparental','Prader-Willi','Angelman']},
+    {t:'Genética del cáncer hereditario', claves:['gen supresor tumoral','BRCA','oncogén hereditario','síndrome de cáncer familiar']}
   ]
 },
 
@@ -100,7 +124,10 @@ window.TEMARIO = (window.TEMARIO || []).concat([
     {t:'Pruebas para variables cuantitativas', claves:['t de Student','ANOVA','apareado','normalidad']},
     {t:'Pruebas para variables cualitativas', claves:['chi cuadrado','Fisher','tabla de contingencia','proporciones']},
     {t:'Correlación y regresión', claves:['correlación','Pearson','regresión lineal','coeficiente','causalidad']},
-    {t:'Significación estadística frente a relevancia clínica', claves:['relevancia clínica','tamaño del efecto','intervalo','p pequeña']}
+    {t:'Significación estadística frente a relevancia clínica', claves:['relevancia clínica','tamaño del efecto','intervalo','p pequeña']},
+    {t:'Regresión logística', claves:['regresión logística','razón de momios','variable binaria','odds ratio ajustado']},
+    {t:'Análisis de supervivencia', claves:['Kaplan-Meier','curva de supervivencia','censura','riesgo proporcional']},
+    {t:'Meta-análisis y revisión sistemática', claves:['meta-análisis','revisión sistemática','heterogeneidad','forest plot']}
   ]
 },
 
@@ -117,7 +144,10 @@ window.TEMARIO = (window.TEMARIO || []).concat([
     {t:'Nematodos tisulares', claves:['Strongyloides','filaria','larva migrans','autoinfección']},
     {t:'Cestodos', claves:['Taenia','cisticercosis','Hymenolepis','proglótide','escólex']},
     {t:'Trematodos', claves:['Schistosoma','Fasciola','caracol','cercaria']},
-    {t:'Diagnóstico parasitológico', claves:['coprológico','concentración','gota gruesa','serología','técnica de Graham']}
+    {t:'Diagnóstico parasitológico', claves:['coprológico','concentración','gota gruesa','serología','técnica de Graham']},
+    {t:'Ectoparásitos', claves:['Pediculus','Sarcoptes scabiei','sarna','piojo','prurito nocturno']},
+    {t:'Artrópodos de importancia médica', claves:['vector','mosquito','garrapata','transmisión vectorial']},
+    {t:'Control y prevención de parasitosis', claves:['desparasitación masiva','saneamiento ambiental','prevención de zoonosis']}
   ]
 },
 
@@ -136,7 +166,9 @@ window.TEMARIO = (window.TEMARIO || []).concat([
     {t:'Ensayo clínico aleatorizado', claves:['ensayo clínico','aleatorización','cegamiento','intención de tratar','placebo']},
     {t:'Sesgos, confusión e interacción', claves:['sesgo','confusión','interacción','apareamiento','estratificación']},
     {t:'Validez de una prueba diagnóstica', claves:['sensibilidad','especificidad','valor predictivo','curva ROC','cribado']},
-    {t:'Causalidad', claves:['causalidad','Bradford Hill','temporalidad','plausibilidad','gradiente']}
+    {t:'Causalidad', claves:['causalidad','Bradford Hill','temporalidad','plausibilidad','gradiente']},
+    {t:'Vigilancia epidemiológica y notificación', claves:['sistema de vigilancia','enfermedad de notificación obligatoria','investigación de brote']},
+    {t:'Epidemiología de enfermedades transmisibles y no transmisibles', claves:['cadena de transmisión','reservorio','transición epidemiológica']}
   ]
 },
 
@@ -151,7 +183,10 @@ window.TEMARIO = (window.TEMARIO || []).concat([
     {t:'Complemento', claves:['complemento','vía clásica','vía alterna','C3','opsonización','MAC']},
     {t:'Respuesta humoral y celular', claves:['linfocito B','linfocito T','CD4','CD8','citocina','memoria inmunitaria']},
     {t:'Hipersensibilidad y autoinmunidad', claves:['hipersensibilidad','tipo I','anafilaxia','autoinmunidad','tolerancia']},
-    {t:'Inmunización', claves:['vacuna','inmunidad pasiva','activa','toxoide','esquema']}
+    {t:'Inmunización', claves:['vacuna','inmunidad pasiva','activa','toxoide','esquema']},
+    {t:'Inmunodeficiencias primarias', claves:['inmunodeficiencia primaria','agammaglobulinemia','inmunodeficiencia combinada grave']},
+    {t:'Trasplante e inmunología del rechazo', claves:['rechazo de trasplante','histocompatibilidad','inmunosupresor','enfermedad de injerto contra hospedero']},
+    {t:'Tolerancia inmunológica', claves:['tolerancia central','tolerancia periférica','selección negativa','anergia']}
   ]
 }
 
