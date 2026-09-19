@@ -190,12 +190,14 @@ window.Examinar = (function () {
   async function generar(){
     const titulo = (document.getElementById('exTitulo').value || '').trim() || (form.archivo ? form.archivo.name : 'Examen');
     const aviso = document.getElementById('exAviso');
+    const estado = document.getElementById('exEstado');
     const btn = document.getElementById('exGenerar');
     if (!form.texto) return;
 
     btn.disabled = true;
-    btn.textContent = 'Generando tu examen… puede tardar un momento';
+    btn.textContent = 'Generando…';
     aviso.innerHTML = '';
+    estado.innerHTML = '<span class="combo" style="display:inline-block">Generando tu examen, puede tardar hasta un minuto…</span>';
 
     try {
       const r = await Nube.invocar('examinar-generar', {
@@ -203,11 +205,13 @@ window.Examinar = (function () {
       });
       if (r && r.error){
         aviso.innerHTML = '<div class="aviso">' + esc(mensajeError(r.error)) + '</div>';
+        estado.innerHTML = '';
         btn.disabled = false; btn.textContent = 'Generar examen';
         return;
       }
       if (!r || !r.examen){
         aviso.innerHTML = '<div class="aviso">No se pudo generar el examen ahora mismo.</div>';
+        estado.innerHTML = '';
         btn.disabled = false; btn.textContent = 'Generar examen';
         return;
       }
@@ -216,6 +220,7 @@ window.Examinar = (function () {
       tomar(r.examen);
     } catch (e) {
       aviso.innerHTML = '<div class="aviso">No se pudo conectar con el servidor. Intenta de nuevo.</div>';
+      estado.innerHTML = '';
       btn.disabled = false; btn.textContent = 'Generar examen';
     }
   }
@@ -226,8 +231,12 @@ window.Examinar = (function () {
       'sin-suscripcion':  'Necesitas una membresía activa para generar exámenes.',
       'sin-cuota':        'Ya generaste tus exámenes de hoy. El cupo se reinicia mañana.',
       'material-corto':   'El texto extraído es muy corto para armar un examen serio.',
-      'sin-preguntas':    'El modelo no pudo redactar preguntas válidas de este documento. Prueba con otro material.'
+      'sin-preguntas':    'El modelo no pudo redactar preguntas válidas de este documento. Prueba con otro material.',
+      'json-invalido':    'El modelo no pudo terminar de armar el examen. Prueba con menos preguntas o un texto más corto.',
     };
+    if (cod && cod.startsWith('corte-')){
+      return 'El modelo no pudo terminar de armar el examen. Prueba con menos preguntas o un texto más corto.';
+    }
     return M[cod] || 'No se pudo generar el examen ahora mismo. Intenta de nuevo en un rato.';
   }
 

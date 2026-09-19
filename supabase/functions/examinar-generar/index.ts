@@ -15,6 +15,7 @@ const TOPE_DIA = 3;             // examenes generados por estudiante al dia
 const TOPE_TEXTO = 45000;       // caracteres del material que se manda al modelo
 const MIN_TEXTO = 400;          // menos que esto no da para preguntas serias
 const MAX_PREGUNTAS = 15;
+const TOPE_SALIDA = 32768;      // margen amplio: 15 preguntas completas pesan mucho
 
 const SISTEMA = `Eres un profesor que redacta examenes de practica para un estudiante universitario dominicano, a partir UNICAMENTE del material de estudio que el mismo estudiante subio.
 
@@ -81,7 +82,16 @@ function prompt(texto: string, n: number, titulo: string): string {
 /* Una rama por proveedor. Solo la de Gemini pide salida JSON estructurada
    de verdad (responseSchema); las otras dos piden JSON por instruccion y
    se parsean con tolerancia, para el dia que se cambie de proveedor. */
-async function llamar(sistema: string, mensaje: string): Promise<PreguntaCruda[]> {
+/* maxOutputTokens: un examen de 15 preguntas con caso, 4 opciones, exp,
+   3 descartes y consideracion por cada una es MUCHO texto -- con 8192
+   (el limite que ya se sabia corto para Arturo, que solo reformula una
+   explicacion) el modelo se quedaba a mitad de la ultima pregunta, y esa
+   respuesta truncada no es JSON valido: JSON.parse revienta y sale
+   'json-invalido'. Verificado en vivo (18/09/2026): 15 preguntas sobre
+   un documento largo tardaba ~40s y fallaba asi cada vez; con este limite
+   mas alto no. Gemini no rechaza un maxOutputTokens mayor al que el
+   modelo soporta, simplemente no lo agota si no hace falta. */
+async function llamar(sistema: string, mensaje: string, tope: number): Promise<PreguntaCruda[]> {
   const proveedor = Deno.env.get('IA_PROVEEDOR') || 'gemini';
   const modelo = Deno.env.get('IA_MODELO') || 'gemini-2.0-flash';
   const clave = Deno.env.get('IA_CLAVE') || '';
@@ -96,7 +106,7 @@ async function llamar(sistema: string, mensaje: string): Promise<PreguntaCruda[]
         system_instruction: { parts: [{ text: sistema }] },
         contents: [{ role: 'user', parts: [{ text: mensaje }] }],
         generationConfig: {
-          maxOutputTokens: 8192, temperature: 0.6,
+          maxOutputTokens: tope, temperature: 0.6,
           responseMimeType: 'application/json',
           responseSchema: ESQUEMA
         }
@@ -108,7 +118,8 @@ async function llamar(sistema: string, mensaje: string): Promise<PreguntaCruda[]
     const cand = j?.candidates?.[0];
     const txt = cand?.content?.parts?.[0]?.text ?? '';
     if (!txt && cand?.finishReason) throw new Error('corte-' + cand.finishReason);
-    try { return JSON.parse(txt); } catch { throw new Error('json-invalido'); }
+    try { return JSON.parse(txt); }
+    catch { throw new Error(cand?.finishReason === 'MAX_TOKENS' ? 'corte-MAX_TOKENS' : 'json-invalido'); }
   }
 
   if (proveedor === 'groq' || proveedor === 'anthropic'){
@@ -118,7 +129,7 @@ async function llamar(sistema: string, mensaje: string): Promise<PreguntaCruda[]
       const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${clave}` },
-        body: JSON.stringify({ model: modelo, max_tokens: 4000,
+        body: JSON.stringify({ model: modelo, max_tokens: tope,
           messages: [{ role: 'system', content: sistema }, { role: 'user', content: pedido }] })
       });
       if (r.status === 429) throw new Error('sin-cuota');
@@ -129,7 +140,7 @@ async function llamar(sistema: string, mensaje: string): Promise<PreguntaCruda[]
       const r = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': clave, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: modelo, max_tokens: 4000, system: sistema,
+        body: JSON.stringify({ model: modelo, max_tokens: tope, system: sistema,
           messages: [{ role: 'user', content: pedido }] })
       });
       if (r.status === 429) throw new Error('sin-cuota');
@@ -228,14 +239,34 @@ Deno.serve(async (req) => {
   if (texto.length < MIN_TEXTO) return json({ error: 'material-corto' }, 400);
   if (texto.length > TOPE_TEXTO) texto = texto.slice(0, TOPE_TEXTO);
 
-  /* 5. El modelo */
+  /* 5. El modelo. Si la respuesta viene truncada (json-invalido o
+        corte-MAX_TOKENS -- el sintoma real de pedir demasiadas preguntas
+        sobre un documento largo), no se le devuelve el error al
+        estudiante de una: se reintenta UNA vez pidiendo la mitad de
+        preguntas, que es mucho mas facil que quepan completas. Mejor un
+        examen mas corto que una pantalla de error. */
   let crudas: PreguntaCruda[] = [];
+  let numFinal = numPreguntas;
   try {
-    crudas = await llamar(SISTEMA, prompt(texto, numPreguntas, titulo));
+    crudas = await llamar(SISTEMA, prompt(texto, numPreguntas, titulo), TOPE_SALIDA);
   } catch (e) {
     const msg = (e as Error).message;
     if (msg === 'sin-cuota') return json({ error: 'sin-cuota' }, 429);
-    return json({ error: msg }, 502);
+    const truncado = msg === 'json-invalido' || msg.startsWith('corte-');
+    if (truncado && numPreguntas > 3){
+      numFinal = Math.max(3, Math.ceil(numPreguntas / 2));
+      try {
+        crudas = await llamar(SISTEMA, prompt(texto, numFinal, titulo), TOPE_SALIDA);
+      } catch (e2) {
+        const msg2 = (e2 as Error).message;
+        console.error('examinar-generar: fallo tambien el reintento', { msg, msg2, numPreguntas, numFinal, textoLen: texto.length });
+        if (msg2 === 'sin-cuota') return json({ error: 'sin-cuota' }, 429);
+        return json({ error: msg2 }, 502);
+      }
+    } else {
+      console.error('examinar-generar: fallo el modelo', { msg, numPreguntas, textoLen: texto.length });
+      return json({ error: msg }, 502);
+    }
   }
 
   const preguntas = normalizar(crudas, titulo, 'Generado · ' + titulo);
