@@ -72,8 +72,7 @@ window.Motor = (function () {
      ya existian y no vamos a reescribir miles de filas para anadir un
      campo que se puede deducir por ausencia.
 
-     El resultado se memoriza porque banco() se llama en bucles (porId
-     hace una busqueda lineal por cada pregunta de una sesion) y filtrar
+     El resultado se memoriza porque banco() se llama en bucles y filtrar
      cinco mil objetos cada vez se notaria. La memoria se invalida sola si
      cambia el programa o si entra otro archivo de banco. */
   let bcLista = null, bcPrograma = null, bcLargo = -1, bcMaterias = '\0';
@@ -122,9 +121,26 @@ window.Motor = (function () {
       q.verificado = true;
       n++;
     });
+    /* `verificado` decide la cuarentena, asi que el banco activo que se
+       tenga guardado ya no vale. */
+    baLista = null;
     return n;
   }
-  function porId(id){ return banco().find(q => q.id === id); }
+
+  /* Indice id -> pregunta, ligado a la lista de banco() que lo origino.
+     porId() se usa dentro de bucles (enRevision por cada pregunta, el
+     dominio por cada respuesta del historial): con `find` cada busqueda
+     recorria el banco entero y el conjunto costaba O(n^2). El primero que
+     aparezca gana, igual que con `find`. */
+  let idBase = null, idMapa = null;
+  function porId(id){
+    const base = banco();
+    if (idBase !== base){
+      idBase = base; idMapa = new Map();
+      base.forEach(q => { if (!idMapa.has(q.id)) idMapa.set(q.id, q); });
+    }
+    return idMapa.get(id);
+  }
 
   function especialidades(){
     const m = {};
@@ -212,14 +228,24 @@ window.Motor = (function () {
   }
 
   /* ---------- prioridad de una pregunta ---------- */
-  function prioridad(q){
+  /* `domEsp` es una memoria opcional del dominio por especialidad. Al
+     barajar hay que puntuar todo el banco (miles de preguntas) y el
+     dominio solo depende de la especialidad, que son doce: sin memoria se
+     recalculaba una vez por pregunta y Entrenar tardaba 4 segundos. */
+  function prioridad(q, domEsp){
     const d = datos(); if (!d) return 1;
     const s = d.srs[q.id];
     let p = 1;
     if (!s) return 1.6;                                   // nunca vista: alta
     if (s.prox <= Date.now()) p += 1.4;                   // vencida
     if (s.fallos > 0) p += 0.8 * Math.min(s.fallos, 3);   // fallada
-    const dom = dominioDe(q.esp);
+    let dom;
+    if (domEsp){
+      if (!(q.esp in domEsp)) domEsp[q.esp] = dominioDe(q.esp);
+      dom = domEsp[q.esp];
+    } else {
+      dom = dominioDe(q.esp);
+    }
     if (dom !== null && dom < 60) p += 0.9;               // area debil
     if (dom !== null && dom > 85) p -= 0.5;               // area dominada
     const dias = (Date.now() - (s.prox - INTERVALOS[s.paso] * DIA)) / DIA;
@@ -228,7 +254,8 @@ window.Motor = (function () {
   }
 
   function barajarPonderado(lista, n){
-    const copia = lista.map(q => ({ q, w: prioridad(q) * (0.6 + Math.random()) }));
+    const domEsp = {};
+    const copia = lista.map(q => ({ q, w: prioridad(q, domEsp) * (0.6 + Math.random()) }));
     copia.sort((a, b) => b.w - a.w);
     return copia.slice(0, n).map(x => x.q);
   }
@@ -243,17 +270,29 @@ window.Motor = (function () {
     if (window.REVISION && window.REVISION[id]) return true;
     const cohortes = window.REVISION_COHORTE || [];
     if (!cohortes.length) return false;
-    const q = banco().find(x => x.id === id);
+    const q = porId(id);
     if (!q) return false;
     return cohortes.some(c => c.prueba(q));
   }
 
+  /* El banco activo se guarda mientras nada lo cambie. Ruta.indice() lo
+     pide en cada emparejamiento de tema para saber si el banco cambio, y
+     Temario o el recorrido de Arturo lo disparan cientos de veces por
+     pintado: rehacer la lista cada vez costaba unos 50 ms y sumaba 10-15
+     segundos. Lo que puede cambiar el resultado es la lista base (programa,
+     materias, tamano del banco), el interruptor del banco extendido y la
+     cuarentena, que depende de `verificado` (ver aplicarExplicaciones).
+     La lista devuelta es de solo lectura: quien quiera ordenarla debe
+     copiarla antes. */
+  let baLista = null, baBase = null, baExtendido = null;
   function bancoActivo(){
+    const base = banco();
     const d = datos();
-    let lista = banco().filter(q => !enRevision(q.id));
-    if (d && d.ajustes && d.ajustes.bancoExtendido === false){
-      lista = lista.filter(q => q.fuente !== 'MIR');
-    }
+    const extendido = !(d && d.ajustes && d.ajustes.bancoExtendido === false);
+    if (baLista && baBase === base && baExtendido === extendido) return baLista;
+    let lista = base.filter(q => !enRevision(q.id));
+    if (!extendido) lista = lista.filter(q => q.fuente !== 'MIR');
+    baLista = lista; baBase = base; baExtendido = extendido;
     return lista;
   }
 
@@ -304,10 +343,13 @@ window.Motor = (function () {
   /* ---------- dominio por area ---------- */
   function dominioDe(esp, tema, sub){
     const h = historial();
-    const ids = banco().filter(q =>
-      (!esp || q.esp === esp) && (!tema || q.tema === tema) && (!sub || q.sub === sub)
-    ).map(q => q.id);
-    const r = h.filter(x => ids.indexOf(x.qid) >= 0);
+    /* Un Set y no una lista: con indexOf cada respuesta del historial
+       recorria los ids del area, y el coste crecia con lo estudiado. */
+    const ids = new Set();
+    banco().forEach(q => {
+      if ((!esp || q.esp === esp) && (!tema || q.tema === tema) && (!sub || q.sub === sub)) ids.add(q.id);
+    });
+    const r = h.filter(x => ids.has(x.qid));
     if (!r.length) return null;
     // se pondera mas lo reciente
     const ult = r.slice(-40);

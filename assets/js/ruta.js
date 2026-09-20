@@ -70,7 +70,7 @@ window.Ruta = (function () {
 
   function invalidar(){
     cTemas = null; cProg = null;
-    cIndice = null; cIndiceLargo = -1;
+    cIndice = null; cIndiceLargo = -1; cIndiceBanco = null;
     cApuntes = null; cApProg = null;
     cPorTema = {}; cTarjTema = {};
   }
@@ -111,10 +111,15 @@ window.Ruta = (function () {
     return false;
   }
 
-  let cIndice = null, cIndiceLargo = -1;
+  let cIndice = null, cIndiceLargo = -1, cIndiceBanco = null;
   function indice(){
     const banco = Motor.bancoActivo();
-    if (cIndice && cIndiceLargo === banco.length) return cIndice;
+    /* Se compara la lista misma, no solo su tamano: Motor.bancoActivo()
+       devuelve el mismo objeto mientras nada cambie y uno nuevo cuando
+       cambia el programa, las materias o el banco extendido. Con el tamano
+       solo, dos bancos distintos de igual largo compartian indice. */
+    if (cIndice && cIndiceBanco === banco && cIndiceLargo === banco.length) return cIndice;
+    cIndiceBanco = banco;
     cIndiceLargo = banco.length;
     /* El emparejamiento por tema cuelga de este indice, asi que se tira
        exactamente cuando el indice se rehace: ni antes (perderiamos el

@@ -53,7 +53,10 @@ window.Temario = (function () {
      VISTA
      ============================================================ */
   function menu(){
-    invalidar();
+    /* No se invalida aqui a proposito. El emparejamiento de temas con el
+       banco (Ruta.preguntasDe) no depende de lo que el estudiante haya
+       respondido, y se rehace solo cuando cambia el banco. Invalidar en
+       cada apertura obligaba a rehacerlo entero cada vez que se entraba. */
     const tarjetasBloque = bloques().map((b, bi) => {
       const estados = b.temas.map(estadoTema);
       const totalPreg = estados.reduce((s, e) => s + e.total, 0);
