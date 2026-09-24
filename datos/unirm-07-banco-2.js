@@ -204,7 +204,7 @@ window.BANCO = (window.BANCO || []).concat([
   trampa:'Ver debilidad y pensar de inmediato en bloqueo. Aquí la debilidad es consecuencia de un exceso de estimulación, no de un déficit.',
   obj:'Localizar el punto de acción de un tóxico en la unión neuromuscular a partir de la clínica.',
   ref:'Guyton y Hall, Tratado de Fisiología Médica.',
-  tags:['organofosforado','acetilcolinesterasa','crisis colinérgica']
+  tags:['organofosforado','acetilcolinesterasa','crisis colinérgica','acetilcolina','sinapsis','placa motora']
 },
 {
   id:'U7-F-Q09', programa:'unirm', cuatri:7,

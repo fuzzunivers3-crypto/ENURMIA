@@ -275,7 +275,7 @@ window.BANCO = (window.BANCO || []).concat([
   trampa:'Quedarse en el dato de que es avascular sin extraer su consecuencia. Lo que se pregunta es siempre la consecuencia.',
   obj:'Derivar las propiedades reparativas del cartílago de su avascularidad.',
   ref:'Ross, Histología. Texto y Atlas. Junqueira, Histología Básica.',
-  tags:['cartílago','avascular','reparación','pericondrio']
+  tags:['cartílago','avascular','reparación','pericondrio','condrocito','laguna']
 },
 {
   id:'U7-H-Q09', programa:'unirm', cuatri:7,
@@ -299,7 +299,7 @@ window.BANCO = (window.BANCO || []).concat([
   trampa:'Meter ambos crecimientos en el mismo saco. Que se cierre el disco no significa que el hueso deje de cambiar.',
   obj:'Distinguir los mecanismos de crecimiento en longitud y en grosor.',
   ref:'Ross, Histología. Texto y Atlas.',
-  tags:['disco epifisario','crecimiento','periostio','osificación endocondral']
+  tags:['disco epifisario','crecimiento','periostio','osificación endocondral','osteoblasto','osteoclasto']
 },
 
 /* ===================== BIOQUIMICA I ===================== */
@@ -397,7 +397,7 @@ window.BANCO = (window.BANCO || []).concat([
   trampa:'Tomarse literalmente lo de colesterol bueno y malo. La diferencia está en el sentido del viaje.',
   obj:'Distinguir LDL y HDL por la dirección del transporte de colesterol.',
   ref:'Harper, Bioquímica Ilustrada. Lehninger, Principios de Bioquímica.',
-  tags:['LDL','HDL','transporte inverso','lipoproteínas']
+  tags:['LDL','HDL','transporte inverso','lipoproteínas','colesterol','triglicérido']
 },
 
 /* ===================== EMBRIOLOGIA ===================== */

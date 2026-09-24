@@ -281,6 +281,15 @@
 <script src="assets/js/almacen.js"></script>
 <script>
 (function(){
+  /* Supabase redirige aqui (fragmento #... o, segun el flujo, en la
+     consulta ?...) con `type=signup` justo despues de que el estudiante
+     pulsa el enlace de confirmacion de su correo. Se captura ANTES de
+     tocar nada mas: crear el cliente de Supabase (mas abajo, en
+     Nube.disponible()) puede limpiar ese fragmento de la URL al leerlo
+     el mismo. Sin esto, el enlace devolvia aqui en silencio, sin decir
+     nada, y era facil de confundir con que el registro no sirvio. */
+  const veniaDeConfirmarCorreo = /type=signup/.test(location.hash) || /type=signup/.test(location.search);
+
   const $ = s => document.querySelector(s);
   /* El correo lo escribe quien se registra y luego se pinta con innerHTML.
      Esta pantalla no carga ui.js, asi que lleva su propio escapador. */
@@ -623,6 +632,36 @@
     if (!r.ok) return aviso($('#avisoEntrar'), r.error);
     pasar($('#avisoEntrar'), 'Entrando sin conexión. Lo que estudies se sincronizará cuando entres con tu cuenta de la nube.');
   };
+
+  /* ---------- bienvenida tras confirmar el correo ----------
+     Si Supabase acaba de traer al estudiante de vuelta desde el enlace
+     de confirmacion, se le avisa aqui mismo en vez de dejarlo en una
+     pantalla que no dice nada. Se limpia la URL primero para que el
+     fragmento no se quede pegado ni el aviso vuelva a salir si refresca. */
+  if (veniaDeConfirmarCorreo) {
+    history.replaceState(null, '', location.pathname);
+    pestana('entrar');
+    (async () => {
+      if (!hayNube){
+        aviso($('#avisoEntrar'), '✅ <b>Correo confirmado.</b> Entra con tu contraseña cuando tengas conexión.', true);
+        return;
+      }
+      aviso($('#avisoEntrar'), '📬 Confirmando tu cuenta…', true);
+      // La confirmacion por enlace ya suele dejar la sesion abierta sola;
+      // si no fue asi (por ejemplo, se abrio en otro dispositivo), se le
+      // pide entrar con su contraseña, pero siempre dejando claro que el
+      // correo SI quedo confirmado.
+      const u = await Nube.usuario();
+      if (!u){
+        aviso($('#avisoEntrar'), '✅ <b>Tu correo quedó confirmado.</b> Ahora entra con tu contraseña para continuar.', true);
+        return;
+      }
+      const msg = await sincronizarAlEntrar(u, u.email);
+      const sus = await Nube.miSuscripcion();
+      if (!sus) return verPlanes();
+      pasar($('#avisoEntrar'), '✅ <b>¡Correo confirmado! Bienvenido a ' + TEXTOS[programa].raiz + 'IA.</b> ' + msg);
+    })();
+  }
 
   // si ya hay sesion abierta, pasar directo
   if (Almacen.sesion()) location.replace('app.html');
