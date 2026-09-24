@@ -71,13 +71,19 @@ window.Duelo = (function () {
         '<div class="campo" style="margin:12px 0">' +
           '<input id="dlCodigo" maxlength="5" style="text-transform:uppercase;letter-spacing:2px;font-family:var(--mono)" placeholder="Ej: 7K2PQ">' +
         '</div>' +
+        '<label class="row" style="gap:8px;align-items:center;font-size:13.5px;color:var(--tinta-3,#666);margin-bottom:12px;cursor:pointer">' +
+          '<input type="checkbox" id="dlEspectador"> Solo quiero mirar (espectador, no respondo preguntas)' +
+        '</label>' +
         '<button class="btn btn--lg btn--ancho btn--fantasma" id="dlUnirse">Unirme al duelo</button>' +
       '</div>' +
     '</div>';
 
     UI.$$('[data-dl-n]').forEach(b => b.onclick = () => { form.n = +b.dataset.dlN; menu(); });
     document.getElementById('dlCrear').onclick = crear;
-    document.getElementById('dlUnirse').onclick = () => unirse(document.getElementById('dlCodigo').value);
+    document.getElementById('dlUnirse').onclick = () => {
+      const comoEspectador = document.getElementById('dlEspectador').checked;
+      unirse(document.getElementById('dlCodigo').value, comoEspectador);
+    };
   }
 
   async function crear(){
@@ -86,10 +92,10 @@ window.Duelo = (function () {
     await iniciarSala(codigoAleatorio(), 'host', preguntas.map(p => p.id));
   }
 
-  async function unirse(codigo){
+  async function unirse(codigo, comoEspectador){
     codigo = normalizarCodigo(codigo);
     if (codigo.length < 4) return UI.tostada('Ese código está incompleto', 'mal');
-    await iniciarSala(codigo, 'invitado', null);
+    await iniciarSala(codigo, comoEspectador ? 'espectador' : 'invitado', null);
   }
 
   /* ============================================================
@@ -110,18 +116,31 @@ window.Duelo = (function () {
       i: 0, elegida: null, revelada: false, correctas: 0, respondidas: 0,
       rivalProgreso: { respondidas: 0, correctas: 0 },
       rivalListo: null, miResultado: null,
-      inicio: null, cronometro: null
+      inicio: null, cronometro: null,
+      /* Solo lo usa el espectador: uid -> {nombre, respondidas, correctas,
+         terminado, ms}. Se llena con los mismos broadcasts de 'progreso' y
+         'listo' que ya se mandan los dos jugadores entre si, asi que no
+         hace falta que ellos manden nada nuevo ni sepan que los miran. */
+      marcador: {}
     };
 
-    pintarEspera();
+    if (rol === 'espectador') pintarEspectador();
+    else pintarEspera();
 
     canal
-      .on('broadcast', { event: 'empezar' }, ({ payload }) => empezarCarrera(payload))
+      .on('broadcast', { event: 'empezar' }, ({ payload }) => {
+        if (D.rol === 'espectador') return; // el espectador no corre preguntas, solo mira el marcador
+        empezarCarrera(payload);
+      })
       .on('broadcast', { event: 'progreso' }, ({ payload }) => {
+        registrarProgreso(payload);
+        if (D.rol === 'espectador') return pintarEspectador();
         if (payload.uid !== D.yo.id) D.rivalProgreso = { respondidas: payload.respondidas, correctas: payload.correctas };
         actualizarMarcador();
       })
       .on('broadcast', { event: 'listo' }, ({ payload }) => {
+        registrarProgreso(payload, true);
+        if (D.rol === 'espectador') return pintarEspectador();
         if (payload.uid === D.yo.id) return;
         D.rivalListo = payload;
         if (D.miResultado) mostrarResultado();
@@ -130,9 +149,30 @@ window.Duelo = (function () {
       .on('presence', { event: 'sync' }, () => sincronizarPresencia())
       .subscribe(async (estado) => {
         if (estado === 'SUBSCRIBED') {
-          await canal.track({ nombre: D.yo.nombre, programa: Almacen.programa() });
+          await canal.track({ nombre: D.yo.nombre, programa: Almacen.programa(), rol: D.rol });
         }
       });
+  }
+
+  /* Guarda el marcador de un jugador (host o invitado) segun lo que va
+     transmitiendo por 'progreso'/'listo'. Solo lo consume la vista de
+     espectador, pero se llama siempre: es barato y evita duplicar la
+     logica de "de quien es este payload" en dos sitios. */
+  function registrarProgreso(payload, terminado){
+    const anterior = D.marcador[payload.uid];
+    const meta = metaDe(payload.uid);
+    D.marcador[payload.uid] = {
+      nombre: (meta && meta.nombre) || (anterior && anterior.nombre) || 'Jugador',
+      respondidas: payload.respondidas, correctas: payload.correctas,
+      terminado: !!terminado || (anterior && anterior.terminado) || false,
+      ms: terminado ? payload.ms : (anterior && anterior.ms)
+    };
+  }
+
+  function metaDe(uid){
+    const estado = D.canal.presenceState();
+    const arr = estado[uid];
+    return arr && arr[0];
   }
 
   function otrasClaves(){
@@ -140,9 +180,31 @@ window.Duelo = (function () {
     return Object.keys(estado).filter(k => k !== D.yo.id);
   }
 
+  /* Los "otros" que cuentan para emparejar un duelo: nunca un espectador.
+     Que alguien entre solo a mirar no debe arrancar la carrera ni
+     convertirse en el rival de nadie. */
+  function otrosJugadores(){
+    return otrasClaves().filter(k => { const m = metaDe(k); return !m || m.rol !== 'espectador'; });
+  }
+
+  function jugadoresConectados(){
+    const estado = D.canal.presenceState();
+    return Object.keys(estado).filter(k => { const m = estado[k][0]; return !m || m.rol !== 'espectador'; });
+  }
+
+  function espectadoresConectados(){
+    const estado = D.canal.presenceState();
+    return Object.keys(estado).filter(k => { const m = estado[k][0]; return m && m.rol === 'espectador'; }).length;
+  }
+
   function sincronizarPresencia(){
-    if (!D || D.empezado) return;
-    const otros = otrasClaves();
+    if (!D) return;
+    if (D.rol === 'espectador'){
+      if (!D.empezado) pintarEspectador();
+      return;
+    }
+    if (D.empezado) return;
+    const otros = otrosJugadores();
     const estado = D.canal.presenceState();
 
     if (otros.length){
@@ -157,7 +219,8 @@ window.Duelo = (function () {
 
     /* Solo el host decide cuando arrancar: si los dos escucharan la
        condicion "somos 2" y las dos mandaran 'empezar', se duplicaria
-       el arranque y podrian pelear dos listas de preguntas distintas. */
+       el arranque y podrian pelear dos listas de preguntas distintas.
+       Los espectadores no cuentan para esta condicion (ver otrosJugadores). */
     if (D.rol === 'host' && otros.length && !D.empezado){
       D.empezado = true;
       const payload = { ids: D.ids, programa: Almacen.programa(), arranca: Date.now() + 3000 };
@@ -168,6 +231,7 @@ window.Duelo = (function () {
 
   function pintarEspera(){
     if (!D || D.empezado) return;
+    const nEsp = espectadoresConectados();
     V().innerHTML =
     '<div class="escalona" style="max-width:520px;text-align:center">' +
       '<div class="encabezado"><p class="eyebrow">Duelo en vivo</p><h1>' +
@@ -180,10 +244,66 @@ window.Duelo = (function () {
         '<p class="muted" style="margin-top:10px">' + (D.rival
           ? 'Arrancando contra <b>' + esc(D.rival.nombre) + '</b>…'
           : 'Nadie más se ha unido todavía.') + '</p>' +
+        (nEsp ? '<p class="muted" style="font-size:12.5px;margin-top:6px">👀 ' + nEsp +
+          (nEsp === 1 ? ' persona mirando' : ' personas mirando') + '</p>' : '') +
       '</div>' +
       '<button class="btn btn--fantasma" id="dlSalirEspera" style="margin-top:12px">Cancelar</button>' +
     '</div>';
     const b = document.getElementById('dlSalirEspera');
+    if (b) b.onclick = () => { salir(); App.ir('duelo'); };
+  }
+
+  /* ============================================================
+     VISTA DE ESPECTADOR
+     ------------------------------------------------------------
+     No corre preguntas ni cuenta para arrancar el duelo (ver
+     otrosJugadores). Solo mira, via presencia, quien esta jugando, y via
+     los broadcasts de 'progreso'/'listo' que los jugadores YA se mandan
+     entre si, el marcador de cada uno en vivo. Funciona incluso si el
+     espectador entra despues de que el duelo ya arranco: no depende del
+     broadcast 'empezar' (que no se reenvia a quien llega tarde), solo del
+     marcador acumulado en D.marcador.
+     ============================================================ */
+  function pintarEspectador(){
+    if (!D) return;
+    const estado = D.canal.presenceState();
+    const idsJugadores = jugadoresConectados();
+    const nEsp = espectadoresConectados();
+
+    if (idsJugadores.length < 2){
+      V().innerHTML =
+      '<div class="escalona" style="max-width:520px;text-align:center">' +
+        '<div class="encabezado"><p class="eyebrow">Duelo en vivo · espectador</p><h1>Esperando jugadores</h1></div>' +
+        '<div class="card" style="padding:28px 22px">' +
+          '<p class="muted">Sala <b style="font-family:var(--mono)">' + esc(D.codigo) + '</b> · ' +
+            idsJugadores.length + ' de 2 jugadores conectados</p>' +
+          (nEsp > 1 ? '<p class="muted" style="font-size:12.5px;margin-top:6px">👀 ' + (nEsp - 1) +
+            ' espectadores más</p>' : '') +
+        '</div>' +
+        '<button class="btn btn--fantasma" style="margin-top:12px" id="dlSalirEspectador">Salir</button>' +
+      '</div>';
+    } else {
+      const filas = idsJugadores.map(id => {
+        const meta = estado[id][0] || {};
+        const m = D.marcador[id] || { respondidas:0, correctas:0, terminado:false };
+        return '<div class="card' + (m.terminado ? ' card--verde' : '') + '" style="padding:16px 18px;text-align:center">' +
+          '<span class="eyebrow">' + esc(meta.nombre || 'Jugador') + '</span>' +
+          '<div style="font-family:var(--display);font-size:28px;margin-top:6px">' + m.correctas + '/' + m.respondidas + '</div>' +
+          (m.terminado ? '<small class="muted">Terminó en ' + UI.reloj(m.ms || 0) + '</small>' : '<small class="muted">Jugando…</small>') +
+        '</div>';
+      }).join('');
+      const ambosTerminaron = idsJugadores.every(id => D.marcador[id] && D.marcador[id].terminado);
+
+      V().innerHTML =
+      '<div class="escalona" style="max-width:640px">' +
+        '<div class="encabezado"><p class="eyebrow">Duelo en vivo · espectador</p><h1>' +
+          (ambosTerminaron ? 'Duelo terminado' : 'Duelo en curso') + '</h1></div>' +
+        '<div class="rejilla rejilla--2" style="margin-bottom:16px">' + filas + '</div>' +
+        (nEsp > 1 ? '<p class="muted" style="font-size:12.5px;text-align:center">👀 ' + nEsp + ' personas mirando</p>' : '') +
+        '<button class="btn btn--fantasma btn--ancho" id="dlSalirEspectador" style="margin-top:12px">Salir</button>' +
+      '</div>';
+    }
+    const b = document.getElementById('dlSalirEspectador');
     if (b) b.onclick = () => { salir(); App.ir('duelo'); };
   }
 
@@ -257,12 +377,14 @@ window.Duelo = (function () {
 
   function marcadorHtml(){
     const total = D.ids.length;
+    const nEsp = espectadoresConectados();
     return '<div class="card" style="margin-bottom:14px;padding:14px 18px">' +
       '<div class="row-b" style="font-size:13.5px">' +
         '<span><b>Tú</b> · ' + D.correctas + '/' + D.respondidas + '</span>' +
         '<span style="opacity:.5">vs</span>' +
         '<span><b>' + esc(D.rival ? D.rival.nombre : 'Rival') + '</b> · ' +
           D.rivalProgreso.correctas + '/' + D.rivalProgreso.respondidas + '</span>' +
+        (nEsp ? '<span style="opacity:.6;font-size:12px">👀 ' + nEsp + '</span>' : '') +
       '</div>' +
       '<div class="row" style="gap:6px;margin-top:8px">' +
         UI.barra(Math.round(D.respondidas / total * 100)) +

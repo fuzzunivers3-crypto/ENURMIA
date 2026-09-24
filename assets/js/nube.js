@@ -267,6 +267,21 @@ window.Nube = (function () {
     return { ok:true, filas: data || [] };
   }
 
+  /* La vista `panel_usuarios` no trae `programa` (se creo antes de que
+     existiera UNIRMIA y nadie la volvio a tocar), asi que se completa
+     aparte leyendo `perfiles` directo -el admin ya puede ver todas sus
+     filas por RLS- y el panel arma el mapa user_id -> programa el mismo.
+     Mas simple y menos riesgoso que reescribir la vista a ciegas sin ver
+     su SQL actual. */
+  async function listarProgramas(){
+    if (!iniciar()) return { ok:false, error:'Sin conexión.', mapa:{} };
+    const { data, error } = await cliente.from('perfiles').select('user_id, programa');
+    if (error) return { ok:false, error: legible(error), mapa:{} };
+    const mapa = {};
+    (data || []).forEach(f => { mapa[f.user_id] = f.programa; });
+    return { ok:true, mapa };
+  }
+
   async function guardarSuscripcion(userId, cambios){
     if (!iniciar()) return { ok:false, error:'Sin conexión.' };
     const fila = Object.assign({ user_id:userId }, cambios);
@@ -412,7 +427,7 @@ window.Nube = (function () {
   return { disponible, registrar, entrar, salir, usuario, recuperar, bajar, subir,
            perfil, miSuscripcion, abrirPrueba, canjearCodigo, generarCodigos, invocar,
            registrarDesafio, configurarRanking, miRanking, clasificacion, mesActual,
-           listarUsuarios, guardarSuscripcion, cambiarRol, progresoDe,
+           listarUsuarios, listarProgramas, guardarSuscripcion, cambiarRol, progresoDe,
            misExamenes, guardarIntentoExamen, borrarExamen, canal,
            crearTicket, misTickets, listarTickets, responderTicket,
            eventosUnirm, guardarEventoUnirm, borrarEventoUnirm,

@@ -16,6 +16,11 @@ window.Admin = (function () {
 
   let filas = [];
   let filtro = '';
+  /* 'todos' | 'enurm' | 'unirm'. Las dos plataformas comparten este panel
+     pero son publicos distintos (residentes contra estudiantes de
+     universidad, bancos de preguntas distintos), asi que shael pidio
+     poder verlos por separado en vez de una sola lista mezclada. */
+  let filtroPrograma = 'todos';
 
   const PLANES  = ['prueba','mensual','trimestral','semestral','anual','cortesia'];
   const ESTADOS = ['activa','vencida','cancelada'];
@@ -76,6 +81,14 @@ window.Admin = (function () {
       return;
     }
     filas = r.filas;
+    /* `panel_usuarios` no trae `programa` (ver Nube.listarProgramas): se
+       completa aparte y no bloquea el pintado si falla -las pestanas de
+       ENURMIA/UNIRMIA simplemente no separarian bien hasta que cargue. */
+    Nube.listarProgramas().then(rp => {
+      if (!rp.ok) return;
+      filas.forEach(f => { f.programa = rp.mapa[f.user_id]; });
+      pintar();
+    });
     pintar();
   }
 
@@ -412,6 +425,11 @@ window.Admin = (function () {
     };
   }
 
+  /* Falta la columna programa por defecto: cuentas viejas de antes de
+     UNIRMIA no la tenian, y se documenta en NUBE_SUPABASE.txt que
+     perfiles.programa nace en 'enurm' por defecto. Mismo criterio aqui. */
+  const programaDe = f => (f.programa === 'unirm' ? 'unirm' : 'enurm');
+
   function resumen(){
     const total = filas.length;
     const activos = filas.filter(f => estadoReal(f) === 'activa').length;
@@ -435,15 +453,29 @@ window.Admin = (function () {
   }
 
   function pintar(){
+    const porPrograma = filtroPrograma === 'todos' ? filas : filas.filter(f => programaDe(f) === filtroPrograma);
     const q = filtro.trim().toLowerCase();
     const lista = q
-      ? filas.filter(f => ((f.correo || '') + ' ' + (f.nombre || '')).toLowerCase().includes(q))
-      : filas;
+      ? porPrograma.filter(f => ((f.correo || '') + ' ' + (f.nombre || '')).toLowerCase().includes(q))
+      : porPrograma;
+
+    const nEnurm = filas.filter(f => programaDe(f) === 'enurm').length;
+    const nUnirm = filas.filter(f => programaDe(f) === 'unirm').length;
+    const tabsPrograma = '<div class="row wrap" style="gap:6px;margin-bottom:12px">' +
+      '<button type="button" class="chip' + (filtroPrograma === 'todos' ? ' on' : '') +
+        '" data-prog-filtro="todos">Todos · ' + filas.length + '</button>' +
+      '<button type="button" class="chip' + (filtroPrograma === 'enurm' ? ' on' : '') +
+        '" data-prog-filtro="enurm">ENURMIA · ' + nEnurm + '</button>' +
+      '<button type="button" class="chip' + (filtroPrograma === 'unirm' ? ' on' : '') +
+        '" data-prog-filtro="unirm">UNIRMIA · ' + nUnirm + '</button>' +
+    '</div>';
 
     const cuerpo = lista.length ? lista.map(f =>
       '<tr data-uid="' + esc(f.user_id) + '">' +
         '<td><b>' + esc(f.nombre || '—') + '</b>' +
           (f.rol === 'admin' ? ' <span class="eyebrow" style="color:var(--acento)">admin</span>' : '') +
+          ' <span class="eyebrow" style="color:var(--tinta-3,#888)">' +
+            (programaDe(f) === 'unirm' ? 'UNIRMIA' : 'ENURMIA') + '</span>' +
           '<br><small class="muted">' + esc(f.correo || '—') + '</small></td>' +
         '<td>' + esc(f.plan || '—') + '<br>' + pastilla(f) + '</td>' +
         '<td><small class="muted">vence</small><br>' + esc(fecha(f.vence)) + '</td>' +
@@ -469,6 +501,7 @@ window.Admin = (function () {
       generador() +
 
       '<div class="card">' +
+        tabsPrograma +
         '<div class="row" style="gap:10px;margin-bottom:12px">' +
           '<input id="buscarUsuario" class="grow" placeholder="Buscar por nombre o correo…" value="' + esc(filtro) + '">' +
           '<button class="btn btn--sm btn--fantasma" id="recargar">Recargar</button>' +
@@ -489,6 +522,7 @@ window.Admin = (function () {
     buscador.oninput = e => { filtro = e.target.value; const p = e.target.selectionStart; pintar();
       const b2 = document.getElementById('buscarUsuario'); b2.focus(); b2.setSelectionRange(p, p); };
     document.getElementById('recargar').onclick = () => cargar();
+    UI.$$('[data-prog-filtro]').forEach(b => b.onclick = () => { filtroPrograma = b.dataset.progFiltro; pintar(); });
     UI.$$('[data-editar]').forEach(b => b.onclick = () => editar(b.dataset.editar));
     UI.$$('[data-ver]').forEach(b => b.onclick = () => verDatos(b.dataset.ver));
     engancharGenerador();
