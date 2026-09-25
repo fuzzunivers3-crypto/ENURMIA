@@ -271,6 +271,15 @@ window.VistaRuta = (function () {
       '</div>'
       : '';
 
+    const avisoReajuste = r.reajustada
+      ? '<div class="card card--suero" style="margin-bottom:18px">' +
+        '<span class="eyebrow">Cambiaste tus materias</span>' +
+        '<p style="margin:6px 0 12px">Rehice el recorrido con las materias que tienes activas ahora. ' +
+        'Lo que ya habías estudiado sigue contando: los temas que tengas hechos aparecen cerrados, ' +
+        'y tus notas de examen y la cola de repaso se conservan.</p>' +
+        '<button class="btn btn--sm" id="rutaReajusteOk">Entendido</button></div>'
+      : '';
+
     const nuevos = Ruta.temasNuevos();
     const avisoNuevos = nuevos.length
       ? '<div class="card card--suero" style="margin-bottom:18px">' +
@@ -299,6 +308,7 @@ window.VistaRuta = (function () {
         UI.barra(av.pct) +
       '</div>' +
 
+      avisoReajuste +
       avisoRepaso +
       avisoNuevos +
 
@@ -358,6 +368,9 @@ window.VistaRuta = (function () {
       Sesion.iniciar({ modo:'aprender', titulo:'Temas por recuperar',
         preguntas: qs.sort(function () { return Math.random() - 0.5; }).slice(0, 20) });
     };
+
+    const reaj = document.getElementById('rutaReajusteOk');
+    if (reaj) reaj.onclick = function () { Ruta.descartarAvisoReajuste(); menu(); };
 
     const abs = document.getElementById('rutaAbsorber');
     if (abs) abs.onclick = function () {

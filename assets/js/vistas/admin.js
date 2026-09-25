@@ -16,11 +16,13 @@ window.Admin = (function () {
 
   let filas = [];
   let filtro = '';
-  /* 'todos' | 'enurm' | 'unirm'. Las dos plataformas comparten este panel
-     pero son publicos distintos (residentes contra estudiantes de
-     universidad, bancos de preguntas distintos), asi que shael pidio
-     poder verlos por separado en vez de una sola lista mezclada. */
-  let filtroPrograma = 'todos';
+  /* 'enurm' | 'unirm'. Las dos plataformas comparten este panel pero son
+     publicos distintos (residentes contra estudiantes de universidad), asi
+     que el panel entero se parte en dos secciones: al elegir una, TODO lo
+     de abajo (cifras, tickets, codigos, lista de estudiantes) es solo de
+     ese programa. Arranca en el programa de la propia cuenta del admin. */
+  let seccion = Almacen.programa() === 'unirm' ? 'unirm' : 'enurm';
+  let programasListos = false;
 
   const PLANES  = ['prueba','mensual','trimestral','semestral','anual','cortesia'];
   const ESTADOS = ['activa','vencida','cancelada'];
@@ -81,12 +83,14 @@ window.Admin = (function () {
       return;
     }
     filas = r.filas;
+    programasListos = false;
     /* `panel_usuarios` no trae `programa` (ver Nube.listarProgramas): se
-       completa aparte y no bloquea el pintado si falla -las pestanas de
-       ENURMIA/UNIRMIA simplemente no separarian bien hasta que cargue. */
+       completa aparte. Hasta que llegue, la lista dice "separando" en vez
+       de meter a todo el mundo en ENURMIA por defecto. Si falla, se cae a
+       ese defecto antes que dejar el panel sin lista. */
     Nube.listarProgramas().then(rp => {
-      if (!rp.ok) return;
-      filas.forEach(f => { f.programa = rp.mapa[f.user_id]; });
+      if (rp.ok) filas.forEach(f => { f.programa = rp.mapa[f.user_id]; });
+      programasListos = true;
       pintar();
     });
     pintar();
@@ -115,14 +119,16 @@ window.Admin = (function () {
       return '<div class="card" style="margin-bottom:18px"><b style="font-size:15px">Te escuchamos</b>' +
         '<p class="muted" style="margin-top:8px">Cargando tickets…</p></div>';
     }
-    const abiertos = ticketsAdmin.filter(t => t.estado === 'abierto');
-    const resto = ticketsAdmin.filter(t => t.estado !== 'abierto');
+    const deLaSeccion = ticketsAdmin.filter(t => (t.programa === 'unirm' ? 'unirm' : 'enurm') === seccion);
+    const abiertos = deLaSeccion.filter(t => t.estado === 'abierto');
+    const resto = deLaSeccion.filter(t => t.estado !== 'abierto');
     const lista = abiertos.concat(resto).slice(0, 12);
 
     return '<div class="card" style="margin-bottom:18px">' +
       '<div class="row-b" style="margin-bottom:6px"><b style="font-size:15px">Te escuchamos</b>' +
       '<span class="chip' + (abiertos.length ? ' chip--yodo' : '') + '">' + abiertos.length + ' sin responder</span></div>' +
-      '<p class="muted" style="font-size:13px;margin-bottom:12px">Problemas y recomendaciones que mandan los estudiantes, de los dos programas.</p>' +
+      '<p class="muted" style="font-size:13px;margin-bottom:12px">Problemas y recomendaciones que mandan los estudiantes de ' +
+        (seccion === 'unirm' ? 'UNIRMIA' : 'ENURMIA') + '.</p>' +
       (lista.length
         ? '<div style="display:flex;flex-direction:column;gap:8px">' + lista.map(t =>
             '<div class="row-b" style="padding:9px 0;border-bottom:1px solid var(--linea)">' +
@@ -328,7 +334,7 @@ window.Admin = (function () {
      buscador. Sin esto, generas un codigo, empiezas a buscar a quien
      pago y lo pierdes de vista. */
   let ultimos = null;      // { plan, codigos:[] }
-  let progGenerador = Almacen.programa();
+  let progGenerador = Almacen.programa() === 'unirm' ? 'unirm' : 'enurm';
 
   function filaCodigo(c){
     return '<div class="row" style="gap:9px;align-items:center;margin-bottom:8px">' +
@@ -341,16 +347,11 @@ window.Admin = (function () {
   function generador(){
     const planes = PLANES_CODIGO_POR_PROGRAMA[progGenerador];
     return '<div class="card" style="margin-bottom:18px">' +
-      '<b style="font-size:15px">Generar código de acceso</b>' +
+      '<b style="font-size:15px">Generar código de acceso · ' + (progGenerador === 'unirm' ? 'UNIRMIA' : 'ENURMIA') + '</b>' +
       '<p class="muted" style="font-size:13px;margin:6px 0 12px">' +
         'Cuando confirmes un pago, genera el código aquí y envíalo. ' +
-        'Sirve una sola vez y queda registrado quién lo usó.</p>' +
-      '<div class="row wrap" style="gap:6px;margin-bottom:12px">' +
-        '<button type="button" class="chip' + (progGenerador === 'enurm' ? ' on' : '') +
-          '" data-prog-gen="enurm">ENURMIA</button>' +
-        '<button type="button" class="chip' + (progGenerador === 'unirm' ? ' on' : '') +
-          '" data-prog-gen="unirm">UNIRMIA</button>' +
-      '</div>' +
+        'Sirve una sola vez y queda registrado quién lo usó. Los precios son los de ' +
+        (progGenerador === 'unirm' ? 'UNIRMIA' : 'ENURMIA') + ': cambia de sección arriba para el otro programa.</p>' +
       '<div class="row wrap" style="gap:9px;align-items:center">' +
         '<select id="codPlan" style="padding:11px 13px;border-radius:10px;' +
           'border:1.5px solid var(--linea);font:inherit;background:var(--papel)">' +
@@ -393,11 +394,6 @@ window.Admin = (function () {
 
   function engancharGenerador(){
     engancharCopiar();
-    UI.$$('[data-prog-gen]').forEach(b => b.onclick = () => {
-      progGenerador = b.dataset.progGen;
-      ultimos = null;
-      pintar();
-    });
     const btn = document.getElementById('btnGenerar');
     if (!btn) return;
     btn.onclick = async () => {
@@ -430,7 +426,7 @@ window.Admin = (function () {
      perfiles.programa nace en 'enurm' por defecto. Mismo criterio aqui. */
   const programaDe = f => (f.programa === 'unirm' ? 'unirm' : 'enurm');
 
-  function resumen(){
+  function resumen(filas){
     const total = filas.length;
     const activos = filas.filter(f => estadoReal(f) === 'activa').length;
     const vencidos = filas.filter(f => estadoReal(f) === 'vencida').length;
@@ -452,30 +448,44 @@ window.Admin = (function () {
     '</div>';
   }
 
+  /* Los dos botones grandes de arriba. Cada uno dice cuanta gente hay en
+     su programa para que se vea de un vistazo sin tener que entrar. */
+  function selectorSeccion(nEnurm, nUnirm){
+    const boton = (id, nombre, sub, n) => {
+      const on = seccion === id;
+      return '<button type="button" data-seccion="' + id + '" class="card' + (on ? ' card--sangria' : '') + '" ' +
+        'style="flex:1;min-width:220px;text-align:left;cursor:pointer;font:inherit;' +
+        (on ? '' : 'border:1.5px solid var(--linea);') + '">' +
+        '<span class="eyebrow"' + (on ? ' style="color:rgba(255,255,255,.55)"' : '') + '>' + esc(sub) + '</span>' +
+        '<b style="display:block;font-family:var(--display);font-size:24px;margin-top:6px">' + esc(nombre) + '</b>' +
+        '<small' + (on ? ' style="color:rgba(255,255,255,.75)"' : ' class="muted"') + '>' +
+          (programasListos ? n + (n === 1 ? ' estudiante' : ' estudiantes') : 'contando…') + '</small>' +
+      '</button>';
+    };
+    return '<div class="row wrap" style="gap:12px;margin-bottom:18px">' +
+      boton('enurm', 'ENURMIA', 'Residencia médica · ENURM', nEnurm) +
+      boton('unirm', 'UNIRMIA', 'Universidad', nUnirm) +
+    '</div>';
+  }
+
   function pintar(){
-    const porPrograma = filtroPrograma === 'todos' ? filas : filas.filter(f => programaDe(f) === filtroPrograma);
+    progGenerador = seccion;
+    const deLaSeccion = programasListos ? filas.filter(f => programaDe(f) === seccion) : [];
     const q = filtro.trim().toLowerCase();
     const lista = q
-      ? porPrograma.filter(f => ((f.correo || '') + ' ' + (f.nombre || '')).toLowerCase().includes(q))
-      : porPrograma;
+      ? deLaSeccion.filter(f => ((f.correo || '') + ' ' + (f.nombre || '')).toLowerCase().includes(q))
+      : deLaSeccion;
 
     const nEnurm = filas.filter(f => programaDe(f) === 'enurm').length;
     const nUnirm = filas.filter(f => programaDe(f) === 'unirm').length;
-    const tabsPrograma = '<div class="row wrap" style="gap:6px;margin-bottom:12px">' +
-      '<button type="button" class="chip' + (filtroPrograma === 'todos' ? ' on' : '') +
-        '" data-prog-filtro="todos">Todos · ' + filas.length + '</button>' +
-      '<button type="button" class="chip' + (filtroPrograma === 'enurm' ? ' on' : '') +
-        '" data-prog-filtro="enurm">ENURMIA · ' + nEnurm + '</button>' +
-      '<button type="button" class="chip' + (filtroPrograma === 'unirm' ? ' on' : '') +
-        '" data-prog-filtro="unirm">UNIRMIA · ' + nUnirm + '</button>' +
-    '</div>';
+    const nombreSeccion = seccion === 'unirm' ? 'UNIRMIA' : 'ENURMIA';
 
-    const cuerpo = lista.length ? lista.map(f =>
+    const cuerpo = !programasListos
+      ? '<tr><td colspan="6"><p class="muted" style="padding:14px 0">Separando a los estudiantes por programa…</p></td></tr>'
+      : lista.length ? lista.map(f =>
       '<tr data-uid="' + esc(f.user_id) + '">' +
         '<td><b>' + esc(f.nombre || '—') + '</b>' +
           (f.rol === 'admin' ? ' <span class="eyebrow" style="color:var(--acento)">admin</span>' : '') +
-          ' <span class="eyebrow" style="color:var(--tinta-3,#888)">' +
-            (programaDe(f) === 'unirm' ? 'UNIRMIA' : 'ENURMIA') + '</span>' +
           '<br><small class="muted">' + esc(f.correo || '—') + '</small></td>' +
         '<td>' + esc(f.plan || '—') + '<br>' + pastilla(f) + '</td>' +
         '<td><small class="muted">vence</small><br>' + esc(fecha(f.vence)) + '</td>' +
@@ -487,21 +497,24 @@ window.Admin = (function () {
           '<button class="btn btn--sm btn--fantasma" data-ver="' + esc(f.user_id) + '">Datos</button>' +
         '</td>' +
       '</tr>').join('')
-      : '<tr><td colspan="6"><p class="muted" style="padding:14px 0">Todavía no hay nadie registrado con ese criterio.</p></td></tr>';
+      : '<tr><td colspan="6"><p class="muted" style="padding:14px 0">' +
+          (q ? 'Nadie de ' + nombreSeccion + ' coincide con esa búsqueda.' : 'Todavía no hay nadie registrado en ' + nombreSeccion + '.') +
+        '</p></td></tr>';
 
     V().innerHTML =
     '<div class="escalona" style="max-width:1100px">' +
       '<div class="encabezado"><p class="eyebrow">Administración</p>' +
       '<h1>Quién está registrado</h1>' +
-      '<p class="muted">Cada fila es una cuenta real. Los cambios de suscripción se aplican al instante.</p></div>' +
+      '<p class="muted">Elige un programa: todo lo de abajo es solo de ese programa. Los cambios de suscripción se aplican al instante.</p></div>' +
 
-      resumen() +
+      selectorSeccion(nEnurm, nUnirm) +
+      resumen(deLaSeccion) +
       tarjetaTickets() +
-      tarjetaEventos() +
+      (seccion === 'unirm' ? tarjetaEventos() : '') +
       generador() +
 
       '<div class="card">' +
-        tabsPrograma +
+        '<b style="display:block;font-size:15px;margin-bottom:12px">Estudiantes de ' + nombreSeccion + '</b>' +
         '<div class="row" style="gap:10px;margin-bottom:12px">' +
           '<input id="buscarUsuario" class="grow" placeholder="Buscar por nombre o correo…" value="' + esc(filtro) + '">' +
           '<button class="btn btn--sm btn--fantasma" id="recargar">Recargar</button>' +
@@ -522,7 +535,12 @@ window.Admin = (function () {
     buscador.oninput = e => { filtro = e.target.value; const p = e.target.selectionStart; pintar();
       const b2 = document.getElementById('buscarUsuario'); b2.focus(); b2.setSelectionRange(p, p); };
     document.getElementById('recargar').onclick = () => cargar();
-    UI.$$('[data-prog-filtro]').forEach(b => b.onclick = () => { filtroPrograma = b.dataset.progFiltro; pintar(); });
+    UI.$$('[data-seccion]').forEach(b => b.onclick = () => {
+      if (seccion === b.dataset.seccion) return;
+      seccion = b.dataset.seccion;
+      ultimos = null;   // los codigos recien generados eran del otro programa
+      pintar();
+    });
     UI.$$('[data-editar]').forEach(b => b.onclick = () => editar(b.dataset.editar));
     UI.$$('[data-ver]').forEach(b => b.onclick = () => verDatos(b.dataset.ver));
     engancharGenerador();

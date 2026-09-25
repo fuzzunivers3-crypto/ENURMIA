@@ -302,18 +302,106 @@ window.Ruta = (function () {
   /* ---------- ciclo de vida ---------- */
   function activa(){
     const d = datos();
-    return (d && d.ruta) ? d.ruta : null;
+    if (!d || !d.ruta) return null;
+    if (Almacen.programa() === 'unirm') reajustarAMaterias(d);
+    return d.ruta;
+  }
+
+  /* La lista de materias activas de UNIRMIA, como texto comparable. En
+     ENURMIA no aplica: ahi el temario no cambia segun lo que elijas. */
+  function claveMaterias(){
+    if (Almacen.programa() !== 'unirm' || !Almacen.materiasUnirm) return '';
+    return Almacen.materiasUnirm().slice().sort().join('|');
+  }
+
+  /* ---------- cambiar de materias a media carrera ----------
+     El recorrido se arma con las materias activas del momento. Si el
+     estudiante las cambia despues (paso de cuatrimestre, suelta una,
+     agrega otra), el orden guardado apunta a temas que ya no estan en su
+     temario: la tanda se quedaba vacia y R2D2 felicitaba por haber
+     "recorrido el temario entero" con cero temas hechos.
+
+     Se rehace la ESTRUCTURA con las materias nuevas y se conserva todo lo
+     demas. El avance de cada tema (leer, preguntas, tarjetas) nunca
+     estuvo en la ruta -se deduce del progreso del estudiante-, asi que
+     sigue intacto solo. Lo que si vive en la ruta y se rescata: las notas
+     de examen por tema, la cola de repaso, el historial de tandas y los
+     bloques ya cerrados que sigan activos (van primero, y el cursor los
+     salta). */
+  function reajustarAMaterias(d){
+    const r = d.ruta;
+    const clave = claveMaterias();
+    if (r.materias === clave) return;
+
+    const actuales = bloques().map(function (b) { return b.bloque; });
+    const falta = (r.bloques || []).some(function (b) { return actuales.indexOf(b) < 0; });
+
+    /* Ruta de antes de que esto existiera y que sigue cuadrando: no se
+       sabe con que materias nacio, pero no hay nada roto. Solo se sella. */
+    if (r.materias === undefined && !falta){
+      r.materias = clave;
+      guardar();
+      return;
+    }
+
+    const antes = r.materias ? r.materias.split('|') : [];
+    const siguen = (r.bloques || []).filter(function (b) { return actuales.indexOf(b) >= 0; });
+    /* Una materia recien activada entra sola. Una que ya estaba activa
+       cuando se armo la ruta y el estudiante dejo fuera a proposito, no. */
+    const agregadas = actuales.filter(function (b) {
+      return siguen.indexOf(b) < 0 && (r.materias === undefined || antes.indexOf(b) < 0);
+    });
+    let elegidos = siguen.concat(agregadas);
+    if (!elegidos.length) elegidos = actuales;
+
+    const cerradosAntes = r.bloquesCerrados || {};
+    elegidos = elegidos.filter(function (b) { return cerradosAntes[b]; })
+      .concat(elegidos.filter(function (b) { return !cerradosAntes[b]; }));
+
+    const nueva = construir(r.tam, elegidos, r.modo || 'mezclado');
+    nueva.creado = r.creado;
+    nueva.examenes = r.examenes || {};
+    nueva.historial = r.historial || [];
+    nueva.repaso = (r.repaso || []).filter(function (t) { return !!temaPorNombre(t); });
+
+    if (nueva.modo === 'bloques'){
+      let cursor = 0;
+      elegidos.forEach(function (b) {
+        if (!cerradosAntes[b]) return;
+        nueva.bloquesCerrados[b] = cerradosAntes[b];
+        cursor += temasDeBloque(b).length;
+      });
+      if (cursor > 0){
+        let acumulado = 0, n = 1;
+        for (let j = 0; j < nueva.tandasN.length && acumulado < cursor; j++){
+          acumulado += nueva.tandasN[j];
+          n = j + 2;
+        }
+        nueva.cursor = cursor;
+        nueva.tanda = n;
+        if (nueva.cursor >= nueva.orden.length) nueva.terminada = Date.now();
+      }
+    }
+
+    nueva.reajustada = Date.now();
+    d.ruta = nueva;
+    guardar();
   }
 
   function crear(tam, elegidos){
     const d = datos();
     if (!d) return null;
-    const bls = normalizarBloques(elegidos);
     /* El modo se decide aqui, mirando el ajuste, y ya no cambia: apagar
        la norma despues quita las puertas pero no reescribe el orden,
        porque reordenar con el cursor a medias descuadraria las tandas
        ya cerradas. */
     const modo = (d.ajustes && d.ajustes.porBloques === false) ? 'mezclado' : 'bloques';
+    d.ruta = construir(tam, normalizarBloques(elegidos), modo);
+    guardar();
+    return d.ruta;
+  }
+
+  function construir(tam, bls, modo){
     const orden = (modo === 'bloques') ? ordenPorBloques(bls) : ordenIntercalado(bls);
     /* En modo bloques las tandas se reparten DENTRO de cada bloque y se
        concatenan, no sobre los temas seguidos. Si no, una tanda quedaria
@@ -326,13 +414,14 @@ window.Ruta = (function () {
           return acc.concat(repartirTandas(temasDeBloque(nombre).length, tam));
         }, [])
       : repartirTandas(orden.length, tam);
-    d.ruta = {
+    return {
       v: 1,
       creado: Date.now(),
       tam: acotar(tam),
       vuelta: 1,
       modo: modo,
       bloques: bls,
+      materias: claveMaterias(),
       bloquesCerrados: {},
       orden: orden,
       examenes: {},
@@ -344,8 +433,14 @@ window.Ruta = (function () {
       terminada: null,
       historial: []
     };
+  }
+
+  /* El aviso de "rehice tu recorrido" se ensena una vez y se descarta. */
+  function descartarAvisoReajuste(){
+    const r = activa();
+    if (!r || !r.reajustada) return;
+    delete r.reajustada;
     guardar();
-    return d.ruta;
   }
 
   function borrar(){
@@ -1025,7 +1120,7 @@ window.Ruta = (function () {
   }
 
   return {
-    activa: activa, crear: crear, borrar: borrar,
+    activa: activa, crear: crear, borrar: borrar, descartarAvisoReajuste: descartarAvisoReajuste,
     proximoPaso: proximoPaso, hilo: hilo, abrirHilo: abrirHilo, cerrarHilo: cerrarHilo,
     pasosDe: pasosDe, tandaActual: tandaActual, avance: avance,
     simulacroDeTanda: simulacroDeTanda, minutosDeTanda: minutosDeTanda,
