@@ -300,9 +300,27 @@ window.Almacen = (function () {
     return materiasUnirm().indexOf(nombre) >= 0;
   }
 
-  /* A que cuatrimestre pertenece una materia de UNIRMIA, y cuantos
+  /* A que bloque pertenece una materia de UNIRMIA, y cuantos
      creditos vale ahi -- una busqueda inversa sobre UNIRM_CUATRIMESTRES,
-     que esta organizado al reves (por cuatrimestre, no por materia). */
+     que esta organizado al reves (por bloque, no por materia). El campo
+     interno se sigue llamando "cuatri" (id numerico de posicion, 7-14),
+     pero de cara al estudiante ya no se muestra como "Cuatrimestre N":
+     ese orden es especifico del pensum de UCATECI, y otras universidades
+     no necesariamente cursan las mismas materias en el mismo orden.
+     nombreBloque()/numeroBloque() traducen ese id interno a una etiqueta
+     neutral "Bloque <romano>", calculada por posicion entre los bloques
+     que de verdad existen en los datos, no por el numero crudo. */
+  const ROMANOS_BLOQUE = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV'];
+  function numeroBloque(cuatri) {
+    const todo = window.UNIRM_CUATRIMESTRES || {};
+    const claves = Object.keys(todo).map(Number).sort((a, b) => a - b);
+    const pos = claves.indexOf(+cuatri);
+    return pos >= 0 ? (ROMANOS_BLOQUE[pos] || String(pos + 1)) : String(cuatri);
+  }
+  function nombreBloque(cuatri) {
+    return 'Bloque ' + numeroBloque(cuatri);
+  }
+
   function infoMateriaUnirm(nombre) {
     const todo = window.UNIRM_CUATRIMESTRES || {};
     for (const c in todo) {
@@ -375,7 +393,7 @@ window.Almacen = (function () {
     datos, guardar, reiniciarProgreso, exportar, importar,
     tocarRacha, hoyISO,
     programa, fijarPrograma, materiasUnirm, fijarMateriasUnirm, materiaActivaUnirm,
-    infoMateriaUnirm, registrarDesafio,
+    infoMateriaUnirm, nombreBloque, numeroBloque, registrarDesafio,
     // puente con la nube
     abrirSesionNube, adoptar, peso, mejorLocal, sincronizarYa, sync, alSincronizar
   };

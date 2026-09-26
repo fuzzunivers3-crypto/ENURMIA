@@ -41,7 +41,7 @@ window.CasosUnirm = (function () {
       const hecho = hechos[c.id];
       return '<button class="card card--flota" data-caso="' + esc(c.id) + '" style="text-align:left;cursor:pointer;font:inherit;border:1px solid var(--linea)">' +
         '<div class="row-b" style="margin-bottom:10px">' +
-          '<span class="chip chip--carbon">' + esc(c.esp) + ' · ' + c.cuatrimestre + 'mo</span>' +
+          '<span class="chip chip--carbon">' + esc(c.esp) + ' · ' + esc(Almacen.nombreBloque(c.cuatrimestre)) + '</span>' +
           (hecho ? '<span class="chip chip--verde">' + esc(hecho.nivel || 'Completado') + '</span>' : UI.chipDif(c.dif)) +
         '</div>' +
         '<b style="display:block;font-family:var(--display);font-size:19px;margin-bottom:6px">' + esc(c.titulo) + '</b>' +
@@ -52,12 +52,12 @@ window.CasosUnirm = (function () {
     '<div class="escalona">' +
       '<div class="encabezado"><p class="eyebrow">Casos prácticos</p>' +
       '<h1>Decidir paso a paso, no elegir entre cuatro letras</h1>' +
-      '<p>En 7mo y 8vo son mecanismos y estructuras; en 9no ya entra el razonamiento clínico. Cada decisión abre un camino distinto, y al final ves el análisis completo de tu recorrido.</p></div>' +
+      '<p>En los primeros bloques son mecanismos y estructuras; más adelante ya entra el razonamiento clínico. Cada decisión abre un camino distinto, y al final ves el análisis completo de tu recorrido.</p></div>' +
 
       '<div class="filtros" style="margin-bottom:18px">' +
         '<button class="chip' + (!filtro.cuat ? ' on' : '') + '" data-f-cuat="">Todos</button>' +
         cuats.map(n => '<button class="chip' + (filtro.cuat === n ? ' on' : '') +
-          '" data-f-cuat="' + n + '">' + n + 'mo</button>').join('') +
+          '" data-f-cuat="' + n + '">' + esc(Almacen.nombreBloque(n)) + '</button>').join('') +
       '</div>' +
 
       '<div class="rejilla rejilla--3">' + (tarjetas || '<p class="muted">' +

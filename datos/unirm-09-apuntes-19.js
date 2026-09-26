@@ -4,10 +4,11 @@
    ~200-300 palabras por seccion, min 13-14). Sustituye el
    contenido corto de los mismos 4 temas en unirm-09-apuntes.js y
    unirm-09-apuntes-10.js (mismas claves, no se agregan temas
-   nuevos). Es la ULTIMA materia de la serie: sistema-salud-
-   dominicano cierra el cuatrimestre 9 y todo el pensum de UNIRMIA
-   cubierto por esta serie (7mo, 8vo y 9no), sigue:null se
-   mantiene correcto.
+   nuevos). Es la ULTIMA materia del cuatrimestre 9: sistema-salud-
+   dominicano cierra el cuatrimestre completo. ACTUALIZACION
+   25/09/2026: la serie se extendio a los cuatrimestres 10-14, asi
+   que 'sigue' ya NO es null -encadena hacia patologia-cardiovascular,
+   primer tema de Anatomia Patologica II (cuatri 10).
    ============================================================ */
 window.APUNTES = Object.assign(window.APUNTES || {}, {
 
@@ -121,7 +122,7 @@ window.APUNTES = Object.assign(window.APUNTES || {}, {
   bloque:'Salud y Comunidad I', programa:'unirm', cuatri:9, min:14,
   idea:'Este último tema del bloque -y de todo el cuatrimestre 9- cierra aterrizando toda la teoría de niveles de prevención, atención primaria y epidemiología comunitaria en la organización concreta del sistema de salud dentro del cual, en la práctica, se ejercerá la profesión.',
   claves:['niveles de atención','sistema nacional de salud','seguro familiar de salud'],
-  sigue:null,
+  sigue:'patologia-cardiovascular',
   secciones:[
     {
       t:'Niveles de atención: la puerta de entrada y las referencias',

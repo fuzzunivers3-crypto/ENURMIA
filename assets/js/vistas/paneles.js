@@ -246,7 +246,7 @@ window.Vistas = (function () {
         '<span class="eyebrow" style="color:rgba(255,255,255,.45)">Antes de empezar</span>' +
         '<h3 style="font-size:22px;margin-top:6px">¿Qué materias vas a estudiar?</h3>' +
         '<p style="color:rgba(255,255,255,.72);font-size:14px;margin-top:6px">' +
-        'Puedes marcar un cuatrimestre completo o combinar materias sueltas. Lo puedes cambiar cuando quieras.</p>' +
+        'Puedes marcar un bloque completo o combinar materias sueltas. Lo puedes cambiar cuando quieras.</p>' +
         '<button class="btn btn--claro" id="btnElegirMaterias" style="margin-top:14px">Elegir materias</button>' +
         '</div>';
     }
@@ -257,7 +257,7 @@ window.Vistas = (function () {
       (porCuatri[c] = porCuatri[c] || []).push(nombre);
     });
     const resumen = Object.keys(porCuatri).sort((a, b) => +a - +b).map(c =>
-      '<div style="margin-top:10px"><span class="eyebrow" style="font-size:11px">Cuatrimestre ' + c + '</span>' +
+      '<div style="margin-top:10px"><span class="eyebrow" style="font-size:11px">' + esc(Almacen.nombreBloque(c)) + '</span>' +
       '<div class="row wrap" style="gap:6px;margin-top:5px">' +
         porCuatri[c].map(n => '<span class="chip">' + esc(n) + '</span>').join('') +
       '</div></div>'
@@ -306,11 +306,11 @@ window.Vistas = (function () {
     return (primeraVez
         ? '<p class="eyebrow">Antes de empezar</p>' +
           '<h3 style="font-size:24px;margin:4px 0 10px">¿Qué materias vas a estudiar?</h3>' +
-          '<p class="muted" style="margin-bottom:16px">Marca las que estás cursando este cuatrimestre. ' +
+          '<p class="muted" style="margin-bottom:16px">Marca las que estás cursando en este bloque. ' +
           'De ahí sale qué preguntas te tocan en Temario, Entrenar, Simulacro, Biblioteca y Casos. Lo puedes cambiar cuando quieras.</p>'
         : '<h3 style="font-size:21px;margin-bottom:6px">Elige tus materias</h3>' +
           '<p class="muted" style="font-size:13.5px;margin-bottom:16px">Marca las que estás cursando o quieres repasar. ' +
-          'Puedes tomar un cuatrimestre completo o combinar materias sueltas, y cambiarlo cuando quieras.</p>') +
+          'Puedes tomar un bloque completo o combinar materias sueltas, y cambiarlo cuando quieras.</p>') +
       '<div style="max-height:50vh;overflow-y:auto;padding-right:4px">' + secciones + '</div>' +
       '<div class="row" style="margin-top:14px;gap:9px">' +
         (primeraVez

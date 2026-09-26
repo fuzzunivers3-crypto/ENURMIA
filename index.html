@@ -222,7 +222,7 @@
       <h2 id="modalTitulo">Elige cómo empezar</h2>
       <p class="membresia-velo__sub">Tu cuenta ya está creada. Solo falta decidir con qué acceso entras.</p>
 
-      <button type="button" class="plan plan--gratis" data-plan="prueba">
+      <button type="button" class="plan plan--gratis" data-plan="prueba" id="btnProbarGratis">
         <span class="plan__nom">Probar gratis<small>3 días completos, sin tarjeta</small></span>
         <span class="plan__precio">RD$0</span>
       </button>
@@ -329,7 +329,7 @@
       raiz: 'UNIRM',
       ceja: 'Para estudiantes de medicina',
       titulo: 'Llega al examen sabiendo <em>por qué</em>, no solo qué.',
-      texto: 'Preguntas por asignatura de los cuatrimestres 7, 8 y 9, con la explicación completa detrás de cada respuesta.',
+      texto: 'Preguntas por asignatura, organizadas en bloques, con la explicación completa detrás de cada respuesta.',
       pilares: ['Asignaturas','Razonar','Practicar','Medir'],
       crear: 'Cuenta de estudiante. Tu progreso se guarda en la nube y va contigo a cualquier computadora.'
     }
@@ -396,6 +396,24 @@
     pintarPrograma();
   });
   pintarPrograma();
+
+  /* Promoción de registro (26/09/2026-30/09/2026): mientras dura la
+     ventana, el botón "Probar gratis" anuncia el mes gratis en vez de
+     los 3 días de siempre. Es solo la copia visible -- lo que de verdad
+     se otorga lo decide el servidor en abrir_prueba() (MIGRACION_PROMO_
+     REGISTRO.sql), que usa su propia fecha, no la de este navegador.
+     Pasada la ventana, este bloque deja de aplicar solo, sin que haga
+     falta tocar nada más. */
+  (function aplicarPromoRegistro(){
+    const hoy = new Date();
+    const inicio = new Date('2026-09-26T00:00:00');
+    const fin = new Date('2026-10-01T00:00:00'); // fin exclusivo: hasta el 30/09 completo
+    if (hoy < inicio || hoy >= fin) return;
+    const b = document.getElementById('btnProbarGratis');
+    if (!b) return;
+    const nom = b.querySelector('.plan__nom');
+    if (nom) nom.innerHTML = '1 mes gratis<small>Promoción de registro por tiempo limitado, sin tarjeta</small>';
+  })();
 
   function aviso(donde, texto, ok){
     donde.innerHTML = '<div class="aviso' + (ok ? ' aviso--ok' : '') + '">' + texto + '</div>';
@@ -514,7 +532,10 @@
         // y lo tiene justo delante.
         return aviso($('#avisoPlan'), r.error + ' Elige una membresía para continuar.');
       }
-      return pasar($('#avisoPlan'), 'Tienes 3 días completos. Entrando…');
+      const mensajeAcceso = r.plan === 'cortesia'
+        ? 'Tienes 1 mes completo de regalo por registrarte esta semana. Entrando…'
+        : 'Tienes 3 días completos. Entrando…';
+      return pasar($('#avisoPlan'), mensajeAcceso);
     }
 
     $('#planElegido').textContent =
