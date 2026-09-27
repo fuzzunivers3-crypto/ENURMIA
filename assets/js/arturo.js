@@ -66,7 +66,7 @@ window.Arturo = (function () {
     ],
     fin: [
       'Recorriste el temario entero. Eso no lo hace casi nadie. Podemos dar una segunda vuelta, mas corta y de puro examen, o medirte con un simulacro completo.',
-      'Se acabaron los 101 temas. Lo que queda ahora es sostenerlo: segunda vuelta de solo examenes, o simulacro completo del ENURM.',
+      'Se acabaron los {total} temas. Lo que queda ahora es sostenerlo: segunda vuelta de solo examenes, o simulacro completo.',
       'Cerramos el temario. A partir de aqui ya no se trata de aprenderlo, sino de que no se te caiga: elige segunda vuelta o simulacro completo.'
     ],
     cierraLectura: [
@@ -162,6 +162,7 @@ window.Arturo = (function () {
       tanda: r ? r.tanda : 0,
       tandas: r ? r.tandasN.length : 0,
       repaso: r ? r.repaso.length : 0,
+      total: r ? r.orden.length : 0,
       nombre: nombre()
     };
     return {

@@ -334,6 +334,16 @@ window.Ruta = (function () {
     if (r.materias === clave) return;
 
     const actuales = bloques().map(function (b) { return b.bloque; });
+
+    /* Sin ningun bloque activo no hay nada que reconstruir. Si se sigue
+       de largo, `elegidos` termina vacio, `construir()` arma una ruta de
+       0 temas, y la pantalla muestra "0 / 0" con R2D2 creyendo que ya se
+       acabo el temario (la frase de "fin"), aunque el estudiante solo
+       este a mitad de cambiar de materias. Se deja la ruta como esta -
+       aunque quede desactualizada un momento- y se reajusta sola en
+       cuanto vuelva a haber al menos una materia activa. */
+    if (!actuales.length) return;
+
     const falta = (r.bloques || []).some(function (b) { return actuales.indexOf(b) < 0; });
 
     /* Ruta de antes de que esto existiera y que sigue cuadrando: no se
