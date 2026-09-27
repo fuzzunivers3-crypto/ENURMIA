@@ -129,7 +129,12 @@ async function llamar(sistema: string, mensaje: string, tope: number): Promise<P
       const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${clave}` },
-        body: JSON.stringify({ model: modelo, max_tokens: tope,
+        /* reasoning_format:'hidden' -- modelos "pensantes" como Qwen3 (via
+           Groq) devuelven por defecto su razonamiento intercalado con la
+           respuesta, lo que rompe el JSON que se espera aqui. Este
+           parametro le pide a Groq que devuelva solo la respuesta final.
+           Un modelo que no razona simplemente lo ignora. */
+        body: JSON.stringify({ model: modelo, max_tokens: tope, reasoning_format: 'hidden',
           messages: [{ role: 'system', content: sistema }, { role: 'user', content: pedido }] })
       });
       if (r.status === 429) throw new Error('sin-cuota');

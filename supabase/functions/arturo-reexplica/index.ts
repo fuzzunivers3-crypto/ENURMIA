@@ -127,9 +127,14 @@ async function llamar(sistema: string, pregunta: string): Promise<string> {
     const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${clave}` },
+      /* reasoning_format:'hidden' -- ver la nota igual en examinar-generar.
+         max_tokens en 2048, no 400: un modelo "pensante" como Qwen3 gasta
+         parte del presupuesto de salida razonando aunque ese razonamiento
+         no se muestre (mismo sintoma ya documentado arriba con Gemini). */
       body: JSON.stringify({
         model: modelo,
-        max_tokens: 400,
+        max_tokens: 2048,
+        reasoning_format: 'hidden',
         messages: [
           { role: 'system', content: sistema },
           { role: 'user', content: pregunta }
