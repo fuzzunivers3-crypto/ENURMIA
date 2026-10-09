@@ -15,7 +15,7 @@ window.CASOS_DX = [
   { id: 'dx-sca', titulo: 'Dolor en el pecho', dif: 1,
     esc: 'Hombre de 58 años, fumador e hipertenso, con dolor opresivo en el centro del pecho desde hace 40 minutos, que se irradia a la mandíbula, con sudoración y náuseas.',
     vitales: 'PA 150/90 · FC 96 · FR 20 · SatO₂ 96 % · T 36,8 °C',
-    ops: ['Infarto agudo de miocardio con elevación del ST', 'Embolia pulmonar', 'Disección aórtica', 'Pericarditis aguda', 'Reflujo gastroesofágico'], ok: 0,
+    ops: ['Embolia pulmonar', 'Disección aórtica', 'Pericarditis aguda', 'Infarto agudo de miocardio con elevación del ST', 'Reflujo gastroesofágico'], ok: 3, ord: 2,
     res: {
       ecg: 'Elevación del ST de 3 mm en II, III y aVF con descenso especular en I y aVL.',
       troponina: 'Troponina de alta sensibilidad elevada, 3 veces el valor de corte y en ascenso.',
@@ -35,7 +35,7 @@ window.CASOS_DX = [
   { id: 'dx-ic', titulo: 'Falta de aire y piernas hinchadas', dif: 1,
     esc: 'Mujer de 72 años, hipertensa, con disnea progresiva en las últimas dos semanas, que ya no puede dormir acostada, y edema de miembros inferiores.',
     vitales: 'PA 160/95 · FC 110 · FR 28 · SatO₂ 89 % · T 36,6 °C. Ingurgitación yugular, crepitantes en ambas bases, edema hasta las rodillas.',
-    ops: ['Insuficiencia cardíaca descompensada', 'Neumonía adquirida en la comunidad', 'Exacerbación de EPOC', 'Embolia pulmonar', 'Anemia grave'], ok: 0,
+    ops: ['Neumonía adquirida en la comunidad', 'Insuficiencia cardíaca descompensada', 'Exacerbación de EPOC', 'Embolia pulmonar', 'Anemia grave'], ok: 1, ord: 2,
     res: {
       bnp: 'NT-proBNP 4 800 pg/mL (muy elevado).',
       rxtorax: 'Cardiomegalia, redistribución vascular, líneas B de Kerley y derrame pleural bilateral.',
@@ -57,7 +57,7 @@ window.CASOS_DX = [
   { id: 'dx-panc', titulo: 'Dolor de estómago que atraviesa hacia la espalda', dif: 1,
     esc: 'Hombre de 45 años, bebedor frecuente, con dolor epigástrico intenso y constante desde ayer, que se irradia a la espalda, y vómitos repetidos. Mejora un poco inclinado hacia adelante.',
     vitales: 'PA 110/70 · FC 108 · FR 20 · T 37,8 °C · SatO₂ 97 %. Abdomen doloroso en epigastrio, sin rigidez.',
-    ops: ['Pancreatitis aguda', 'Úlcera péptica perforada', 'Colecistitis aguda', 'Infarto de cara inferior', 'Obstrucción intestinal'], ok: 0,
+    ops: ['Pancreatitis aguda', 'Úlcera péptica perforada', 'Colecistitis aguda', 'Infarto de cara inferior', 'Obstrucción intestinal'], ok: 0, ord: 2,
     res: {
       lipasa: 'Lipasa 1 450 U/L (más de 3 veces el límite superior).',
       hemograma: 'Leucocitos 14 800, Hb 15,6 g/dL (hemoconcentración).',
@@ -82,7 +82,7 @@ window.CASOS_DX = [
   { id: 'dx-apen', titulo: 'Dolor que empezó en el ombligo', dif: 1,
     esc: 'Hombre de 22 años con dolor que empezó alrededor del ombligo hace 18 horas y ahora se localiza en la fosa ilíaca derecha, con náuseas, anorexia y fiebre.',
     vitales: 'PA 120/75 · FC 98 · T 38,2 °C. Dolor y defensa en el punto de McBurney, Rovsing positivo.',
-    ops: ['Apendicitis aguda', 'Gastroenteritis', 'Cólico renal derecho', 'Diverticulitis', 'Adenitis mesentérica'], ok: 0,
+    ops: ['Gastroenteritis', 'Cólico renal derecho', 'Apendicitis aguda', 'Diverticulitis', 'Adenitis mesentérica'], ok: 2, ord: 2,
     res: {
       hemograma: 'Leucocitos 15 200 con 85 % de neutrófilos.',
       vsg_pcr: 'PCR 68 mg/L.',
@@ -102,7 +102,7 @@ window.CASOS_DX = [
   { id: 'dx-cad', titulo: 'Vómitos, dolor de barriga y respiración rápida', dif: 2,
     esc: 'Mujer de 19 años con diabetes tipo 1, que dejó de ponerse insulina hace tres días por un cuadro gripal. Consulta por vómitos, dolor abdominal difuso, mucha sed y orina abundante. Respira profundo y rápido y huele a acetona.',
     vitales: 'PA 95/60 · FC 124 · FR 30 · T 37 °C · SatO₂ 98 %. Mucosas secas, abdomen blando y doloroso a la palpación difusa.',
-    ops: ['Cetoacidosis diabética', 'Estado hiperosmolar hiperglucémico', 'Apendicitis aguda', 'Sepsis de origen urinario', 'Hipoglucemia'], ok: 0,
+    ops: ['Estado hiperosmolar hiperglucémico', 'Apendicitis aguda', 'Sepsis de origen urinario', 'Hipoglucemia', 'Cetoacidosis diabética'], ok: 4, ord: 2,
     res: {
       glucosa: 'Glucosa 520 mg/dL.',
       gaso: 'pH 7,08, PaCO₂ 19, HCO₃ 6.',
@@ -125,7 +125,7 @@ window.CASOS_DX = [
   { id: 'dx-hsa', titulo: 'La peor cefalea de mi vida', dif: 2,
     esc: 'Mujer de 50 años, hipertensa, que durante un esfuerzo físico siente un dolor de cabeza explosivo, el peor que ha sufrido, con vómitos y rigidez del cuello. Hace 40 minutos estaba bien.',
     vitales: 'PA 170/100 · FC 88 · T 36,9 °C · Glasgow 14. Sin déficit motor focal.',
-    ops: ['Hemorragia subaracnoidea', 'Meningitis bacteriana', 'Migraña con aura', 'Infarto isquémico cerebral', 'Hemorragia intraparenquimatosa hipertensiva'], ok: 0,
+    ops: ['Meningitis bacteriana', 'Hemorragia subaracnoidea', 'Migraña con aura', 'Infarto isquémico cerebral', 'Hemorragia intraparenquimatosa hipertensiva'], ok: 1, ord: 2,
     res: {
       tc_craneo: 'Hiperdensidad en las cisternas basales y la cisura de Silvio: hemorragia subaracnoidea (Fisher 3).',
       angiotc_cer: 'Aneurisma sacular de 6 mm de la arteria comunicante anterior.',
@@ -147,7 +147,7 @@ window.CASOS_DX = [
   { id: 'dx-anem', titulo: 'Cansancio y palidez', dif: 1,
     esc: 'Mujer de 34 años con cansancio de varios meses, palidez, caída del cabello, disnea al subir escaleras y menstruaciones muy abundantes. Come poco carne.',
     vitales: 'PA 105/65 · FC 98 · T 36,6 °C. Conjuntivas pálidas, uñas frágiles, sin soplos ni hepatoesplenomegalia.',
-    ops: ['Anemia ferropénica', 'Anemia megaloblástica por déficit de B12', 'Talasemia minor', 'Anemia de enfermedad crónica', 'Hipotiroidismo'], ok: 0,
+    ops: ['Anemia megaloblástica por déficit de B12', 'Talasemia minor', 'Anemia de enfermedad crónica', 'Hipotiroidismo', 'Anemia ferropénica'], ok: 4, ord: 2,
     res: {
       hemograma: 'Hb 8,1 g/dL, VCM 68 fL, HCM baja, RDW 18 %, plaquetas 480 000, leucocitos normales.',
       ferritina: 'Ferritina 6 ng/mL, hierro sérico bajo, saturación de transferrina 7 %, capacidad total de fijación de hierro alta.',
@@ -166,7 +166,7 @@ window.CASOS_DX = [
   { id: 'dx-colang', titulo: 'Ictericia, fiebre y dolor a la derecha', dif: 2,
     esc: 'Mujer de 68 años con dolor en el hipocondrio derecho de dos días, fiebre con escalofríos y coloración amarilla de piel y ojos. Tiene antecedente de cálculos en la vesícula.',
     vitales: 'PA 90/55 · FC 118 · FR 24 · T 39,2 °C. Ictericia, dolor en hipocondrio derecho sin peritonismo.',
-    ops: ['Colangitis aguda', 'Colecistitis aguda', 'Hepatitis viral aguda', 'Pancreatitis aguda', 'Absceso hepático'], ok: 0,
+    ops: ['Colangitis aguda', 'Colecistitis aguda', 'Hepatitis viral aguda', 'Pancreatitis aguda', 'Absceso hepático'], ok: 0, ord: 2,
     res: {
       hemograma: 'Leucocitos 19 500 con desviación a la izquierda.',
       bili_fa: 'Bilirrubina total 6,8 (directa 5,9), FA 520, GGT 410.',
@@ -189,7 +189,7 @@ window.CASOS_DX = [
   { id: 'dx-pielo', titulo: 'Ardor al orinar y fiebre', dif: 1,
     esc: 'Mujer de 29 años con ardor al orinar y ganas frecuentes desde hace cuatro días; desde ayer, fiebre alta con escalofríos y dolor en el costado derecho. Náuseas sin vómitos.',
     vitales: 'PA 110/70 · FC 106 · T 39 °C. Puñopercusión lumbar derecha positiva. Abdomen blando.',
-    ops: ['Pielonefritis aguda', 'Cistitis no complicada', 'Cólico renal con litiasis', 'Apendicitis aguda', 'Neumonía basal derecha'], ok: 0,
+    ops: ['Cistitis no complicada', 'Cólico renal con litiasis', 'Apendicitis aguda', 'Pielonefritis aguda', 'Neumonía basal derecha'], ok: 3, ord: 2,
     res: {
       ego: 'Leucocituria intensa, nitritos positivos, bacteriuria y cilindros leucocitarios.',
       urocultivo: 'E. coli > 100 000 UFC/mL (se informa a las 48 horas).',
@@ -211,7 +211,7 @@ window.CASOS_DX = [
   { id: 'dx-tep', titulo: 'Falta de aire después de la cirugía', dif: 2,
     esc: 'Hombre de 62 años, al quinto día de una prótesis de cadera, con disnea súbita y dolor al respirar en el costado derecho. La pierna izquierda está hinchada y dolorosa.',
     vitales: 'PA 118/76 · FC 118 · FR 26 · SatO₂ 90 % · T 37,4 °C.',
-    ops: ['Embolia pulmonar', 'Neumonía', 'Edema agudo de pulmón', 'Neumotórax', 'Infarto agudo de miocardio'], ok: 0,
+    ops: ['Neumonía', 'Edema agudo de pulmón', 'Embolia pulmonar', 'Neumotórax', 'Infarto agudo de miocardio'], ok: 2, ord: 2,
     res: {
       angiotc: 'Defectos de llenado en las arterias lobares de ambos pulmones; cociente VD/VI de 1,2.',
       dimero: 'Dímero D 4 800 ng/mL. (Con probabilidad clínica alta, no cambia la conducta: no sirve para descartar.)',
@@ -233,7 +233,7 @@ window.CASOS_DX = [
   { id: 'dx-hipotir', titulo: 'Siempre cansada y con frío', dif: 1,
     esc: 'Mujer de 48 años con cansancio, intolerancia al frío, estreñimiento, piel seca y un aumento de 6 kg en tres meses, sin cambios en la dieta. Su madre tuvo enfermedad tiroidea.',
     vitales: 'PA 130/88 · FC 54 · T 36,0 °C. Piel seca, reflejos con relajación lenta, tiroides no visible.',
-    ops: ['Hipotiroidismo primario', 'Anemia crónica', 'Depresión mayor', 'Insuficiencia suprarrenal', 'Hipotiroidismo central'], ok: 0,
+    ops: ['Hipotiroidismo primario', 'Anemia crónica', 'Depresión mayor', 'Insuficiencia suprarrenal', 'Hipotiroidismo central'], ok: 0, ord: 2,
     res: {
       tsh: 'TSH 38 mUI/L con T4 libre baja (0,5 ng/dL).',
       antitpo: 'Anti-TPO muy elevados: tiroiditis de Hashimoto.',
@@ -254,7 +254,7 @@ window.CASOS_DX = [
   { id: 'dx-ira', titulo: 'Orina muy poca desde hace dos días', dif: 2,
     esc: 'Hombre de 70 años con diarrea y vómitos de cuatro días. Toma enalapril, hidroclorotiazida e ibuprofeno para la rodilla. Orina muy poco y está mareado al ponerse de pie.',
     vitales: 'PA 90/55 (acostado) · FC 112 · T 36,8 °C. Mucosas secas, pliegue cutáneo lento, sin edema.',
-    ops: ['Lesión renal aguda prerrenal', 'Necrosis tubular aguda', 'Glomerulonefritis aguda', 'Uropatía obstructiva', 'Nefritis intersticial aguda'], ok: 0,
+    ops: ['Necrosis tubular aguda', 'Glomerulonefritis aguda', 'Uropatía obstructiva', 'Nefritis intersticial aguda', 'Lesión renal aguda prerrenal'], ok: 4, ord: 2,
     res: {
       creatinina: 'Creatinina 2,8 mg/dL (basal 1,0), BUN 68; cociente BUN/Cr mayor de 20.',
       ego: 'Densidad 1 030, sedimento sin cilindros, sin proteinuria ni hematuria.',

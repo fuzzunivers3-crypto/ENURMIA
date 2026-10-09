@@ -34,9 +34,14 @@ window.ArturoIA = (function () {
     return !!(s && s.nube);
   }
 
+  /* Las preguntas con ord:2 tienen las opciones reordenadas (la correcta ya
+     no cae casi siempre en la b): su llave lleva '|o2' para no reutilizar una
+     re-explicacion guardada con el orden viejo de las opciones. */
+  let reordenadas = null;
   function clave(qid, elegida){
+    if (!reordenadas) { reordenadas = new Set(); (window.BANCO || []).forEach(function (q) { if (q.ord === 2) reordenadas.add(q.id); }); }
     const e = (elegida === null || elegida === undefined) ? '-' : elegida;
-    return qid + '|' + e;
+    return qid + '|' + e + (reordenadas.has(qid) ? '|o2' : '');
   }
 
   function recortar(s, n){
