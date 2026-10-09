@@ -35,6 +35,7 @@ window.Emergencias = (function () {
       '<h1>Cómo abordar lo que no puede esperar</h1>' +
       '<p>Cada emergencia: cómo se reconoce, cuánto tiempo hay, qué hacer y en qué orden, qué no hacer nunca y la idea que salva la vida. ' +
       'Al final de cada una, un ejercicio para ordenar los pasos de memoria.</p></div>' +
+      (window.Juego ? Juego.zona('emergencias') : '') +
       '<div class="card card--yodo" style="margin-bottom:16px"><b>Nota:</b> las dosis son de adulto salvo que se indique y sirven para estudiar. En la práctica se contrastan con el protocolo de tu institución.</div>' +
       '<input id="emBuscar" placeholder="Buscar: paro, anafilaxia, convulsión…" value="' + esc(filtro.texto) + '" ' +
         'style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:9px;border:1.5px solid var(--linea);font:inherit;margin-bottom:12px">' +
@@ -51,6 +52,7 @@ window.Emergencias = (function () {
     '</div>';
 
     document.getElementById('emAtras').onclick = () => App.ir('medpractica');
+    if (window.Juego) Juego.enganchar();
     const b = document.getElementById('emBuscar');
     b.oninput = () => {
       filtro.texto = b.value; const pos = b.selectionStart; lista();

@@ -34,6 +34,7 @@ window.Cronicas = (function () {
       '<h1>Aprender a tratar la enfermedad crónica</h1>' +
       '<p>Cada capítulo sigue la guía oficial más reciente: diagnóstico, metas, tratamiento escalonado con sus dosis, seguimiento, ' +
       'cuándo referir, errores frecuentes y preguntas para practicar.</p></div>' +
+      (window.Juego ? Juego.zona('cronicas') : '') +
       '<div class="card card--yodo" style="margin-bottom:16px"><b>Nota:</b> el contenido resume las guías vigentes en octubre de 2026 y las dosis son de adulto, para estudiar. ' +
       'Las guías se actualizan: contrasta siempre con el texto original y con el protocolo de tu institución.</div>' +
       '<input id="crBuscar" placeholder="Buscar: hipertensión, EPOC, riñón, tiroides…" value="' + esc(filtro.texto) + '" ' +
@@ -51,6 +52,7 @@ window.Cronicas = (function () {
     '</div>';
 
     document.getElementById('crAtras').onclick = () => App.ir('medpractica');
+    if (window.Juego) Juego.enganchar();
     const b = document.getElementById('crBuscar');
     b.oninput = () => {
       filtro.texto = b.value; const pos = b.selectionStart; lista();

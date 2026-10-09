@@ -48,6 +48,7 @@ window.Calculos = (function () {
       '<h1>Los cálculos que se usan a la cabecera del paciente</h1>' +
       '<p>Cada uno explica qué es, cómo se hace, para qué sirve, por qué se hace y cómo cambia la conducta con el paciente. ' +
       'Tiene calculadora, un ejemplo resuelto paso a paso y casos para practicar.</p></div>' +
+      (window.Juego ? Juego.zona('calculos') : '') +
       '<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:14px">' +
         '<input id="calBuscar" class="grow" placeholder="Buscar: calcio, glomerular, quemado…" value="' + esc(filtro.texto) + '" ' +
           'style="min-width:220px;padding:10px 12px;border-radius:9px;border:1.5px solid var(--linea);font:inherit">' +
@@ -61,6 +62,7 @@ window.Calculos = (function () {
         : '<p class="muted">Ningún cálculo coincide con la búsqueda.</p>') +
     '</div>';
 
+    if (window.Juego) Juego.enganchar();
     const b = document.getElementById('calBuscar');
     b.oninput = () => {
       filtro.texto = b.value;

@@ -26,6 +26,7 @@ window.Laboratorio = (function () {
       '<h1>Qué pedir, por qué y qué te dice</h1>' +
       '<p>Para qué sirve cada prueba, qué diagnóstico da sola o combinada con otras, y cuándo conviene pedirla. ' +
       'Después, ponlo a prueba en el simulacro diagnóstico.</p></div>' +
+      (window.Juego ? Juego.zona('laboratorio') : '') +
       '<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:16px">' +
         '<button class="chip' + (tab === 'pruebas' ? ' chip--carbon' : '') + '" data-tab="pruebas">Pruebas · ' + window.PRUEBAS.length + '</button>' +
         '<button class="chip' + (tab === 'patrones' ? ' chip--carbon' : '') + '" data-tab="patrones">Patrones combinados · ' + window.PATRONES.length + '</button>' +
@@ -35,6 +36,7 @@ window.Laboratorio = (function () {
     '</div>';
 
     document.getElementById('labAtras').onclick = () => App.ir('medpractica');
+    if (window.Juego) Juego.enganchar();
     document.getElementById('labSim').onclick = () => App.ir('diagnostico');
     UI.$$('[data-tab]').forEach(b => b.onclick = () => { tab = b.dataset.tab; menu(); });
     if (tab === 'pruebas') pruebas(); else patrones();

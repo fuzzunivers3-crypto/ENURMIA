@@ -51,6 +51,7 @@ window.Tubos = (function () {
       '<div class="encabezado"><p class="eyebrow">Medicina práctica · Tubos</p>' +
       '<h1>Cada tubo, su color y su para qué</h1>' +
       '<p>Lo que tiene cada tubo, qué se pide en él, cuántas veces se invierte y por qué el orden de extracción importa.</p></div>' +
+      (window.Juego ? Juego.zona('tubos') : '') +
 
       '<div class="card" style="margin-bottom:16px"><span class="eyebrow">Orden de extracción</span>' +
         '<div class="row" style="justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 4px">' +
@@ -74,6 +75,7 @@ window.Tubos = (function () {
     '</div>';
 
     document.getElementById('tbAtras').onclick = () => App.ir('medpractica');
+    if (window.Juego) Juego.enganchar();
     UI.$$('[data-t]').forEach(b => b.onclick = () => { sel = b.dataset.t; UI.$$('[data-t]').forEach(x => x.classList.toggle('on', x.dataset.t === sel)); detalle(); });
     document.getElementById('tbPlay').onclick = () => {
       document.getElementById('tbFila').innerHTML = filaOrden(orden, animar());

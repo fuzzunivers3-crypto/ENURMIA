@@ -22,18 +22,35 @@ window.MedPractica = (function () {
       desc: 'Manejo según las guías oficiales, con nivel académico alto.' }
   ];
 
+  /* cada bloque, un tono de la paleta del logo (vino → rosa) */
+  const TONOS = {
+    calculos: ['#8A1A3E', '#47061C'], tubos: ['#C9476A', '#63102C'], laboratorio: ['#63102C', '#24071A'],
+    emergencias: ['#A8233F', '#47061C'], cronicas: ['#F96F89', '#8A1A3E']
+  };
+
   function menu(){
+    const J = window.Juego;
     V().innerHTML =
-    '<div class="escalona" style="max-width:920px">' +
-      '<div class="encabezado"><p class="eyebrow">Medicina práctica</p>' +
-      '<h1>Lo que se usa en el día a día clínico</h1>' +
-      '<p>Herramientas y guías para razonar y actuar con el paciente delante.</p></div>' +
-      '<div class="rejilla rejilla--2">' + BLOQUES.map(b => {
+    '<div class="escalona" style="max-width:960px">' +
+      '<section class="mp-hero">' +
+        '<svg class="mp-ecg" viewBox="0 0 260 60" aria-hidden="true"><path d="M0 30 H70 L80 30 L88 14 L96 44 L104 4 L112 52 L120 30 H170 L178 22 L186 30 H260"/></svg>' +
+        '<p class="eyebrow">Medicina práctica</p>' +
+        '<h1>Lo que se usa en el día a día clínico</h1>' +
+        '<p>Primero juegas y te das cuenta de lo que sabes; luego lo estudias a fondo con el paciente delante. Cada partida suma XP.</p>' +
+        (J ? J.barraNivel() : '') +
+      '</section>' +
+      '<div class="mp-bloques">' + BLOQUES.map(b => {
         const listo = !!window[b.modulo];
-        return '<button class="card" ' + (listo ? 'data-b="' + b.id + '"' : 'disabled') + ' style="text-align:left;font:inherit;' + (listo ? 'cursor:pointer' : 'opacity:.55') + '">' +
-          '<div style="font-size:28px">' + b.em + '</div><h3 style="margin:6px 0 4px">' + esc(b.nombre) + '</h3>' +
-          '<p class="muted" style="font-size:13.5px;margin:0">' + esc(b.desc) + '</p>' +
-          (listo ? '' : '<span class="chip" style="margin-top:10px">En preparación</span>') + '</button>';
+        const t = TONOS[b.id] || ['#8A1A3E', '#47061C'];
+        const av = J ? J.avance(b.id) : 0;
+        return '<button class="mp-bloque" style="--c1:' + t[0] + ';--c2:' + t[1] + '" ' + (listo ? 'data-b="' + b.id + '"' : 'disabled') + '>' +
+          '<div class="row" style="justify-content:space-between;align-items:center">' +
+            (J ? J.anillo(av, b.em) : '<div style="font-size:30px">' + b.em + '</div>') +
+            '<span class="chip">' + (listo ? (J && J.BLOQUES[b.id] ? '🎮 ' + J.BLOQUES[b.id].juegos.length + ' juegos' : 'Abrir') : 'En preparación') + '</span></div>' +
+          '<h3>' + esc(b.nombre) + '</h3>' +
+          '<p>' + esc(b.desc) + '</p>' +
+          '<div class="mp-bloque__pie"><span>' + (av ? Math.round(av * 100) + ' % de estrellas' : 'Empieza jugando') + '</span><span>Entrar →</span></div>' +
+        '</button>';
       }).join('') + '</div>' +
     '</div>';
     UI.$$('[data-b]').forEach(x => x.onclick = () => App.ir(x.dataset.b));
