@@ -123,7 +123,17 @@ async function llamar(sistema: string, mensaje: string, tope: number): Promise<P
   }
 
   if (proveedor === 'groq' || proveedor === 'anthropic'){
-    const pedido = mensaje + '\n\nResponde SOLO con un array JSON valido, sin texto alrededor ni bloques de codigo.';
+    const pedido = mensaje + `\n\nResponde SOLO con un array JSON valido, sin texto alrededor ni bloques de codigo. Cada elemento del array es un objeto con EXACTAMENTE estos campos:
+- "enunciado": string, la pregunta
+- "caso": string, vineta clinica opcional (cadena vacia si no hay)
+- "tema": string, tema corto
+- "ops": array de EXACTAMENTE 4 strings, las opciones
+- "ok": entero 0-3, indice en "ops" de la opcion correcta
+- "clave": string, la respuesta correcta reafirmada en una oracion
+- "exp": string, por que la correcta es correcta
+- "descartes": array de 4 strings; en la posicion de la correcta pon cadena vacia y en las demas por que esa opcion esta mal
+- "trampa": string, el error tipico que lleva a elegir mal
+- "consideracion": string, dato clinico basico o cadena vacia`;
     let txt = '';
     if (proveedor === 'groq'){
       const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -275,7 +285,10 @@ Deno.serve(async (req) => {
   }
 
   const preguntas = normalizar(crudas, titulo, 'Generado · ' + titulo);
-  if (!preguntas.length) return json({ error: 'sin-preguntas' }, 502);
+  if (!preguntas.length){
+    console.error('examinar-generar: ninguna pregunta valida', JSON.stringify(crudas).slice(0, 600));
+    return json({ error: 'sin-preguntas' }, 502);
+  }
 
   /* 6. Guardar el examen. Con service_role, asi que el RLS de la tabla no
         aplica aqui: la politica de la tabla es para cuando el ESTUDIANTE
