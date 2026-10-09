@@ -64,9 +64,13 @@ window.Laboratorio = (function () {
     };
     UI.$$('[data-g]').forEach(x => x.onclick = () => { filtro.grupo = x.dataset.g; pruebas(); });
     UI.$$('details[data-p]').forEach(d => d.ontoggle = () => { if (d.open) abierta = d.dataset.p; });
+    if (window.Juego) { Juego.engancharCerradas(); Juego.engancharEstudio(() => pruebas()); }
   }
 
   function fila(p){
+    if (window.Juego && Juego.situacion('laboratorio', 'pruebas', p.id) === 'bloqueado')
+      return '<div class="card jg-bloq jg-bloq--fila" data-jgbloq="1"><span style="font-size:20px;margin-right:8px">' + p.em + '</span><b>' + esc(p.nombre) + '</b>' +
+        ' <span class="chip" style="margin-left:8px;font-weight:500">' + esc(p.grupo) + '</span><span class="jg-bloq__ic">🔒</span></div>';
     return '<details class="card" data-p="' + esc(p.id) + '"' + (abierta === p.id ? ' open' : '') + ' style="margin-bottom:10px;padding:14px 16px">' +
       '<summary style="cursor:pointer;font-weight:700;list-style:none"><span style="font-size:20px;margin-right:8px">' + p.em + '</span>' + esc(p.nombre) +
         ' <span class="chip" style="margin-left:8px;font-weight:500">' + esc(p.grupo) + '</span></summary>' +
@@ -74,6 +78,7 @@ window.Laboratorio = (function () {
         linea('Qué mide', p.mide) + linea('Sola diagnostica', p.solo) + linea('En combinación', p.combinada) +
         linea('Cuándo pedirla', p.cuando) +
         '<div class="card card--yodo" style="margin:10px 0 0"><b>Ojo:</b> ' + esc(p.ojo) + '</div>' +
+        (window.Juego ? '<div style="margin-top:12px">' + Juego.botonEstudio('laboratorio', 'pruebas', p.id) + '</div>' : '') +
       '</div></details>';
   }
 
@@ -83,12 +88,26 @@ window.Laboratorio = (function () {
   function patrones(){
     document.getElementById('labCuerpo').innerHTML =
       '<p class="muted" style="margin:0 0 14px">Los hallazgos rara vez se interpretan solos: el diagnóstico sale del patrón.</p>' +
-      '<div class="rejilla rejilla--2">' + window.PATRONES.map(p =>
-        '<div class="card"><h3 style="margin:0 0 8px">' + esc(p.titulo) + '</h3>' +
+      '<div class="rejilla rejilla--2">' + window.PATRONES.map((p, i) =>
+        (window.Juego && Juego.situacion('laboratorio', 'patrones', 'pat' + i) === 'bloqueado') ? Juego.tarjetaCerrada('🧩', p.titulo) :
+        '<div class="card" id="pat' + i + '"><h3 style="margin:0 0 8px">' + esc(p.titulo) + '</h3>' +
         '<ul style="margin:0 0 10px;padding-left:18px;line-height:1.6">' + p.pistas.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' +
         '<p style="margin:0 0 8px;line-height:1.6"><b>Sugiere:</b> ' + esc(p.dx) + '</p>' +
-        '<p class="muted" style="margin:0;font-size:13.5px;line-height:1.5">' + esc(p.nota) + '</p></div>').join('') + '</div>';
+        '<p class="muted" style="margin:0;font-size:13.5px;line-height:1.5">' + esc(p.nota) + '</p>' +
+        (window.Juego ? '<div style="margin-top:12px">' + Juego.botonEstudio('laboratorio', 'patrones', 'pat' + i) + '</div>' : '') + '</div>').join('') + '</div>';
+    if (window.Juego) { Juego.engancharCerradas(); Juego.engancharEstudio(() => patrones()); }
   }
 
-  return { menu };
+  /* abrir una prueba o un patron desde la ruta de estudio */
+  function abrir(t, id){
+    tab = t; filtro = { texto: '', grupo: '' };
+    if (t === 'pruebas') abierta = id;
+    App.ir('laboratorio', t);
+    setTimeout(() => {
+      const el = t === 'pruebas' ? document.querySelector('details[data-p="' + id + '"]') : document.getElementById(id);
+      if (el) { if (el.tagName === 'DETAILS') el.open = true; el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    }, 80);
+  }
+
+  return { menu, abrir };
 })();

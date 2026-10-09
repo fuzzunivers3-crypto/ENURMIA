@@ -44,6 +44,7 @@ window.Cronicas = (function () {
         window.CRONICAS_GRUPOS.map(g => '<button class="chip' + (filtro.grupo === g ? ' chip--carbon' : '') + '" data-g="' + esc(g) + '">' + esc(g) + '</button>').join('') +
       '</div>' +
       (visibles.length ? '<div class="rejilla rejilla--2">' + visibles.map(c =>
+        (window.Juego && Juego.situacion('cronicas', 'cronicas', c.id) === 'bloqueado') ? Juego.tarjetaCerrada(c.em, c.nombre) :
         '<button class="card" data-c="' + c.id + '" style="text-align:left;cursor:pointer;font:inherit">' +
           '<div style="font-size:26px">' + c.em + '</div><h3 style="margin:6px 0 4px">' + esc(c.nombre) + '</h3>' +
           '<p class="muted" style="font-size:13.5px;margin:0">' + esc(c.resumen.slice(0, 130)) + '…</p>' +
@@ -60,6 +61,7 @@ window.Cronicas = (function () {
     };
     UI.$$('[data-g]').forEach(x => x.onclick = () => { filtro.grupo = x.dataset.g; lista(); });
     UI.$$('[data-c]').forEach(x => x.onclick = () => App.ir('cronicas', x.dataset.c));
+    if (window.Juego) Juego.engancharCerradas();
   }
 
   /* ---------- capitulo ---------- */
@@ -67,6 +69,11 @@ window.Cronicas = (function () {
 
   function capitulo(c){
     hechas[c.id] = hechas[c.id] || {};
+    if (window.Juego && Juego.situacion('cronicas', 'cronicas', c.id) === 'bloqueado') {
+      V().innerHTML = '<div class="escalona" style="max-width:820px">' + Juego.candado('cronicas', 'cronicas', 'Volver a las enfermedades') + '</div>';
+      document.getElementById('jgVolver').onclick = () => App.ir('cronicas');
+      return;
+    }
     V().innerHTML =
     '<div class="escalona" style="max-width:820px">' +
       '<button class="btn btn--sm btn--fantasma" id="crLista" style="margin-bottom:12px">← Todas las enfermedades</button>' +
@@ -86,7 +93,8 @@ window.Cronicas = (function () {
       '<div class="card card--sangria" style="margin:16px 0 12px"><span class="eyebrow">Cuándo referir</span>' + lis(c.referir) + '</div>' +
       '<div class="card card--yodo" style="margin-bottom:16px"><span class="eyebrow">Perlas y errores frecuentes</span>' + lis(c.perlas) + '</div>' +
 
-      '<div class="card" style="margin-bottom:30px"><span class="eyebrow">Practica</span><div id="crPractica" style="margin-top:8px"></div></div>' +
+      '<div class="card" style="margin-bottom:16px"><span class="eyebrow">Practica</span><div id="crPractica" style="margin-top:8px"></div></div>' +
+      '<div id="jgEstudioCr" style="margin:0 0 30px"></div>' +
     '</div>';
 
     document.getElementById('crLista').onclick = () => App.ir('cronicas');
@@ -95,6 +103,7 @@ window.Cronicas = (function () {
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
     practica(c);
+    if (window.Juego) Juego.montarEstudio(document.getElementById('jgEstudioCr'), 'cronicas', 'cronicas', c.id);
   }
 
   function practica(c){

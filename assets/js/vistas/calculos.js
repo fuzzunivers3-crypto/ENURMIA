@@ -72,9 +72,11 @@ window.Calculos = (function () {
     };
     UI.$$('[data-grupo]').forEach(x => x.onclick = () => { filtro.grupo = x.dataset.grupo; lista(); });
     UI.$$('[data-calc]').forEach(x => x.onclick = () => App.ir('calculos', x.dataset.calc));
+    if (window.Juego) Juego.engancharCerradas();
   }
 
   function tarjeta(c){
+    if (window.Juego && Juego.situacion('calculos', 'calculos', c.id) === 'bloqueado') return Juego.tarjetaCerrada(c.em, c.nombre);
     return '<button class="card" data-calc="' + esc(c.id) + '" style="text-align:left;cursor:pointer;font:inherit">' +
       '<div style="font-size:26px">' + c.em + '</div>' +
       '<h3 style="margin:6px 0 4px">' + esc(c.nombre) + '</h3>' +
@@ -144,6 +146,11 @@ window.Calculos = (function () {
 
   function ficha(c){
     caso = null;
+    if (window.Juego && Juego.situacion('calculos', 'calculos', c.id) === 'bloqueado') {
+      V().innerHTML = '<div class="escalona" style="max-width:820px">' + Juego.candado('calculos', 'calculos', 'Volver a los cálculos') + '</div>';
+      document.getElementById('jgVolver').onclick = () => App.ir('calculos');
+      return;
+    }
     const defs = {};
     c.campos.forEach(f => { defs[f.id] = f.tipo === 'fecha' ? (f.rand && f.rand[1] === 0 ? hoyISO() : haceDias(120)) : f.def; });
     const ejR = c.calcular(c.ej);
@@ -171,6 +178,7 @@ window.Calculos = (function () {
         '<p style="margin:6px 0 10px">Te doy datos al azar; calcula tú el resultado y compruébalo. <span class="muted" id="calRacha"></span></p>' +
         '<div id="calCaso"></div>' +
         '<button class="btn btn--vivo" id="calNuevo">Ponme un caso</button></div>' +
+      '<div id="jgEstudioCal" style="margin:-12px 0 30px"></div>' +
     '</div>';
 
     const pintar = () => { document.getElementById('calRes').innerHTML = resultadoHtml(c, leer(c, 'c_')); };
@@ -179,6 +187,7 @@ window.Calculos = (function () {
     pintarRacha();
     document.getElementById('calAtras').onclick = () => App.ir('calculos');
     document.getElementById('calNuevo').onclick = () => nuevoCaso(c);
+    if (window.Juego) Juego.montarEstudio(document.getElementById('jgEstudioCal'), 'calculos', 'calculos', c.id);
   }
 
   /* ---------- practica ---------- */

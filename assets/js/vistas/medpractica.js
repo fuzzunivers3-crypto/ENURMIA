@@ -36,7 +36,7 @@ window.MedPractica = (function () {
         '<svg class="mp-ecg" viewBox="0 0 260 60" aria-hidden="true"><path d="M0 30 H70 L80 30 L88 14 L96 44 L104 4 L112 52 L120 30 H170 L178 22 L186 30 H260"/></svg>' +
         '<p class="eyebrow">Medicina práctica</p>' +
         '<h1>Lo que se usa en el día a día clínico</h1>' +
-        '<p>Primero juegas y te das cuenta de lo que sabes; luego lo estudias a fondo con el paciente delante. Cada partida suma XP.</p>' +
+        '<p>Estudia 3 temas, juega con ellos y desbloquea los 3 siguientes. Cada tema estudiado y cada partida suman XP.</p>' +
         (J ? J.barraNivel() : '') +
       '</section>' +
       '<div class="mp-bloques">' + BLOQUES.map(b => {
@@ -49,7 +49,7 @@ window.MedPractica = (function () {
             '<span class="chip">' + (listo ? (J && J.BLOQUES[b.id] ? '🎮 ' + J.BLOQUES[b.id].juegos.length + ' juegos' : 'Abrir') : 'En preparación') + '</span></div>' +
           '<h3>' + esc(b.nombre) + '</h3>' +
           '<p>' + esc(b.desc) + '</p>' +
-          '<div class="mp-bloque__pie"><span>' + (av ? Math.round(av * 100) + ' % de estrellas' : 'Empieza jugando') + '</span><span>Entrar →</span></div>' +
+          '<div class="mp-bloque__pie"><span>' + (J ? (function () { const k = J.conteo(b.id); return k.h ? k.h + ' de ' + k.t + ' temas estudiados' : 'Empieza por 3 temas'; })() : '') + '</span><span>Entrar →</span></div>' +
         '</button>';
       }).join('') + '</div>' +
     '</div>';

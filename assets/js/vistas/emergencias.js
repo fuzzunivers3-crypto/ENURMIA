@@ -44,6 +44,7 @@ window.Emergencias = (function () {
         window.EMERGENCIAS_GRUPOS.map(g => '<button class="chip' + (filtro.grupo === g ? ' chip--carbon' : '') + '" data-g="' + esc(g) + '">' + esc(g) + '</button>').join('') +
       '</div>' +
       (visibles.length ? '<div class="rejilla rejilla--2">' + visibles.map(e =>
+        (window.Juego && Juego.situacion('emergencias', 'emergencias', e.id) === 'bloqueado') ? Juego.tarjetaCerrada(e.em, e.nombre) :
         '<button class="card" data-e="' + e.id + '" style="text-align:left;cursor:pointer;font:inherit">' +
           '<div style="font-size:26px">' + e.em + '</div><h3 style="margin:6px 0 4px">' + esc(e.nombre) + '</h3>' +
           '<p class="muted" style="font-size:13.5px;margin:0">' + esc(e.reconoce.slice(0, 110)) + '…</p>' +
@@ -60,6 +61,7 @@ window.Emergencias = (function () {
     };
     UI.$$('[data-g]').forEach(x => x.onclick = () => { filtro.grupo = x.dataset.g; lista(); });
     UI.$$('[data-e]').forEach(x => x.onclick = () => App.ir('emergencias', x.dataset.e));
+    if (window.Juego) Juego.engancharCerradas();
   }
 
   /* ---------- ficha ---------- */
@@ -67,6 +69,11 @@ window.Emergencias = (function () {
 
   function ficha(e){
     drill = null;
+    if (window.Juego && Juego.situacion('emergencias', 'emergencias', e.id) === 'bloqueado') {
+      V().innerHTML = '<div class="escalona" style="max-width:820px">' + Juego.candado('emergencias', 'emergencias', 'Volver a las emergencias') + '</div>';
+      document.getElementById('jgVolver').onclick = () => App.ir('emergencias');
+      return;
+    }
     V().innerHTML =
     '<div class="escalona" style="max-width:820px">' +
       '<button class="btn btn--sm btn--fantasma" id="emLista" style="margin-bottom:12px">← Todas las emergencias</button>' +
@@ -82,9 +89,11 @@ window.Emergencias = (function () {
       '<div class="card" style="margin:16px 0 30px"><span class="eyebrow">Practica: ordena los pasos</span>' +
         '<p style="margin:6px 0 10px">Sin mirar arriba, toca los pasos en el orden correcto.</p>' +
         '<div id="emDrill"></div></div>' +
+      '<div id="jgEstudioEm" style="margin:-14px 0 30px"></div>' +
     '</div>';
     document.getElementById('emLista').onclick = () => App.ir('emergencias');
     nuevoDrill(e);
+    if (window.Juego) Juego.montarEstudio(document.getElementById('jgEstudioEm'), 'emergencias', 'emergencias', e.id);
   }
 
   /* ---------- ejercicio de ordenar ---------- */

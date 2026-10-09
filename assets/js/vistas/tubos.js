@@ -63,8 +63,11 @@ window.Tubos = (function () {
 
       '<div class="card" style="margin-bottom:16px"><span class="eyebrow">Toca un tubo</span>' +
         '<div class="tubo-galeria" id="tbGaleria">' +
-          window.TUBOS.map(t => '<button class="tubo-item' + (t.id === sel ? ' on' : '') + '" data-t="' + t.id + '" title="' + esc(t.nombre) + '">' + svg(t) +
-            '<span>' + esc(t.nombre.replace(/^Tapón /, '').replace(/ \(.*\)/, '')) + '</span></button>').join('') +
+          window.TUBOS.map(t => {
+            const cerrado = window.Juego && Juego.situacion('tubos', 'tubos', t.id) === 'bloqueado';
+            return '<button class="tubo-item' + (t.id === sel ? ' on' : '') + (cerrado ? ' jg-tubo-cerrado' : '') + '" ' + (cerrado ? 'data-jgbloq="1"' : 'data-t="' + t.id + '"') + ' title="' + esc(t.nombre) + '">' + svg(t) +
+              '<span>' + (cerrado ? '🔒 ' : '') + esc(t.nombre.replace(/^Tapón /, '').replace(/ \(.*\)/, '')) + '</span></button>';
+          }).join('') +
         '</div></div>' +
 
       '<div id="tbDetalle"></div>' +
@@ -77,6 +80,8 @@ window.Tubos = (function () {
     document.getElementById('tbAtras').onclick = () => App.ir('medpractica');
     if (window.Juego) Juego.enganchar();
     UI.$$('[data-t]').forEach(b => b.onclick = () => { sel = b.dataset.t; UI.$$('[data-t]').forEach(x => x.classList.toggle('on', x.dataset.t === sel)); detalle(); });
+    if (window.Juego) Juego.engancharCerradas();
+    if (window.Juego && Juego.situacion('tubos', 'tubos', sel) === 'bloqueado') sel = window.TUBOS.slice().sort((a, b) => a.orden - b.orden)[0].id;
     document.getElementById('tbPlay').onclick = () => {
       document.getElementById('tbFila').innerHTML = filaOrden(orden, animar());
     };
@@ -108,8 +113,9 @@ window.Tubos = (function () {
         fila('Cuándo pedirlo', t.cuando) +
         '<p style="margin:10px 0 4px"><b>Errores que arruinan la muestra:</b></p><ul style="margin:0;padding-left:18px;line-height:1.6">' + t.errores.map(e => '<li>' + esc(e) + '</li>').join('') + '</ul>' +
         '<div class="card card--yodo" style="margin:12px 0 0"><b>A recordar:</b> ' + esc(t.clave) + '</div>' +
-      '</div></div></div>';
+      '</div></div><div id="jgEstudioTb" style="margin-top:14px"></div></div>';
 
+    if (window.Juego) Juego.montarEstudio(document.getElementById('jgEstudioTb'), 'tubos', 'tubos', t.id);
     const g = document.getElementById('tbGrande');
     document.getElementById('tbInv').onclick = () => {
       if (!animar()) return;
@@ -162,5 +168,11 @@ window.Tubos = (function () {
     if (el) el.textContent = quiz.total ? 'Aciertos: ' + quiz.bien + ' de ' + quiz.total + '.' : '';
   }
 
-  return { menu };
+  /* abrir un tubo desde la ruta de estudio */
+  function abrir(id){
+    sel = id; menu();
+    setTimeout(() => { const d = document.getElementById('tbDetalle'); if (d) d.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
+  }
+
+  return { menu, abrir };
 })();

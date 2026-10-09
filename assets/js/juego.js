@@ -7,7 +7,11 @@
      deslizar mandar cada tarjeta a su lado (p. ej. HACER / NO HACER)
    Cada juego se arma con los datos reales de su bloque (nunca
    inventa contenido) y al terminar manda a estudiar a fondo.
-   El progreso se guarda en datos().juego.
+   RUTA: los temas se estudian de 3 en 3. Al principio solo estan
+   abiertos los 3 primeros; al marcar los 3 como estudiados se
+   desbloquean el juego (que pregunta SOLO lo ya estudiado) y los
+   3 temas siguientes, y asi hasta completar el bloque.
+   El progreso se guarda en datos().juego (xp, bloques, estudiado).
    ============================================================ */
 window.Juego = (function () {
 
@@ -52,11 +56,16 @@ window.Juego = (function () {
     return { n: i + 1, nombre: NIVELES[i][1], desde, hasta, pct: hasta > desde ? (xp - desde) / (hasta - desde) : 1, sig: NIVELES[i + 1] ? NIVELES[i + 1][1] : null };
   }
   function registro(bloque, juego){ const e = estado(); e.bloques[bloque] = e.bloques[bloque] || {}; return e.bloques[bloque][juego] || { mejor: 0, estrellas: 0, partidas: 0 }; }
-  /* avance del bloque: estrellas ganadas sobre las posibles (3 por juego) */
+  /* avance del bloque: temas estudiados sobre el total de sus rutas */
   function avance(bloque){
-    const b = BLOQUES[bloque]; if (!b) return 0;
-    const e = estado().bloques[bloque] || {};
-    return b.juegos.reduce((s, j) => s + ((e[j.id] && e[j.id].estrellas) || 0), 0) / (b.juegos.length * 3);
+    const ps = PISTAS[bloque] || []; let t = 0, h = 0;
+    ps.forEach(P => { const items = P.items(), E = estudiados(bloque, P.id); t += items.length; h += items.filter(it => E.has(it.id)).length; });
+    return t ? h / t : 0;
+  }
+  function conteo(bloque){
+    const ps = PISTAS[bloque] || []; let t = 0, h = 0;
+    ps.forEach(P => { const items = P.items(), E = estudiados(bloque, P.id); t += items.length; h += items.filter(it => E.has(it.id)).length; });
+    return { h, t };
   }
 
   /* ---------- sonido (sintetizado, sin archivos) ---------- */
@@ -102,16 +111,18 @@ window.Juego = (function () {
 
   const BLOQUES = {
     calculos: { nombre: 'Cálculos médicos', em: '🧮', modulo: 'Calculos', juegos: [
-      { id: 'cual', em: '🎯', nombre: '¿Qué cálculo uso?', desc: 'Te digo para qué lo necesitas; tú eliges el cálculo.', tipo: 'quiz', tiempo: 14,
-        rondas: () => barajar(window.CALCULOS).slice(0, RONDAS).map(c => {
+      { id: 'cual', pista: 'calculos', em: '🎯', nombre: '¿Qué cálculo uso?', desc: 'Te digo para qué lo necesitas; tú eliges el cálculo.', tipo: 'quiz', tiempo: 14,
+        rondas: (E) => barajar(window.CALCULOS.filter(c => E.has(c.id))).slice(0, RONDAS).map(c => {
           const o = opsCon(c.nombre, window.CALCULOS.map(x => x.nombre), 4);
           return { q: c.sirve, sub: c.grupo, ops: o.ops, ok: o.ok, exp: c.nombre + ': ' + c.que };
         }) },
-      { id: 'relampago', em: '⚡', nombre: 'Cálculo relámpago', desc: 'Un paciente al azar: calcula de cabeza y elige el resultado.', tipo: 'quiz', tiempo: 25,
-        rondas: () => {
-          const aptos = window.CALCULOS.filter(c => c.campos.every(k => k.tipo !== 'fecha'));
+      { id: 'relampago', pista: 'calculos', em: '⚡', nombre: 'Cálculo relámpago', desc: 'Un paciente al azar: calcula de cabeza y elige el resultado.', tipo: 'quiz', tiempo: 25,
+        rondas: (E) => {
+          const aptos = window.CALCULOS.filter(c => E.has(c.id) && c.campos.every(k => k.tipo !== 'fecha'));
           const out = [];
-          for (const c of barajar(aptos)) {
+          // con pocos calculos estudiados se repiten con otros pacientes al azar
+          const cola = []; for (let v = 0; v < 4 && cola.length < RONDAS * 2; v++) cola.push(...barajar(aptos));
+          for (const c of cola) {
             if (out.length >= RONDAS) break;
             const v = {}; c.campos.forEach(k => { v[k.id] = valorCampo(k); });
             let r; try { r = c.calcular(v); } catch (e) { continue; }
@@ -139,16 +150,18 @@ window.Juego = (function () {
     ] },
 
     tubos: { nombre: 'Tubos de laboratorio', em: '🧪', modulo: 'Tubos', juegos: [
-      { id: 'gradilla', em: '🧫', nombre: 'Arma la gradilla', desc: 'Toca los tubos en el orden de extracción correcto.', tipo: 'ordenar', tiempo: 40,
-        rondas: () => {
-          const orden = window.TUBOS.slice().sort((a, b) => a.orden - b.orden);
-          const sets = [0, 1, 2].map(() => barajar(orden).slice(0, 5).sort((a, b) => a.orden - b.orden));
-          sets.unshift(orden.filter(t => ['hemo', 'azul', 'rojo', 'amarillo', 'verde', 'lila', 'gris'].indexOf(t.id) >= 0));
+      { id: 'gradilla', pista: 'tubos', em: '🧫', nombre: 'Arma la gradilla', desc: 'Toca los tubos en el orden de extracción correcto.', tipo: 'ordenar', tiempo: 40,
+        rondas: (E) => {
+          const orden = window.TUBOS.filter(t => E.has(t.id)).sort((a, b) => a.orden - b.orden);
+          if (orden.length < 3) return [];
+          const tam = Math.max(3, Math.min(5, orden.length - 1));
+          const sets = orden.length > 3 ? [0, 1, 2].map(() => barajar(orden).slice(0, tam).sort((a, b) => a.orden - b.orden)) : [];
+          sets.unshift(orden.slice(0, 7));
           return sets.map(s => ({ q: 'Ordena para extraer', items: s.map(t => ({ t: t.nombre.replace(/^Tapón /, '').replace(/ \(.*\)/, '').replace('Frascos de hemocultivo', 'Hemocultivo').replace(/^./, (c) => c.toUpperCase()), color: t.color })),
             exp: window.TUBOS_ORDEN_PORQUE }));
         } },
-      { id: 'veloz', em: '🏎️', nombre: 'Tubo veloz', desc: 'Te digo la prueba; toca su tubo antes de que acabe el tiempo.', tipo: 'quiz', tiempo: 9,
-        rondas: () => barajar(window.TUBOS_QUIZ).slice(0, RONDAS).map(([prueba, id]) => {
+      { id: 'veloz', pista: 'tubos', em: '🏎️', nombre: 'Tubo veloz', desc: 'Te digo la prueba; toca su tubo antes de que acabe el tiempo.', tipo: 'quiz', tiempo: 9,
+        rondas: (E) => barajar(window.TUBOS_QUIZ.filter(([, id]) => E.has(id))).slice(0, RONDAS).map(([prueba, id]) => {
           const t = window.TUBOS.find(x => x.id === id);
           const otros = barajar(window.TUBOS.filter(x => x.id !== id)).slice(0, 3);
           const ops = barajar(otros.concat([t]));
@@ -157,13 +170,13 @@ window.Juego = (function () {
     ] },
 
     laboratorio: { nombre: 'Analíticas e imágenes', em: '🔬', modulo: 'Laboratorio', juegos: [
-      { id: 'detective', em: '🕵️', nombre: 'Detective de patrones', desc: 'Lee las pistas del laboratorio y nombra el patrón.', tipo: 'quiz', tiempo: 18,
-        rondas: () => barajar(window.PATRONES).slice(0, RONDAS).map(p => {
+      { id: 'detective', pista: 'patrones', em: '🕵️', nombre: 'Detective de patrones', desc: 'Lee las pistas del laboratorio y nombra el patrón.', tipo: 'quiz', tiempo: 18,
+        rondas: (E) => barajar(window.PATRONES.filter((p, i) => E.has('pat' + i))).slice(0, RONDAS).map(p => {
           const o = opsCon(p.titulo, window.PATRONES.map(x => x.titulo), 4);
           return { q: 'Pistas', lista: p.pistas, ops: o.ops, ok: o.ok, exp: p.dx + (p.nota ? ' ' + p.nota : '') };
         }) },
-      { id: 'prueba', em: '🧬', nombre: '¿Qué prueba es?', desc: 'Te digo qué mide; tú eliges la prueba.', tipo: 'quiz', tiempo: 14,
-        rondas: () => barajar(window.PRUEBAS).slice(0, RONDAS).map(p => {
+      { id: 'prueba', pista: 'pruebas', em: '🧬', nombre: '¿Qué prueba es?', desc: 'Te digo qué mide; tú eliges la prueba.', tipo: 'quiz', tiempo: 14,
+        rondas: (E) => barajar(window.PRUEBAS.filter(p => E.has(p.id))).slice(0, RONDAS).map(p => {
           const mismas = window.PRUEBAS.filter(x => x.grupo === p.grupo).map(x => x.nombre);
           const pool = mismas.length >= 4 ? mismas : window.PRUEBAS.map(x => x.nombre);
           const o = opsCon(p.nombre, pool, 4);
@@ -172,38 +185,39 @@ window.Juego = (function () {
     ] },
 
     emergencias: { nombre: 'Emergencias médicas', em: '🚑', modulo: 'Emergencias', juegos: [
-      { id: 'codigo', em: '🚨', nombre: 'Código rojo', desc: 'Ordena los primeros pasos antes de que se acabe el tiempo.', tipo: 'ordenar', tiempo: 45,
-        rondas: () => barajar(window.EMERGENCIAS.filter(e => e.pasos && e.pasos.length >= 4)).slice(0, 4).map(e => ({
+      { id: 'codigo', pista: 'emergencias', em: '🚨', nombre: 'Código rojo', desc: 'Ordena los primeros pasos antes de que se acabe el tiempo.', tipo: 'ordenar', tiempo: 45,
+        rondas: (E) => barajar(window.EMERGENCIAS.filter(e => E.has(e.id) && e.pasos && e.pasos.length >= 4)).slice(0, 4).map(e => ({
           q: e.em + ' ' + e.nombre, items: e.pasos.slice(0, 6).map(t => ({ t })), exp: e.salvar })) },
-      { id: 'hacer', em: '👉', nombre: '¿Hacer o NO hacer?', desc: 'Manda cada acción a su lado. Rápido, como en la guardia.', tipo: 'deslizar', tiempo: 12,
+      { id: 'hacer', pista: 'emergencias', em: '👉', nombre: '¿Hacer o NO hacer?', desc: 'Manda cada acción a su lado. Rápido, como en la guardia.', tipo: 'deslizar', tiempo: 12,
         izq: 'NO hacer', der: 'Hacer',
-        rondas: () => {
+        rondas: (E) => {
           const out = [];
-          barajar(window.EMERGENCIAS).forEach(e => {
-            if (e.hacer && e.hacer.length) out.push({ t: corta(frase(azar(e.hacer)).replace(/\.$/, ''), 160), ctx: e.em + ' ' + e.nombre, lado: 'der', exp: e.salvar });
-            if (e.noHacer && e.noHacer.length) {
-              const x = azar(e.noHacer), accion = afirmar(x.split(/:\s/)[0].replace(/[.:]\s*$/, ''));
+          // de cada emergencia estudiada salen varias acciones de cada lado (sin repetir)
+          window.EMERGENCIAS.filter(e => E.has(e.id)).forEach(e => {
+            barajar(e.hacer || []).slice(0, 2).forEach(h => out.push({ t: corta(frase(h).replace(/\.$/, ''), 160), ctx: e.em + ' ' + e.nombre, lado: 'der', exp: e.salvar }));
+            barajar(e.noHacer || []).slice(0, 2).forEach(x => {
+              const accion = afirmar(x.split(/:\s/)[0].replace(/[.:]\s*$/, ''));
               if (accion) out.push({ t: corta(accion, 160), ctx: e.em + ' ' + e.nombre, lado: 'izq', exp: x });
-            }
+            });
           });
           return barajar(out).slice(0, 12);
         } }
     ] },
 
     cronicas: { nombre: 'Enfermedades crónicas', em: '🩺', modulo: 'Cronicas', juegos: [
-      { id: 'metas', em: '🎯', nombre: 'Metas en la diana', desc: 'Elige la cifra meta correcta de cada enfermedad.', tipo: 'quiz', tiempo: 14,
-        rondas: () => {
+      { id: 'metas', pista: 'cronicas', em: '🎯', nombre: 'Metas en la diana', desc: 'Elige la cifra meta correcta de cada enfermedad.', tipo: 'quiz', tiempo: 14,
+        rondas: (E) => {
           const todas = []; window.CRONICAS.forEach(c => (c.metas || []).forEach(m => todas.push({ c, m })));
-          return barajar(todas).slice(0, RONDAS).map(({ c, m }) => {
+          return barajar(todas.filter(x => E.has(x.c.id))).slice(0, RONDAS).map(({ c, m }) => {
             const pool = todas.filter(x => x.m[1] !== m[1]).map(x => x.m[1]);
             const o = opsCon(m[1], [m[1]].concat(pool), 4);
             return { q: m[0], sub: c.em + ' ' + c.nombre, ops: o.ops, ok: o.ok, exp: c.nombre + ' · ' + m[0] + ': ' + m[1] + '. Referencia: ' + c.guia + '.' };
           });
         } },
-      { id: 'caso', em: '🩻', nombre: 'Caso rápido', desc: 'Casos clínicos de los capítulos, contra reloj.', tipo: 'quiz', tiempo: 35,
-        rondas: () => {
+      { id: 'caso', pista: 'cronicas', em: '🩻', nombre: 'Caso rápido', desc: 'Casos clínicos de los capítulos, contra reloj.', tipo: 'quiz', tiempo: 35,
+        rondas: (E) => {
           const todas = []; window.CRONICAS.forEach(c => (c.practica || []).forEach(p => todas.push({ c, p })));
-          return barajar(todas).slice(0, 8).map(({ c, p }) => {
+          return barajar(todas.filter(x => E.has(x.c.id))).slice(0, 8).map(({ c, p }) => {
             const idx = barajar(p.ops.map((_, i) => i));
             return { q: p.q, sub: c.em + ' ' + c.nombre, ops: idx.map(i => p.ops[i]), ok: idx.indexOf(p.ok), exp: p.exp };
           });
@@ -212,35 +226,163 @@ window.Juego = (function () {
   };
 
   /* ============================================================
-     ZONA DE JUEGO (va arriba de cada bloque)
+     RUTA DE ESTUDIO: niveles de 3 temas
+     ============================================================ */
+  const POR_NIVEL = 3;
+  const nomTubo = (t) => t.nombre.replace(/^Tapón /, '').replace(/ \(.*\)/, '').replace('Frascos de hemocultivo', 'Hemocultivo').replace(/^./, (c) => c.toUpperCase());
+  const PISTAS = {
+    calculos: [{ id: 'calculos', nombre: 'Cálculos', items: () => window.CALCULOS.map(c => ({ id: c.id, em: c.em, nombre: c.nombre })),
+      abrir: (id) => App.ir('calculos', id) }],
+    tubos: [{ id: 'tubos', nombre: 'Tubos', items: () => window.TUBOS.slice().sort((a, b) => a.orden - b.orden).map(t => ({ id: t.id, em: '🧪', nombre: nomTubo(t), color: t.color })),
+      abrir: (id) => window.Tubos && Tubos.abrir(id) }],
+    laboratorio: [
+      { id: 'pruebas', nombre: 'Pruebas', items: () => window.PRUEBAS.map(p => ({ id: p.id, em: p.em, nombre: p.nombre })),
+        abrir: (id) => window.Laboratorio && Laboratorio.abrir('pruebas', id) },
+      { id: 'patrones', nombre: 'Patrones combinados', items: () => window.PATRONES.map((p, i) => ({ id: 'pat' + i, em: '🧩', nombre: p.titulo })),
+        abrir: (id) => window.Laboratorio && Laboratorio.abrir('patrones', id) }],
+    emergencias: [{ id: 'emergencias', nombre: 'Emergencias', items: () => window.EMERGENCIAS.map(e => ({ id: e.id, em: e.em, nombre: e.nombre })),
+      abrir: (id) => App.ir('emergencias', id) }],
+    cronicas: [{ id: 'cronicas', nombre: 'Capítulos', items: () => window.CRONICAS.map(c => ({ id: c.id, em: c.em, nombre: c.nombre })),
+      abrir: (id) => App.ir('cronicas', id) }]
+  };
+  const pista = (bloque, p) => (PISTAS[bloque] || []).find(x => x.id === p);
+  function hechos(bloque, p){
+    const e = estado(); e.estudiado = e.estudiado || {};
+    const k = bloque + ':' + p; e.estudiado[k] = e.estudiado[k] || [];
+    return e.estudiado[k];
+  }
+  function estudiados(bloque, p){ return new Set(hechos(bloque, p)); }
+  /* cuantos temas (en orden) estan abiertos: 3 por cada nivel completo, mas el nivel en curso */
+  function abiertos(bloque, p){
+    const P = pista(bloque, p); if (!P) return 0;
+    const items = P.items(), E = estudiados(bloque, p);
+    let n = 0;
+    while (n < items.length) {
+      const nivel = items.slice(n, n + POR_NIVEL);
+      n += nivel.length;
+      if (!nivel.every(it => E.has(it.id))) break;
+    }
+    return n;
+  }
+  /* 'estudiado' | 'abierto' | 'bloqueado' */
+  function situacion(bloque, p, id){
+    const P = pista(bloque, p); if (!P) return 'abierto';
+    if (estudiados(bloque, p).has(id)) return 'estudiado';
+    const i = P.items().findIndex(it => it.id === id);
+    return i < 0 || i < abiertos(bloque, p) ? 'abierto' : 'bloqueado';
+  }
+  function marcar(bloque, p, id){
+    if (situacion(bloque, p, id) !== 'abierto') return;
+    const antes = abiertos(bloque, p), lista = hechos(bloque, p);
+    lista.push(id);
+    estado().xp = (estado().xp || 0) + 10;
+    Almacen.guardar();
+    const despues = abiertos(bloque, p), P = pista(bloque, p), total = P.items().length;
+    const E = estudiados(bloque, p);
+    const nivelHecho = P.items().slice(0, despues).every(it => E.has(it.id));
+    if (despues > antes || (nivelHecho && E.size === total)) {
+      tono('fin');
+      UI.tostada(E.size === total ? '🏆 ¡Completaste todo ' + esc(P.nombre.toLowerCase()) + '!' :
+        '🔓 ¡Nivel completado! Se abrieron ' + Math.min(POR_NIVEL, despues - antes) + ' temas nuevos y el juego de este nivel.', 'exito');
+    } else {
+      const falta = Math.ceil(despues / POR_NIVEL) * POR_NIVEL - [...E].filter(x => P.items().slice(0, despues).some(it => it.id === x)).length;
+      UI.tostada('✔ Estudiado (+10 XP). ' + (falta > 0 ? 'Te falta' + (falta === 1 ? ' 1 tema' : 'n ' + falta + ' temas') + ' para abrir el siguiente nivel.' : ''), 'exito');
+    }
+  }
+  /* boton "Lo estudie" para el final de cada tema; alCambiar repinta la vista */
+  function botonEstudio(bloque, p, id){
+    const s = situacion(bloque, p, id);
+    if (s === 'estudiado') return '<div class="jg-estudio hecho"><span>✔</span><div><b>Tema estudiado</b><small>Ya cuenta para tus juegos de este bloque.</small></div>' +
+      '<button class="jg-estudio__btn claro" data-jgjugar="' + bloque + '">🎮 Ir a jugar</button></div>';
+    if (s === 'bloqueado') return '';
+    return '<div class="jg-estudio"><span>📖</span><div><b>¿Terminaste de estudiarlo?</b><small>Márcalo para avanzar en la ruta: cada 3 temas se abre el juego y 3 temas nuevos.</small></div>' +
+      '<button class="jg-estudio__btn" data-jgmarcar="' + bloque + '|' + p + '|' + esc(id) + '">✔ Lo estudié</button></div>';
+  }
+  function engancharEstudio(alCambiar){
+    UI.$$('[data-jgmarcar]').forEach(b => b.onclick = () => { const [bl, p, id] = b.dataset.jgmarcar.split('|'); marcar(bl, p, id); if (alCambiar) alCambiar(); });
+    UI.$$('[data-jgjugar]').forEach(b => b.onclick = () => { App.ir(b.dataset.jgjugar); setTimeout(() => { const z = document.getElementById('jgZona'); if (z) z.scrollIntoView({ behavior: animar() ? 'smooth' : 'auto' }); }, 60); });
+  }
+  /* recuadro "Lo estudie" que se repinta solo dentro de su contenedor */
+  function montarEstudio(el, bloque, p, id){
+    if (!el) return;
+    el.innerHTML = botonEstudio(bloque, p, id);
+    engancharEstudio(() => montarEstudio(el, bloque, p, id));
+  }
+  /* tarjeta de lista para un tema cerrado */
+  function tarjetaCerrada(em, nombre){
+    return '<div class="card jg-bloq" data-jgbloq="1"><div style="font-size:26px">' + em + '</div><h3 style="margin:6px 0 4px">' + esc(nombre) + '</h3>' +
+      '<p class="muted" style="font-size:13.5px;margin:0">Se abre al completar el nivel anterior de la ruta.</p><span class="jg-bloq__ic">🔒</span></div>';
+  }
+  function engancharCerradas(){ UI.$$('[data-jgbloq]').forEach(x => x.onclick = () => UI.tostada('🔒 Estudia los temas abiertos para desbloquear este: cada 3 se abren 3 más.')); }
+  /* pantalla para un tema que aun no esta abierto */
+  function candado(bloque, p, volver){
+    const P = pista(bloque, p);
+    return '<div class="jg-candado-pant"><div class="jg-candado-pant__ic">🔒</div><h2>Este tema aún está cerrado</h2>' +
+      '<p>Estudia los temas abiertos de ' + esc(P ? P.nombre.toLowerCase() : 'este bloque') + ' para desbloquearlo: cada 3 temas estudiados se abren 3 más.</p>' +
+      '<button class="btn btn--vivo" id="jgVolver">← ' + esc(volver || 'Volver a la ruta') + '</button></div>';
+  }
+
+  /* ============================================================
+     ZONA DE JUEGO (va arriba de cada bloque): la ruta y los juegos
      ============================================================ */
   function zona(bloque){
     const b = BLOQUES[bloque]; if (!b) return '';
     const av = avance(bloque);
     return '<section class="jg-zona" id="jgZona">' +
-      '<div class="jg-zona__cab"><div><p class="jg-zona__eyebrow">Paso 1 · Aprende jugando</p>' +
-      '<h2 class="jg-zona__titulo">Juega primero, luego estúdialo a fondo</h2>' +
-      '<p class="jg-zona__sub">Partidas de 2 minutos con los datos reales del bloque. Cada error trae su explicación.</p></div>' +
+      '<div class="jg-zona__cab"><div><p class="jg-zona__eyebrow">Tu ruta · estudia 3, juega, desbloquea 3 más</p>' +
+      '<h2 class="jg-zona__titulo">Aprende paso a paso</h2>' +
+      '<p class="jg-zona__sub">Estudia los 3 temas del nivel y márcalos. Al completarlos se abre el juego con lo que ya estudiaste y los 3 temas siguientes.</p></div>' +
       anillo(av, b.em) + '</div>' +
-      '<div class="jg-zona__juegos">' + b.juegos.map(j => {
-        const r = registro(bloque, j.id);
-        return '<button class="jg-boton" data-jg="' + bloque + ':' + j.id + '">' +
-          '<span class="jg-boton__em">' + j.em + '</span>' +
-          '<span class="jg-boton__txt"><b>' + esc(j.nombre) + '</b><small>' + esc(j.desc) + '</small></span>' +
-          '<span class="jg-boton__meta">' + estrellas(r.estrellas) + (r.mejor ? '<small>Récord ' + r.mejor + '</small>' : '<small>Nuevo</small>') + '</span>' +
-          '<span class="jg-boton__play">▶</span></button>';
-      }).join('') + '</div>' +
-      '<a class="jg-zona__luego" href="#jgFondo">Paso 2 · Estudiar a fondo ↓</a>' +
+      (PISTAS[bloque] || []).map(P => ruta(bloque, P, b)).join('') +
+      '<a class="jg-zona__luego" href="#jgFondo">Ver todos los temas del bloque ↓</a>' +
     '</section><div id="jgFondo"></div>';
   }
+  function ruta(bloque, P, b){
+    const items = P.items(), E = estudiados(bloque, P.id), ab = abiertos(bloque, P.id);
+    const niveles = Math.ceil(items.length / POR_NIVEL);
+    const actual = Math.min(niveles - 1, Math.floor(Math.max(0, ab - 1) / POR_NIVEL));
+    const lleva = items.filter(it => E.has(it.id)).length;
+    const juegos = b.juegos.filter(j => j.pista === P.id);
+    const listo = lleva >= POR_NIVEL;
+    const nodos = Array.from({ length: niveles }, (_, n) => {
+      const del = items.slice(n * POR_NIVEL, n * POR_NIVEL + POR_NIVEL);
+      const ok = del.every(it => E.has(it.id)), abierto = n * POR_NIVEL < ab;
+      return '<span class="jg-nodo' + (ok ? ' ok' : abierto ? ' actual' : '') + '" title="Nivel ' + (n + 1) + '">' + (ok ? '✔' : abierto ? (n + 1) : '🔒') + '</span>';
+    }).join('<i class="jg-nodo__linea"></i>');
+    const delActual = items.slice(actual * POR_NIVEL, actual * POR_NIVEL + POR_NIVEL);
+    const todo = lleva === items.length;
+    return '<div class="jg-ruta">' +
+      ((PISTAS[bloque] || []).length > 1 ? '<p class="jg-ruta__nombre">' + esc(P.nombre) + '</p>' : '') +
+      '<div class="jg-ruta__mapa">' + nodos + '</div>' +
+      '<div class="jg-ruta__info"><b>' + (todo ? '🏆 Ruta completa' : 'Nivel ' + (actual + 1) + ' de ' + niveles) + '</b><span>' + lleva + ' de ' + items.length + ' estudiados</span></div>' +
+      (todo ? '' : '<div class="jg-temas">' + delActual.map(it => {
+        const hecho = E.has(it.id);
+        return '<button class="jg-tema' + (hecho ? ' hecho' : '') + '" data-jgabrir="' + bloque + '|' + P.id + '|' + esc(it.id) + '">' +
+          '<span class="jg-tema__em"' + (it.color ? ' style="background:' + it.color + '"' : '') + '>' + (it.color ? '' : it.em) + '</span>' +
+          '<span class="jg-tema__txt"><b>' + esc(it.nombre) + '</b><small>' + (hecho ? '✔ Estudiado' : 'Estudiar →') + '</small></span></button>';
+      }).join('') + '</div>') +
+      '<div class="jg-zona__juegos">' + juegos.map(j => {
+        const r = registro(bloque, j.id);
+        return '<button class="jg-boton' + (listo ? '' : ' cerrado') + '" data-jg="' + bloque + ':' + j.id + '"' + (listo ? '' : ' aria-disabled="true"') + '>' +
+          '<span class="jg-boton__em">' + (listo ? j.em : '🔒') + '</span>' +
+          '<span class="jg-boton__txt"><b>' + esc(j.nombre) + '</b><small>' + (listo ? esc(j.desc) + ' Con tus ' + lleva + ' temas estudiados.' : 'Se abre al estudiar los 3 temas del nivel 1.') + '</small></span>' +
+          '<span class="jg-boton__meta">' + estrellas(r.estrellas) + (r.mejor ? '<small>Récord ' + r.mejor + '</small>' : '<small>' + (listo ? 'Nuevo' : '') + '</small>') + '</span>' +
+          (listo ? '<span class="jg-boton__play">▶</span>' : '') + '</button>';
+      }).join('') + '</div>' +
+    '</div>';
+  }
   function enganchar(){
-    UI.$$('[data-jg]').forEach(x => x.onclick = () => { const [b, j] = x.dataset.jg.split(':'); jugar(b, j); });
+    UI.$$('[data-jg]').forEach(x => x.onclick = () => {
+      if (x.classList.contains('cerrado')) { UI.tostada('🔒 Estudia primero los 3 temas del nivel para abrir este juego.'); return; }
+      const [b, j] = x.dataset.jg.split(':'); jugar(b, j);
+    });
+    UI.$$('[data-jgabrir]').forEach(x => x.onclick = () => { const [b, p, id] = x.dataset.jgabrir.split('|'); const P = pista(b, p); if (P) P.abrir(id); });
     const l = document.querySelector('.jg-zona__luego');
     if (l) l.onclick = (e) => { e.preventDefault(); const f = document.getElementById('jgFondo'); if (f) f.scrollIntoView({ behavior: animar() ? 'smooth' : 'auto', block: 'start' }); };
   }
   function anillo(p, em){
     const R = 26, L = 2 * Math.PI * R;
-    return '<div class="jg-anillo" title="' + Math.round(p * 100) + ' % de estrellas"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="' + R + '" class="jg-anillo__fondo"/>' +
+    return '<div class="jg-anillo" title="' + Math.round(p * 100) + ' % estudiado"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="' + R + '" class="jg-anillo__fondo"/>' +
       '<circle cx="32" cy="32" r="' + R + '" class="jg-anillo__val" style="stroke-dasharray:' + L.toFixed(1) + ';stroke-dashoffset:' + (L * (1 - p)).toFixed(1) + '"/></svg><span>' + em + '</span></div>';
   }
   function estrellas(n){ return '<span class="jg-estrellas">' + [0, 1, 2].map(i => '<i class="' + (i < n ? 'on' : '') + '">★</i>').join('') + '</span>'; }
@@ -262,9 +404,11 @@ window.Juego = (function () {
   function jugar(bloque, juegoId){
     const b = BLOQUES[bloque], j = b && b.juegos.find(x => x.id === juegoId);
     if (!j) return;
+    const E = estudiados(bloque, j.pista);
+    if (E.size < POR_NIVEL) { UI.tostada('🔒 Estudia primero los 3 temas del nivel para abrir este juego.'); return; }
     let rondas = [];
-    try { rondas = j.rondas().filter(Boolean); } catch (e) { console.warn('Juego', e); }
-    if (!rondas.length) { UI.toast && UI.toast('Este juego no tiene datos todavía.'); return; }
+    try { rondas = j.rondas(E).filter(Boolean); } catch (e) { console.warn('Juego', e); }
+    if (!rondas.length) { UI.tostada('Estudia un tema más para que este juego tenga preguntas.'); return; }
     cerrar();
     P = { bloque, j, rondas, i: 0, vidas: VIDAS, puntos: 0, combo: 0, mejorCombo: 0, bien: 0, hechas: 0, reloj: null, t0: 0, bloqueada: false };
     const velo = document.createElement('div');
@@ -503,7 +647,7 @@ window.Juego = (function () {
     Almacen.guardar();
     const despues = nivel(e.xp);
     tono('fin');
-    const msg = est === 3 ? 'Dominio total.' : est === 2 ? 'Muy bien: ya casi lo tienes.' : est === 1 ? 'Buen comienzo. Estúdialo a fondo y vuelve.' : 'Aquí hay terreno por ganar: estúdialo a fondo y vuelve a jugar.';
+    const msg = est === 3 ? 'Dominio total de lo que llevas estudiado.' : est === 2 ? 'Muy bien: ya casi lo tienes.' : est === 1 ? 'Buen comienzo. Repasa los temas que fallaste y vuelve.' : 'Repasa los temas de este nivel y vuelve a jugar.';
     document.getElementById('jgTiempo').style.width = '0';
     document.getElementById('jgProg').style.width = '100%';
     document.getElementById('jgEscena').innerHTML =
@@ -518,7 +662,7 @@ window.Juego = (function () {
           '<div><b>+' + xp + '</b><small>XP</small></div></div>' +
         (despues.n > antes.n ? '<p class="jg-final__sube">⬆ Subiste a <b>' + esc(despues.nombre) + '</b></p>' : '') +
         '<div class="jg-final__botones"><button class="jg-sig" id="jgOtra">↻ Jugar otra vez</button>' +
-        '<button class="jg-sig jg-sig--claro" id="jgFondoBtn">📖 Ahora estúdialo a fondo</button></div>' +
+        '<button class="jg-sig jg-sig--claro" id="jgFondoBtn">📖 Seguir con la ruta</button></div>' +
       '</div>';
     const bloque = P.bloque, jid = P.j.id;
     document.getElementById('jgOtra').onclick = () => jugar(bloque, jid);
@@ -526,7 +670,8 @@ window.Juego = (function () {
       cerrar();
       const z = document.getElementById('jgZona');
       if (z) { z.outerHTML = zona(bloque).replace('<div id="jgFondo"></div>', ''); enganchar(); }
-      const f = document.getElementById('jgFondo'); if (f) f.scrollIntoView({ behavior: animar() ? 'smooth' : 'auto' });
+      const sig = document.querySelector('.jg-tema:not(.hecho)') || document.getElementById('jgZona');
+      if (sig) sig.scrollIntoView({ behavior: animar() ? 'smooth' : 'auto', block: 'center' });
     };
   }
   function confeti(){
@@ -536,5 +681,5 @@ window.Juego = (function () {
     return s + '</div>';
   }
 
-  return { zona, enganchar, jugar, barraNivel, avance, anillo, BLOQUES };
+  return { zona, enganchar, jugar, barraNivel, avance, conteo, anillo, BLOQUES, PISTAS, situacion, marcar, botonEstudio, engancharEstudio, montarEstudio, tarjetaCerrada, engancharCerradas, candado };
 })();
