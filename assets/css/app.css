@@ -863,3 +863,36 @@ button.chip.on{background:var(--carbon);color:#fff}
 .bl-paso--act{ border-color:var(--sangria); background:var(--sangria-luz) }
 
 .chip--llave{ opacity:.55; border-style:dashed; cursor:pointer }
+
+/* ---------- Tubos de laboratorio (Medicina practica) ---------- */
+.tubo-svg{ width:44px; height:122px; display:block; overflow:visible }
+.tubo-fila{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px }
+.tubo-paso{ display:flex; flex-direction:column; align-items:center; gap:4px; width:84px; position:relative; text-align:center }
+.tubo-paso small{ font-size:11.5px; color:var(--tinta-60); line-height:1.2 }
+.tubo-num{ position:absolute; top:-6px; left:6px; width:22px; height:22px; border-radius:50%; background:var(--carbon); color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; z-index:1 }
+.tubo-galeria{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px }
+.tubo-item{ display:flex; flex-direction:column; align-items:center; gap:4px; width:92px; padding:10px 6px; border:2px solid transparent; border-radius:12px; background:var(--hueso); cursor:pointer; font:inherit; font-size:11.5px; color:var(--tinta-60) }
+.tubo-item.on{ border-color:var(--sangria); background:var(--sangria-luz); color:var(--tinta) }
+.tubo-item:hover{ border-color:var(--linea) }
+.tubo-det{ display:grid; grid-template-columns:150px 1fr; gap:22px; align-items:start }
+.tubo-det__arte{ display:flex; flex-direction:column; align-items:center }
+.tubo-grande .tubo-svg{ width:96px; height:266px }
+.tubo-ops{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:8px }
+.tubo-op{ display:flex; align-items:center; gap:10px; padding:10px 12px; border:1.5px solid var(--linea); border-radius:10px; background:var(--papel); font:inherit; text-align:left; cursor:pointer }
+.tubo-op:hover:not(:disabled){ border-color:var(--sangria) }
+.tubo-op.ok{ border-color:var(--quirofano); background:var(--quirofano-luz) }
+.tubo-op.mal{ border-color:var(--sangria-vivo); background:var(--sangria-luz) }
+.tubo-chip{ width:16px; height:16px; border-radius:50%; flex:none; border:1px solid rgba(0,0,0,.25) }
+
+.tubo-liq,.tubo-top,.tubo-cel,.tubo-gel{ transform-box:fill-box; transform-origin:bottom }
+.tubo-top,.tubo-cel,.tubo-gel{ opacity:0 }
+.tubo-sep .tubo-top,.tubo-sep .tubo-cel,.tubo-sep .tubo-gel{ opacity:1; transition:opacity .9s }
+.tubo-sep .tubo-liq{ opacity:0; transition:opacity .9s }
+.tubo-anim .tubo-liq{ animation:tuboLlena 1s ease-out both; animation-delay:var(--d,0s) }
+@keyframes tuboLlena{ from{ transform:scaleY(0) } to{ transform:scaleY(1) } }
+.tubo-inv .tubo-svg{ animation:tuboInv 1.6s ease-in-out }
+@keyframes tuboInv{ 0%{ transform:rotate(0) } 40%{ transform:rotate(180deg) } 60%{ transform:rotate(180deg) } 100%{ transform:rotate(360deg) } }
+.tubo-gira .tubo-svg{ animation:tuboGira .12s linear infinite }
+@keyframes tuboGira{ 0%{ transform:translateX(-3px) } 50%{ transform:translateX(3px) } 100%{ transform:translateX(-3px) } }
+@media(max-width:640px){ .tubo-det{ grid-template-columns:1fr } }
+@media(prefers-reduced-motion:reduce){ .tubo-anim .tubo-liq,.tubo-inv .tubo-svg,.tubo-gira .tubo-svg{ animation:none } }

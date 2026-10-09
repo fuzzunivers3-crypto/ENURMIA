@@ -19,6 +19,13 @@ window.App = (function () {
     practicar:   { em:'🧠', nombre:'Practicar',      ver: p => Vistas.entrenar(p) },
     clinica:     { em:'🩺', nombre:'Clínica',        ver: p => Clinica.menu(p) },
     casos:       { em:'🧬', nombre:'Casos',          ver: p => CasosUnirm.menu(p) },
+    medpractica: { em:'🧰', nombre:'Medicina práctica', ver: p => MedPractica.menu(p) },
+    calculos:    { em:'🧮', nombre:'Cálculos médicos',  ver: p => Calculos.menu(p) },
+    tubos:       { em:'🧪', nombre:'Tubos de laboratorio', ver: () => Tubos.menu() },
+    laboratorio: { em:'🔬', nombre:'Analíticas e imágenes', ver: p => Laboratorio.menu(p) },
+    diagnostico: { em:'🩺', nombre:'Simulacro diagnóstico', ver: p => Diagnostico.menu(p) },
+    emergencias: { em:'🚑', nombre:'Emergencias médicas', ver: p => Emergencias.menu(p) },
+    cronicas:    { em:'🩺', nombre:'Enfermedades crónicas', ver: p => Cronicas.menu(p) },
     flashcards:  { em:'⚡', nombre:'Flashcards',     ver: p => Flashcards.menu(p) },
     material:    { em:'📎', nombre:'Mi material',    ver: p => Material.menu(p) },
     razonar:     { em:'🔍', nombre:'Razonar',        ver: p => Vistas.razonar(p) },
@@ -43,7 +50,7 @@ window.App = (function () {
      cuatrimestre 7 no tiene nada que hacer en un simulacro del ENURM. */
   const MENUS = {
     enurm: {
-      arriba: ['inicio','ruta','simulacro','estudiar','temario','entrenar','clinica','flashcards','desafio','ranking','biblioteca'],
+      arriba: ['inicio','ruta','simulacro','estudiar','temario','entrenar','clinica','medpractica','flashcards','desafio','ranking','biblioteca'],
       abajo:  ['progreso','preparacion','ajustes','soporte'],
       movil:  ['inicio','ruta','estudiar','flashcards','progreso']
     },
@@ -71,7 +78,7 @@ window.App = (function () {
      sesion, y eso es rehacer como se carga el banco entero. */
   const SOLO_CON_MEMBRESIA = new Set([
     'simulacro','entrenar','clinica','flashcards','desafio','ruta','biblioteca',
-    'practicar','razonar','examinar','casos','duelo'
+    'practicar','razonar','examinar','casos','duelo','diagnostico'
   ]);
 
   /* Nace en 'desconocida' a proposito: hasta que el servidor conteste no se
