@@ -174,6 +174,132 @@ window.Arturo = (function () {
     };
   }
 
+  /* ---------- la cara ----------
+     Dibujado en SVG en linea: sin archivos que cargar, funciona sin
+     internet y hereda la paleta. El gesto (humor) y el accesorio
+     (insignia) cambian segun lo que Arturo esta haciendo en ese
+     momento; el parpadeo y el habla los pone el CSS. */
+  const HUMOR_DE_PASO = {
+    sinruta: 'neutro', leer: 'neutro', preg: 'atento', tarj: 'neutro',
+    simulacro: 'atento', fin: 'feliz'
+  };
+  const INSIGNIA = {
+    sinruta: '🧭', leer: '📖', preg: '❓', tarj: '🗂️', simulacro: '⏱️',
+    fin: '🏆', feliz: '✨', preocupado: '📖'
+  };
+
+  function caraArturo(humor){
+    const cejas = {
+      neutro:     'M27 30 H38 M42 30 H53',
+      atento:     'M27 28 Q32.5 25 38 28 M42 28 Q47.5 25 53 28',
+      feliz:      'M27 29 Q32.5 26 38 29 M42 29 Q47.5 26 53 29',
+      preocupado: 'M27 32 L38 28.5 M42 28.5 L53 32'
+    }[humor] || 'M27 30 H38 M42 30 H53';
+    const boca = {
+      neutro:     '<path d="M33 50 Q40 54 47 50" class="av__trazo"/>',
+      atento:     '<path d="M34 50.5 Q40 52.5 46 50.5" class="av__trazo"/>',
+      feliz:      '<path d="M31 48.5 Q40 60 49 48.5 Z" fill="#8A2A38" stroke="#4A0812" stroke-width="1.4" stroke-linejoin="round"/>',
+      preocupado: '<path d="M34 53 Q40 48.5 46 53" class="av__trazo"/>'
+    }[humor] || '';
+    return '<svg class="av av--arturo av--' + humor + '" viewBox="0 0 80 80" aria-hidden="true">' +
+      '<g class="av__cuerpo">' +
+        '<path d="M8 82 Q10 58 40 58 Q70 58 72 82 Z" fill="#fff" stroke="#E7DCD4" stroke-width="1.5"/>' +
+        '<path d="M31 58 L40 74 L49 58 Z" fill="#6E0F1F"/>' +
+        '<path d="M25 60 Q22 76 35 76" fill="none" stroke="#2A1F1D" stroke-width="2" stroke-linecap="round"/>' +
+        '<circle cx="36.5" cy="76" r="3" fill="#7FA8C4" stroke="#2A1F1D" stroke-width="1.4"/>' +
+      '</g>' +
+      '<rect x="35" y="49" width="10" height="11" rx="3" fill="#D9A582"/>' +
+      '<g class="av__cabeza">' +
+        '<ellipse cx="40" cy="37" rx="17" ry="19" fill="#E8B896"/>' +
+        '<path d="M22.5 35 Q21 13 40 13.5 Q59 13 57.5 35 Q54 24.5 40 24 Q26 24.5 22.5 35 Z" fill="#2A1F1D"/>' +
+        '<circle cx="32.5" cy="38" r="6" fill="#fff" fill-opacity=".55" stroke="#2A1F1D" stroke-width="1.6"/>' +
+        '<circle cx="47.5" cy="38" r="6" fill="#fff" fill-opacity=".55" stroke="#2A1F1D" stroke-width="1.6"/>' +
+        '<path d="M38.5 38 H41.5" stroke="#2A1F1D" stroke-width="1.6"/>' +
+        '<g class="av__ojos"><circle cx="32.5" cy="38" r="1.9" fill="#2A1F1D"/><circle cx="47.5" cy="38" r="1.9" fill="#2A1F1D"/></g>' +
+        '<path d="' + cejas + '" class="av__trazo av__ceja"/>' +
+        '<g class="av__boca">' + boca + '</g>' +
+      '</g>' +
+    '</svg>';
+  }
+
+  function caraRobot(humor){
+    const lente = { neutro:'#7FA8C4', atento:'#7FA8C4', feliz:'#4E8C74', preocupado:'#C8873A' }[humor] || '#7FA8C4';
+    return '<svg class="av av--robot av--' + humor + '" viewBox="0 0 80 80" aria-hidden="true">' +
+      '<path class="av__antena" d="M52 16 L56 6" stroke="#6B5F5A" stroke-width="2" stroke-linecap="round"/>' +
+      '<circle class="av__antena" cx="56.5" cy="5.5" r="2.4" fill="#B31331"/>' +
+      '<g class="av__cabeza">' +
+        '<path d="M18 44 A22 22 0 0 1 62 44 Z" fill="#EEF2F5" stroke="#9C918C" stroke-width="1.6" stroke-linejoin="round"/>' +
+        '<path d="M22 36 A19 19 0 0 1 36 24 L33 44 H20 Z" fill="#7FA8C4" fill-opacity=".85"/>' +
+        '<path d="M58 36 A19 19 0 0 0 44 24 L47 44 H60 Z" fill="#7FA8C4" fill-opacity=".85"/>' +
+        '<circle cx="40" cy="33" r="8.5" fill="#16100F" stroke="#9C918C" stroke-width="1.6"/>' +
+        '<g class="av__ojos"><circle class="av__lente" cx="40" cy="33" r="5" fill="' + lente + '"/>' +
+        '<circle cx="38" cy="31" r="1.5" fill="#fff" fill-opacity=".85"/></g>' +
+      '</g>' +
+      '<g class="av__cuerpo">' +
+        '<rect x="16" y="44" width="48" height="30" rx="6" fill="#F4F6F8" stroke="#9C918C" stroke-width="1.6"/>' +
+        '<rect x="22" y="50" width="14" height="9" rx="2" fill="#7FA8C4"/>' +
+        '<rect x="40" y="50" width="18" height="4" rx="2" fill="#6E0F1F"/>' +
+        '<rect x="40" y="57" width="10" height="4" rx="2" fill="#DCEDE4" stroke="#4E8C74" stroke-width=".8"/>' +
+        '<rect x="22" y="64" width="36" height="4" rx="2" fill="#7FA8C4" fill-opacity=".6"/>' +
+        '<rect x="22" y="74" width="8" height="6" rx="2" fill="#9C918C"/>' +
+        '<rect x="50" y="74" width="8" height="6" rx="2" fill="#9C918C"/>' +
+      '</g>' +
+    '</svg>';
+  }
+
+  function cara(humor, insignia){
+    const svg = nombre() === 'R2D2' ? caraRobot(humor) : caraArturo(humor);
+    const ins = insignia === false ? '' : (INSIGNIA[insignia] || INSIGNIA[humor] || '');
+    return '<span class="arturo__av">' + svg +
+      (ins ? '<span class="arturo__insignia">' + ins + '</span>' : '') + '</span>';
+  }
+
+  /* Escribe el texto como si lo dijera. Mientras escribe, la tira lleva
+     la clase arturo--habla y la cara mueve la boca (o la lente). Con
+     "reducir movimiento" activado, el texto aparece entero y sin cara
+     animada. Se escribe con textContent: nada de lo que llegue aqui se
+     interpreta como HTML. */
+  function hablar(caja){
+    const p = caja.querySelector('.arturo__texto p');
+    if (!p || p.dataset.dicho) return;
+    p.dataset.dicho = '1';
+    decir(p, caja);
+  }
+
+  /* Escribe el texto de p letra a letra y marca caja como "hablando".
+     Devuelve una funcion que lo termina de golpe (para el que no quiere
+     esperar) o lo corta si la pantalla ya cambio. */
+  function decir(p, caja, alAcabar){
+    if (p._hablando) p._hablando(true);
+    const texto = p.textContent;
+    let quieto = false;
+    try { quieto = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+    if (quieto || texto.length < 2){ if (alAcabar) alAcabar(); return function () {}; }
+    p.style.minHeight = p.offsetHeight + 'px';
+    p.textContent = '';
+    caja.classList.add('arturo--habla');
+    const paso = Math.max(1, Math.ceil(texto.length / 70));
+    let i = 0, fin = false;
+    function acabar(completo){
+      if (fin) return;
+      fin = true;
+      clearInterval(t);
+      if (completo) p.textContent = texto;
+      caja.classList.remove('arturo--habla');
+      p.style.minHeight = '';
+      p._hablando = null;
+      if (alAcabar) alAcabar();
+    }
+    const t = setInterval(function () {
+      if (!document.body.contains(p)) { acabar(false); return; }
+      i = Math.min(texto.length, i + paso);
+      p.textContent = texto.slice(0, i);
+      if (i >= texto.length) acabar(false);
+    }, 18);
+    p._hablando = acabar;
+    return function () { acabar(true); };
+  }
+
   /* ---------- la tira, para incrustar en cualquier vista ---------- */
   /* op.frase y op.boton permiten que una pantalla concreta ponga el
      remate que le toca (cerrar la lectura, interpretar un resultado) en
@@ -185,9 +311,9 @@ window.Arturo = (function () {
     const texto = op.frase || p.frase;
     const boton = op.boton === null ? null : (op.boton || p.boton);
     const accion = op.accion || '';
-    const sello = n === 'R2D2' ? '🤖' : n.charAt(0);
-    return '<div class="arturo">' +
-        '<span class="arturo__sello">' + esc(sello) + '</span>' +
+    const humor = op.humor || HUMOR_DE_PASO[p.tipo] || 'neutro';
+    return '<div class="arturo arturo--' + humor + '">' +
+        cara(humor, op.humor ? op.humor : p.tipo) +
         '<div class="arturo__texto">' +
           '<b>' + esc(n) + '</b>' +
           '<p>' + esc(texto) + '</p>' +
@@ -202,6 +328,7 @@ window.Arturo = (function () {
   function enganchar(){
     cablear(document.getElementById('arturoSeguir'));
     cablear(document.getElementById('arturoOtro'));
+    document.querySelectorAll('.arturo').forEach(hablar);
   }
 
   function cablear(b){
@@ -287,7 +414,7 @@ window.Arturo = (function () {
   }
 
   return {
-    nombre: nombre,
+    nombre: nombre, cara: cara, decir: decir,
     paso: paso, frase: frase, barra: barra,
     enganchar: enganchar, seguir: seguir,
     cerrarLectura: cerrarLectura, releer: releer,

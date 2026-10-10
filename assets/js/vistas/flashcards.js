@@ -211,6 +211,7 @@ window.Flashcards = (function () {
     }
     return Arturo.barra({
       frase: Arturo.frase('eligeTema', { tema: tema, tanda: Ruta.activa().tanda }),
+      humor: 'feliz',
       boton: 'Siguiente tema',
       boton2: 'Examinarme de este tema',
       accion2: 'examenTema'

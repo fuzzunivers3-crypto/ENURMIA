@@ -483,27 +483,25 @@ window.Sesion = (function () {
     const clave = bien ? 'resultadoAlto' : 'resultadoBajo';
     return '<div style="margin-bottom:18px">' +
       Arturo.barra(bien
-        ? { frase: Arturo.frase(clave, { tema:h.tema, pct:pct }) }
+        ? { frase: Arturo.frase(clave, { tema:h.tema, pct:pct }), humor: 'feliz' }
         : { frase: Arturo.frase(clave, { tema:h.tema, pct:pct }),
-            boton: 'Volver al texto', accion: 'releer' }) +
+            boton: 'Volver al texto', accion: 'releer', humor: 'preocupado' }) +
       '</div>';
   }
 
   /* ---------- "Aun no lo entiendo" ---------- */
-  /* Solo aparece si hay explicacion escrita que reformular y la funcion
-     esta disponible (ajuste activo, con internet, cuenta de nube y con
-     cuota). Si ya se pidio antes, se muestra lo guardado sin gastar. */
+  /* Abre la clase de Arturo: una pantalla central que desmonta la
+     pregunta paso a paso. Se ofrece siempre que haya explicacion
+     escrita; no depende de internet ni de la nube (eso solo afecta al
+     ultimo paso, "de otra forma"). */
   function bloqueReexplicar(p, elegida){
-    if (!window.ArturoIA || !p.exp) return '';
-    const ya = ArturoIA.guardada(p.id, elegida);
-    if (ya){
-      return '<div class="reexp" id="reexp-' + esc(p.id) + '">' +
-        '<span class="eyebrow">' + esc(Arturo.nombre()) + ', de otra forma</span>' +
-        '<p>' + esc(ya) + '</p></div>';
-    }
-    if (!ArturoIA.disponible()) return '';
-    return '<div class="reexp reexp--vacio" id="reexp-' + esc(p.id) + '">' +
-      '<button class="btn btn--sm btn--fantasma" data-reexp="' + esc(p.id) +
+    if (!window.ArturoClase || !p.exp) return '';
+    const n = Arturo.nombre();
+    return '<div class="reexp-cta">' +
+      Arturo.cara('atento', false) +
+      '<div class="reexp-cta__txt"><b>¿No te quedó claro?</b>' +
+      '<span>' + esc(n) + ' te lo explica paso a paso.</span></div>' +
+      '<button class="btn btn--sm" data-reexp="' + esc(p.id) +
       '" data-elegida="' + (elegida === null || elegida === undefined ? '' : elegida) +
       '">Aún no lo entiendo</button></div>';
   }
@@ -523,29 +521,10 @@ window.Sesion = (function () {
   /* Cablea los botones que haya en pantalla. Se llama despues de pintar. */
   function engancharReexplicar(){
     UI.$$('[data-reexp]').forEach(function (b) {
-      b.onclick = async function () {
-        const qid = b.dataset.reexp;
+      b.onclick = function () {
         const cruda = b.dataset.elegida;
-        const elegida = cruda === '' ? null : +cruda;
-        const q = Motor.porId(qid);
-        if (!q) return;
-        const caja = document.getElementById('reexp-' + qid);
-        const n = Arturo.nombre();
-        b.disabled = true;
-        b.textContent = n + ' lo está pensando…';
-        try {
-          const texto = await ArturoIA.reexplicar(q, elegida);
-          caja.classList.remove('reexp--vacio');
-          caja.innerHTML = '<span class="eyebrow">' + esc(n) + ', de otra forma</span>' +
-                           '<p>' + esc(texto) + '</p>';
-        } catch (e) {
-          const m = e && e.message;
-          UI.tostada(m === 'sin-cuota'
-            ? n + ' ya no puede reformular más por hoy. Vuelve mañana.'
-            : n + ' no puede reformular ahora mismo.', 'mal');
-          if (m === 'sin-cuota') caja.remove();
-          else { b.disabled = false; b.textContent = 'Aún no lo entiendo'; }
-        }
+        const q = Motor.porId(b.dataset.reexp);
+        if (q) ArturoClase.abrir(q, cruda === '' ? null : +cruda);
       };
     });
   }
