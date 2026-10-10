@@ -605,6 +605,8 @@ button.chip.on{background:var(--carbon);color:#fff}
     font-size:18px;cursor:pointer;transition:all .2s var(--salida);
   }
   .movil button.on{background:var(--sangria-vivo);color:#fff}
+  .movil button{flex:1 1 0;min-width:0;padding:9px 0}
+  .movil__mas{font-weight:800}
   .sesion__barra{flex-wrap:wrap;border-radius:var(--r-lg);position:static}
   .pregunta{padding:20px}
   .encabezado h1{font-size:26px}
@@ -896,3 +898,39 @@ button.chip.on{background:var(--carbon);color:#fff}
 @keyframes tuboGira{ 0%{ transform:translateX(-3px) } 50%{ transform:translateX(3px) } 100%{ transform:translateX(-3px) } }
 @media(max-width:640px){ .tubo-det{ grid-template-columns:1fr } }
 @media(prefers-reduced-motion:reduce){ .tubo-anim .tubo-liq,.tubo-inv .tubo-svg,.tubo-gira .tubo-svg{ animation:none } }
+
+/* ---------- hoja "Mas" del telefono (todas las secciones) ----------
+   Mismo fondo vino del juego de Medicina practica (variables --jg-* de juego.css). */
+.hoja-mas{
+  position:fixed;inset:0;z-index:300;display:flex;align-items:flex-end;justify-content:center;
+  background:radial-gradient(90% 70% at 50% 100%,rgba(138,26,62,.45),transparent 60%),rgba(20,4,12,.72);
+  backdrop-filter:blur(4px);animation:veloEntra .2s ease both;
+}
+.hoja-mas__panel{
+  position:relative;overflow:hidden auto;width:100%;max-width:560px;max-height:82vh;
+  padding:16px 16px calc(20px + env(safe-area-inset-bottom));color:#fff;
+  background:radial-gradient(120% 70% at 85% -10%,rgba(249,111,137,.45),transparent 55%),
+    linear-gradient(160deg,var(--jg-vino-600,#63102C),var(--jg-vino,#47061C) 55%,var(--jg-vino-900,#14040C));
+  border:1px solid rgba(249,111,137,.3);border-bottom:none;border-radius:var(--r-xl) var(--r-xl) 0 0;
+  box-shadow:0 -20px 50px rgba(71,6,28,.45);
+  animation:subeHoja .32s var(--salida) both;
+}
+.hoja-mas__panel::before{content:"";display:block;width:44px;height:5px;border-radius:5px;margin:0 auto 10px;background:rgba(255,179,193,.45)}
+.hoja-mas__cab{display:flex;align-items:center;justify-content:space-between;padding:0 6px 14px;font-family:var(--display);font-size:18px;color:#fff}
+.hoja-mas__cerrar{width:40px;height:40px;border:1px solid rgba(249,111,137,.35);border-radius:50%;background:rgba(20,4,12,.38);color:#fff;font-size:16px;cursor:pointer}
+.hoja-mas__rejilla{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.hoja-mas__item{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:84px;padding:12px 6px;
+  border:1px solid rgba(249,111,137,.3);border-radius:var(--r-md);background:rgba(20,4,12,.38);
+  font-size:12.5px;font-weight:700;line-height:1.2;text-align:center;color:#fff;cursor:pointer;
+  transition:transform .12s var(--salida),background .2s;
+}
+.hoja-mas__item .em{font-size:24px}
+.hoja-mas__item:active{transform:translateY(2px);background:rgba(249,111,137,.18)}
+.hoja-mas__item.on{background:linear-gradient(135deg,#fff,var(--jg-rosa-300,#FFB3C1));border-color:transparent;color:var(--jg-vino,#47061C);box-shadow:0 8px 20px rgba(0,0,0,.25)}
+.hoja-mas__item:focus-visible,.hoja-mas__cerrar:focus-visible{outline:2.5px solid var(--jg-rosa,#F96F89);outline-offset:2px}
+.hoja-mas__sep{height:1px;background:rgba(249,111,137,.25);margin:14px 4px}
+body.sin-scroll{overflow:hidden}
+@keyframes subeHoja{from{transform:translateY(100%)}to{transform:none}}
+@keyframes veloEntra{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.hoja-mas,.hoja-mas__panel{animation:none}}

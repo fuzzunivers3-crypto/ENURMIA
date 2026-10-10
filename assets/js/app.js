@@ -116,6 +116,7 @@ window.App = (function () {
   function ir(id, param){
     const ruta = RUTAS.find(r => r.id === id)
       || (PANTALLAS[id] ? Object.assign({ id }, PANTALLAS[id]) : RUTAS[0]);
+    cerrarMas();
     if (window.Sesion) Sesion.salir();
     if (window.Flashcards) Flashcards.salir();
     if (window.Duelo) Duelo.salir();
@@ -137,7 +138,46 @@ window.App = (function () {
 
   function marcar(){
     UI.$$('.rail__link').forEach(b => b.classList.toggle('on', b.dataset.ruta === actual));
-    UI.$$('.movil button').forEach(b => b.classList.toggle('on', b.dataset.ruta === actual));
+    UI.$$('.movil button[data-ruta]').forEach(b => b.classList.toggle('on', b.dataset.ruta === actual));
+    const mas = document.getElementById('btnMas');
+    if (mas) mas.classList.toggle('on', !menu().movil.includes(actual));
+  }
+
+  /* En el telefono la barra inferior solo cabe con 5 accesos; el resto de
+     pantallas (y Administracion, si el rol lo permite) vive en esta hoja.
+     Se arma al abrirla desde menu(), asi que siempre refleja el programa y
+     el rol confirmados por el servidor, aunque lleguen tarde. */
+  function abrirMas(){
+    cerrarMas();
+    const m = menu();
+    const item = id =>
+      '<button class="hoja-mas__item' + (id === actual ? ' on' : '') + '" data-ir="' + id + '">' +
+        '<span class="em">' + emojiPantalla(id) + '</span><span>' + esc(nombrePantalla(id)) + '</span></button>';
+    const velo = document.createElement('div');
+    velo.className = 'hoja-mas';
+    velo.innerHTML =
+      '<div class="hoja-mas__panel" role="dialog" aria-modal="true" aria-label="Todas las secciones">' +
+        '<div class="hoja-mas__cab"><b>' + marcaPrograma() + '</b>' +
+          '<button class="hoja-mas__cerrar" aria-label="Cerrar">✕</button></div>' +
+        '<div class="hoja-mas__rejilla">' + m.arriba.map(item).join('') + '</div>' +
+        '<div class="hoja-mas__sep"></div>' +
+        '<div class="hoja-mas__rejilla">' + m.abajo.map(item).join('') + '</div>' +
+      '</div>';
+    document.body.appendChild(velo);
+    document.body.classList.add('sin-scroll');
+    velo.onclick = e => { if (e.target === velo) cerrarMas(); };
+    velo.querySelector('.hoja-mas__cerrar').onclick = cerrarMas;
+    velo.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => { cerrarMas(); ir(b.dataset.ir); });
+    velo.onkeydown = e => { if (e.key === 'Escape') cerrarMas(); };
+    const primero = velo.querySelector('.hoja-mas__item.on') || velo.querySelector('.hoja-mas__item');
+    if (primero) primero.focus();
+  }
+
+  function cerrarMas(){
+    const v = document.querySelector('.hoja-mas');
+    if (!v) return;
+    v.remove();
+    document.body.classList.remove('sin-scroll');
   }
 
   function marcaPrograma(){ return Almacen.programa() === 'unirm' ? 'UNIRMIA' : 'ENURMIA'; }
@@ -198,11 +238,13 @@ window.App = (function () {
 
     '<nav class="movil">' +
       menu().movil.map(id =>
-        '<button data-ruta="' + id + '" title="' + esc(nombrePantalla(id)) + '">' + emojiPantalla(id) + '</button>'
+        '<button data-ruta="' + id + '" title="' + esc(nombrePantalla(id)) + '" aria-label="' + esc(nombrePantalla(id)) + '">' + emojiPantalla(id) + '</button>'
       ).join('') +
+      '<button id="btnMas" class="movil__mas" title="Más secciones" aria-label="Más secciones" aria-haspopup="dialog">☰</button>' +
     '</nav>';
 
     UI.$$('[data-ruta]').forEach(b => b.onclick = () => ir(b.dataset.ruta));
+    document.getElementById('btnMas').onclick = abrirMas;
 
     document.getElementById('perfilTop').onclick = () => ir('ajustes');
     document.getElementById('btnRachaTop').onclick = () => {
