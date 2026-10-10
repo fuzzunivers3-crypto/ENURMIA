@@ -249,3 +249,49 @@ body.jg-abierto{overflow:hidden}
   .jg-estudio__btn{width:100%}
 }
 @media (prefers-reduced-motion:reduce){.jg-nodo.actual{animation:none}}
+
+/* ---------- Arturo en los bloques: lecciones ---------- */
+body.jg-abierto .clase-velo{z-index:400}
+.cl-lista{margin:0;padding-left:20px;line-height:1.65;font-size:15px}
+.cl-lista li{margin-bottom:6px;opacity:0;animation:aparece .45s ease both;animation-delay:var(--d,0s)}
+.cl-lista--bien li::marker{content:'✓  ';color:#3F8A6E;font-weight:800}
+.cl-lista--mal li::marker{content:'✕  ';color:var(--jg-rosa-600);font-weight:800}
+.cl-orden{list-style:none;margin:0;padding:0;display:grid;gap:7px}
+.cl-orden li{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;font-size:14.5px;line-height:1.45;border:1.5px solid var(--linea);background:#fff;transition:all .3s}
+.cl-orden li span{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font:700 12px var(--mono);background:var(--hueso-hondo);color:var(--tinta)}
+.cl-orden li.on{border-color:var(--jg-rosa);background:var(--jg-rosa-100);box-shadow:0 6px 16px rgba(201,71,106,.18);transform:translateX(4px)}
+.cl-orden li.on span{background:var(--jg-vino);color:#fff}
+.cl-orden li.hecho{opacity:.7}
+.cl-orden li.hecho span{background:var(--jg-rosa);color:var(--jg-vino)}
+.cl-orden li.luego{opacity:.38}
+.cl-orden--mono li{font-family:var(--mono);font-size:13px}
+.cl-formula{font-family:var(--mono);font-size:14px;line-height:1.6;padding:14px 16px;border-radius:14px;background:var(--jg-vino-800);color:#fff;margin-bottom:10px}
+.cl-datos{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
+.cl-datos .chip b{color:var(--jg-vino)}
+.cl-res{padding:16px 18px;border-radius:16px;background:linear-gradient(140deg,var(--jg-rosa-100),#fff);border:1.5px solid var(--jg-rosa)}
+.cl-res b{display:block;font:800 30px var(--display);color:var(--jg-vino)}
+.cl-res p{margin:6px 0 0;line-height:1.55}
+.cl-res__tuya{color:var(--jg-rosa-600)}
+.cl-tubo{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:14px;background:var(--hueso);margin-bottom:10px}
+.cl-tubo>span{flex:none;width:38px;height:56px;border-radius:9px 9px 16px 16px;box-shadow:inset 0 -18px 0 rgba(143,29,44,.85),0 4px 10px rgba(0,0,0,.18)}
+.cl-tubo b{display:block;font-size:16px}
+.cl-tubo small{color:var(--tinta-60,#6B5F5A)}
+.cl-metas{display:grid;gap:6px}
+.cl-metas div{display:flex;justify-content:space-between;gap:12px;padding:9px 12px;border-radius:10px;background:var(--hueso);font-size:14px}
+.cl-metas b{text-align:right;color:var(--jg-vino)}
+.cl-caso--largo{max-height:300px;overflow:auto;line-height:1.7}
+.cl-comprueba__q{font-weight:700;font-size:16px;line-height:1.45;margin:0 0 10px}
+.cl-op--elige{cursor:pointer;width:100%;text-align:left;font:inherit}
+.cl-op--elige:hover:not(:disabled){border-color:var(--jg-rosa);transform:translateY(-1px)}
+.cl-comprueba__msg{margin-top:10px;padding:12px 14px;border-radius:12px;line-height:1.55}
+.cl-comprueba__msg.ok{background:var(--jg-rosa-100);border:1.5px solid var(--jg-rosa)}
+.cl-comprueba__msg.mal{background:var(--hueso-hondo);border:1.5px solid var(--linea)}
+
+/* boton de Arturo al final de cada tema y en los fallos del juego */
+.jg-arturo-cta{margin:0}
+.jg-arturo-btn{margin-left:8px}
+/* Arturo como guia de la ruta */
+.jg-guia{display:flex;align-items:center;gap:12px;margin:0 0 12px}
+.jg-guia .arturo__av{width:54px;height:54px;flex:none;background:#fff;border-radius:50%;box-shadow:0 0 0 3px rgba(249,111,137,.35)}
+.jg-guia p{position:relative;margin:0;padding:10px 14px;border-radius:14px;background:#fff;color:var(--tinta);font-size:14px;line-height:1.45;font-weight:600}
+.jg-guia p::before{content:"";position:absolute;left:-7px;top:50%;margin-top:-7px;border:7px solid transparent;border-left:0;border-right-color:#fff}

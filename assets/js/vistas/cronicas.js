@@ -94,6 +94,7 @@ window.Cronicas = (function () {
       '<div class="card card--yodo" style="margin-bottom:16px"><span class="eyebrow">Perlas y errores frecuentes</span>' + lis(c.perlas) + '</div>' +
 
       '<div class="card" style="margin-bottom:16px"><span class="eyebrow">Practica</span><div id="crPractica" style="margin-top:8px"></div></div>' +
+      '<div id="arCr" style="margin:0 0 14px">' + (window.ArturoBloques ? ArturoBloques.cta('cronicas', 'cronicas', c.id, '¿Te doy la clase del capítulo?') : '') + '</div>' +
       '<div id="jgEstudioCr" style="margin:0 0 30px"></div>' +
     '</div>';
 
@@ -103,7 +104,9 @@ window.Cronicas = (function () {
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
     practica(c);
-    if (window.Juego) Juego.montarEstudio(document.getElementById('jgEstudioCr'), 'cronicas', 'cronicas', c.id);
+    const refrescar = () => { if (window.Juego) Juego.montarEstudio(document.getElementById('jgEstudioCr'), 'cronicas', 'cronicas', c.id); };
+    refrescar();
+    if (window.ArturoBloques) ArturoBloques.enganchar(refrescar);
   }
 
   function practica(c){
@@ -118,9 +121,13 @@ window.Cronicas = (function () {
             '<b style="flex:none">' + 'ABCD'[oi] + '</b><span>' + esc(o) + '</span></button>';
         }).join('') + '</div>' +
         (el !== undefined ? '<div class="card ' + (el === q.ok ? 'card--verde' : 'card--sangria') + '" style="margin:8px 0 0"><b>' + (el === q.ok ? '¡Correcto! ' : 'Correcta: ' + 'ABCD'[q.ok] + '. ') + '</b>' + esc(q.exp) + '</div>' : '') +
+        (el !== undefined && el !== q.ok && window.ArturoClase ? '<button class="btn btn--sm" data-crarturo="' + qi + '" style="margin-top:8px">🩺 Aún no lo entiendo</button>' : '') +
       '</div>';
     }).join('');
     UI.$$('[data-q]').forEach(b => b.onclick = () => { h[+b.dataset.q] = +b.dataset.o; practica(c); });
+    // la pregunta de practica ya tiene forma de pregunta: usa la clase de Arturo tal cual
+    UI.$$('[data-crarturo]').forEach(b => b.onclick = () => { const qi = +b.dataset.crarturo, q = c.practica[qi];
+      ArturoClase.abrir({ id: 'CR-' + c.id + '-' + qi, esp: 'Enfermedades crónicas', caso: '', enunciado: q.q, ops: q.ops, ok: q.ok, exp: q.exp, ref: c.guia }, h[qi]); });
   }
 
   return { menu };

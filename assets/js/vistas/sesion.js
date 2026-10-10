@@ -227,7 +227,7 @@ window.Sesion = (function () {
           ' · Correcta: ' + L[p.ok]) + '</small></span></div>' +
       defensa +
       (p.exp
-        ? '<div class="bloque bloque--porque"><span class="eyebrow">Por qué ' + L[p.ok] + ' es la correcta</span><p>' + esc(p.exp) + '</p></div>'
+        ? '<div class="bloque bloque--porque"><span class="eyebrow">Por qué ' + L[p.ok] + ' es la correcta</span><p>' + enfasis(esc(p.exp)) + '</p></div>'
         : '<div class="bloque bloque--porque"><span class="eyebrow">Respuesta correcta</span><p>' +
           L[p.ok] + '. ' + esc(p.ops[p.ok]) + '</p></div>' +
           '<div class="bloque bloque--trampa"><span class="eyebrow">Sin explicación verificada todavía</span>' +
@@ -489,6 +489,9 @@ window.Sesion = (function () {
       '</div>';
   }
 
+  /* Las explicaciones del ENURM marcan el *enfasis* con asteriscos. */
+  function enfasis(s){ return s.replace(/\*([^*]+)\*/g, '<b>$1</b>'); }
+
   /* ---------- "Aun no lo entiendo" ---------- */
   /* Abre la clase de Arturo: una pantalla central que desmonta la
      pregunta paso a paso. Se ofrece siempre que haya explicacion
@@ -681,7 +684,7 @@ window.Sesion = (function () {
         p.ops.map((o, k) => '<div class="opcion ' + (k === p.ok ? 'correcta' : 'apagada') + '">' +
         '<span class="opcion__letra">' + L[k] + '</span><span class="opcion__texto">' + esc(o) + '</span></div>').join('') +
       '</div>' +
-      '<div class="bloque bloque--porque"><span class="eyebrow">Por qué</span><p>' + esc(p.exp) + '</p></div>' +
+      '<div class="bloque bloque--porque"><span class="eyebrow">Por qué</span><p>' + enfasis(esc(p.exp)) + '</p></div>' +
       '<div class="bloque bloque--clave"><span class="eyebrow">Dato clave</span><p>' + esc(p.clave) + '</p></div>' +
       (descartes ? '<div class="bloque"><span class="eyebrow">Por qué no las otras</span><div class="descartes">' + descartes + '</div></div>' : '') +
       bloqueReexplicar(p, ultimaElegida(p.id)) +

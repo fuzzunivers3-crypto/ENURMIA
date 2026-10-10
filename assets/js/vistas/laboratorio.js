@@ -65,6 +65,7 @@ window.Laboratorio = (function () {
     UI.$$('[data-g]').forEach(x => x.onclick = () => { filtro.grupo = x.dataset.g; pruebas(); });
     UI.$$('details[data-p]').forEach(d => d.ontoggle = () => { if (d.open) abierta = d.dataset.p; });
     if (window.Juego) { Juego.engancharCerradas(); Juego.engancharEstudio(() => pruebas()); }
+    if (window.ArturoBloques) ArturoBloques.enganchar(() => pruebas());
   }
 
   function fila(p){
@@ -78,6 +79,7 @@ window.Laboratorio = (function () {
         linea('Qué mide', p.mide) + linea('Sola diagnostica', p.solo) + linea('En combinación', p.combinada) +
         linea('Cuándo pedirla', p.cuando) +
         '<div class="card card--yodo" style="margin:10px 0 0"><b>Ojo:</b> ' + esc(p.ojo) + '</div>' +
+        (window.ArturoBloques ? '<div style="margin-top:12px">' + ArturoBloques.cta('laboratorio', 'pruebas', p.id) + '</div>' : '') +
         (window.Juego ? '<div style="margin-top:12px">' + Juego.botonEstudio('laboratorio', 'pruebas', p.id) + '</div>' : '') +
       '</div></details>';
   }
@@ -94,8 +96,10 @@ window.Laboratorio = (function () {
         '<ul style="margin:0 0 10px;padding-left:18px;line-height:1.6">' + p.pistas.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' +
         '<p style="margin:0 0 8px;line-height:1.6"><b>Sugiere:</b> ' + esc(p.dx) + '</p>' +
         '<p class="muted" style="margin:0;font-size:13.5px;line-height:1.5">' + esc(p.nota) + '</p>' +
+        (window.ArturoBloques ? '<div style="margin-top:12px">' + ArturoBloques.cta('laboratorio', 'patrones', 'pat' + i) + '</div>' : '') +
         (window.Juego ? '<div style="margin-top:12px">' + Juego.botonEstudio('laboratorio', 'patrones', 'pat' + i) + '</div>' : '') + '</div>').join('') + '</div>';
     if (window.Juego) { Juego.engancharCerradas(); Juego.engancharEstudio(() => patrones()); }
+    if (window.ArturoBloques) ArturoBloques.enganchar(() => patrones());
   }
 
   /* abrir una prueba o un patron desde la ruta de estudio */

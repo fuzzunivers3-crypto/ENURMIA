@@ -178,7 +178,8 @@ window.Calculos = (function () {
         '<p style="margin:6px 0 10px">Te doy datos al azar; calcula tú el resultado y compruébalo. <span class="muted" id="calRacha"></span></p>' +
         '<div id="calCaso"></div>' +
         '<button class="btn btn--vivo" id="calNuevo">Ponme un caso</button></div>' +
-      '<div id="jgEstudioCal" style="margin:-12px 0 30px"></div>' +
+      '<div id="arCal" style="margin:-6px 0 14px">' + (window.ArturoBloques ? ArturoBloques.cta('calculos', 'calculos', c.id) : '') + '</div>' +
+      '<div id="jgEstudioCal" style="margin:0 0 30px"></div>' +
     '</div>';
 
     const pintar = () => { document.getElementById('calRes').innerHTML = resultadoHtml(c, leer(c, 'c_')); };
@@ -187,7 +188,9 @@ window.Calculos = (function () {
     pintarRacha();
     document.getElementById('calAtras').onclick = () => App.ir('calculos');
     document.getElementById('calNuevo').onclick = () => nuevoCaso(c);
-    if (window.Juego) Juego.montarEstudio(document.getElementById('jgEstudioCal'), 'calculos', 'calculos', c.id);
+    const refrescar = () => { if (window.Juego) Juego.montarEstudio(document.getElementById('jgEstudioCal'), 'calculos', 'calculos', c.id); };
+    refrescar();
+    if (window.ArturoBloques) ArturoBloques.enganchar(refrescar);
   }
 
   /* ---------- practica ---------- */
@@ -252,7 +255,10 @@ window.Calculos = (function () {
     document.getElementById('calVered').innerHTML =
       '<div class="card ' + (bien ? 'card--verde' : 'card--sangria') + '" style="margin:0">' +
         '<b>' + (bien ? '¡Correcto!' : 'No coincide.') + '</b> Resultado: ' + fmt(real, dec) + ' ' + esc(caso.r.unidad) + '. ' + esc(caso.r.lectura) +
-        '<ol style="margin:8px 0 0;padding-left:20px;line-height:1.7">' + caso.r.pasos.map(p => '<li class="mono" style="font-size:13px">' + esc(p) + '</li>').join('') + '</ol></div>';
+        '<ol style="margin:8px 0 0;padding-left:20px;line-height:1.7">' + caso.r.pasos.map(p => '<li class="mono" style="font-size:13px">' + esc(p) + '</li>').join('') + '</ol></div>' +
+      (!bien && window.ArturoBloques ? '<button class="btn btn--sm" id="calArturo" style="margin-top:10px">🩺 Aún no lo entiendo: resuélvelo conmigo</button>' : '');
+    const ca = document.getElementById('calArturo');
+    if (ca) { const v = caso.v; ca.onclick = () => ArturoBloques.abrir('calculos', 'calculos', c.id, { v, respuesta: x }, () => { if (window.Juego) Juego.montarEstudio(document.getElementById('jgEstudioCal'), 'calculos', 'calculos', c.id); }); }
     document.getElementById('calComprobar').disabled = true;
   }
 

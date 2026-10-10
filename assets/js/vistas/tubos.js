@@ -113,9 +113,11 @@ window.Tubos = (function () {
         fila('Cuándo pedirlo', t.cuando) +
         '<p style="margin:10px 0 4px"><b>Errores que arruinan la muestra:</b></p><ul style="margin:0;padding-left:18px;line-height:1.6">' + t.errores.map(e => '<li>' + esc(e) + '</li>').join('') + '</ul>' +
         '<div class="card card--yodo" style="margin:12px 0 0"><b>A recordar:</b> ' + esc(t.clave) + '</div>' +
-      '</div></div><div id="jgEstudioTb" style="margin-top:14px"></div></div>';
+      '</div></div><div style="margin-top:14px">' + (window.ArturoBloques ? ArturoBloques.cta('tubos', 'tubos', t.id) : '') + '</div><div id="jgEstudioTb" style="margin-top:12px"></div></div>';
 
-    if (window.Juego) Juego.montarEstudio(document.getElementById('jgEstudioTb'), 'tubos', 'tubos', t.id);
+    const refrescar = () => { if (window.Juego) Juego.montarEstudio(document.getElementById('jgEstudioTb'), 'tubos', 'tubos', t.id); };
+    refrescar();
+    if (window.ArturoBloques) ArturoBloques.enganchar(refrescar);
     const g = document.getElementById('tbGrande');
     document.getElementById('tbInv').onclick = () => {
       if (!animar()) return;

@@ -11,10 +11,20 @@
    otro angulo con ArturoIA.
 
    Armar los pasos (pasos) no toca el DOM: se puede validar en Node.
+
+   LECCIONES: la misma pantalla sirve para explicar un tema de los
+   bloques de Medicina practica (ArturoClase.leccion). Cada paso trae
+   su escena ya pintada (html) y la leccion puede cerrar con un paso
+   de comprobacion: una mini pregunta que, si se acierta, avisa con
+   alAprobar (el bloque lo cuenta como estudiado).
    ============================================================ */
 window.ArturoClase = (function () {
 
   const L = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+  /* Algunas explicaciones traen *enfasis* con asteriscos; Arturo lo dice,
+     no lo deletrea. */
+  function limpio(s){ return String(s == null ? '' : s).replace(/\*([^*]+)\*/g, '$1'); }
 
   function esc(s){
     if (window.UI && UI.esc) return UI.esc(s);
@@ -28,7 +38,7 @@ window.ArturoClase = (function () {
      en frases y se agrupan en trozos de unos 230 caracteres, con tope
      de 4 trozos para que no se haga eterna. */
   function trozos(texto){
-    const t = String(texto || '').trim();
+    const t = limpio(texto).trim();
     if (!t) return [];
     const frases = t.split(/(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÑ¿¡0-9])/);
     const meta = Math.max(230, Math.ceil(t.length / 4));
@@ -85,7 +95,7 @@ window.ArturoClase = (function () {
       out.push({
         titulo: 'Por qué la ' + L[elegida] + ' no era',
         humor: 'preocupado',
-        voz: noMapa[elegida],
+        voz: limpio(noMapa[elegida]),
         escena: { tipo: 'opciones', modo: 'tuya', elegida: elegida }
       });
     }
@@ -106,7 +116,7 @@ window.ArturoClase = (function () {
       out.push({
         titulo: 'La trampa',
         humor: 'atento',
-        voz: q.trampa,
+        voz: limpio(q.trampa),
         escena: { tipo: 'trampa' }
       });
     }
@@ -140,7 +150,7 @@ window.ArturoClase = (function () {
         '<h3 class="cl-enun">' + esc(q.enunciado) + '</h3>';
     }
     if (e.tipo === 'clave'){
-      return '<div class="cl-clave"><span class="cl-clave__ico">🔑</span><p>' + esc(q.clave) + '</p></div>';
+      return '<div class="cl-clave"><span class="cl-clave__ico">🔑</span><p>' + esc(limpio(q.clave)) + '</p></div>';
     }
     if (e.tipo === 'opciones') return opciones(q, e.modo, e.elegida);
     if (e.tipo === 'descartes'){
@@ -148,7 +158,7 @@ window.ArturoClase = (function () {
         return '<div class="cl-descarte" style="--d:' + (0.25 + i * 0.7).toFixed(2) + 's">' +
           '<div class="cl-descarte__op"><span class="opcion__letra">' + L[k] + '</span>' +
           '<span class="cl-descarte__txt">' + esc(q.ops[k]) + '</span></div>' +
-          '<p><b>✕</b> ' + esc(q.no[k]) + '</p></div>';
+          '<p><b>✕</b> ' + esc(limpio(q.no[k])) + '</p></div>';
       }).join('') + '</div>';
     }
     if (e.tipo === 'trampa'){
@@ -159,8 +169,8 @@ window.ArturoClase = (function () {
           : '') + '</div></div>';
     }
     if (e.tipo === 'cierre'){
-      return (q.clave ? '<div class="cl-clave"><span class="cl-clave__ico">🔑</span><p>' + esc(q.clave) + '</p></div>' : '') +
-        (q.obj ? '<p class="cl-obj"><b>Recuerda:</b> ' + esc(q.obj) + '</p>' : '') +
+      return (q.clave ? '<div class="cl-clave"><span class="cl-clave__ico">🔑</span><p>' + esc(limpio(q.clave)) + '</p></div>' : '') +
+        (q.obj ? '<p class="cl-obj"><b>Recuerda:</b> ' + esc(limpio(q.obj)) + '</p>' : '') +
         (q.ref ? '<p class="cl-ref">' + esc(q.ref) + '</p>' : '');
     }
     if (e.tipo === 'otroangulo'){
@@ -169,20 +179,55 @@ window.ArturoClase = (function () {
     if (e.tipo === 'pensando'){
       return '<div class="cl-pensando"><i></i><i></i><i></i></div>';
     }
+    if (e.tipo === 'html') return e.html || '';
+    if (e.tipo === 'comprueba'){
+      const c = e.c;
+      return '<p class="cl-comprueba__q">' + esc(c.q) + '</p>' +
+        '<div class="opciones cl-ops cl-comprueba">' + c.ops.map(function (o, k) {
+          return '<button class="opcion cl-op cl-op--elige" data-cl="' + k + '" style="--d:' + (k * 0.08).toFixed(2) + 's">' +
+            '<span class="opcion__letra">' + L[k] + '</span><span class="opcion__texto">' + esc(o) + '</span></button>';
+        }).join('') + '</div><div class="cl-comprueba__res"></div>';
+    }
     return '';
   }
 
   /* ---------- la pantalla ---------- */
   let abierta = null;
 
+  /* Clase de una pregunta (el boton "Aun no lo entiendo"). */
   function abrir(q, elegida){
     if (!q || !q.exp || !window.document) return;
-    if (abierta) abierta.cerrar();
-
-    const nombre = Arturo.nombre();
     const lista = pasos(q, elegida);
     const ya = (window.ArturoIA) ? ArturoIA.guardada(q.id, elegida) : null;
-    if (ya) agregarOtro(ya);
+    abrirLista(lista, {
+      titulo: null,
+      escena: function (p) { return escena(q, p.escena); },
+      ia: { q: q, elegida: elegida },
+      otroYa: ya
+    });
+  }
+
+  /* Leccion de un tema de Medicina practica.
+     L = { titulo, pasos:[{titulo, humor, voz, html}], comprueba:{q, ops, ok, exp}, alAprobar } */
+  function leccion(L){
+    if (!L || !L.pasos || !L.pasos.length || !window.document) return;
+    const lista = L.pasos.map(function (p) { return { titulo: p.titulo, humor: p.humor || 'atento', voz: p.voz, escena: { tipo: 'html', html: p.html } }; });
+    if (L.comprueba && L.comprueba.ops && L.comprueba.ops.length > 1){
+      lista.push({ titulo: 'Comprueba que lo tienes', humor: 'atento', voz: 'Ahora tú. Una sola pregunta para ver si se quedó.',
+        escena: { tipo: 'comprueba', c: L.comprueba }, comprueba: true });
+    }
+    lista[lista.length - 1].ultimo = true;
+    abrirLista(lista, {
+      titulo: L.titulo || null,
+      escena: function (p) { return escena(null, p.escena); },
+      alAprobar: L.alAprobar
+    });
+  }
+
+  function abrirLista(lista, op){
+    if (abierta) abierta.cerrar();
+    const nombre = Arturo.nombre();
+    if (op.otroYa) agregarOtro(op.otroYa);
     let i = 0, pararVoz = null, cargandoIA = false;
 
     const velo = document.createElement('div');
@@ -190,7 +235,7 @@ window.ArturoClase = (function () {
     velo.innerHTML =
       '<div class="clase" role="dialog" aria-modal="true" aria-label="' + esc(nombre) + ' te lo explica">' +
         '<div class="clase__cab">' +
-          '<b>' + esc(nombre) + ' te lo explica</b>' +
+          '<b>' + esc(nombre) + ' te lo explica' + (op.titulo ? ' · ' + esc(op.titulo) : '') + '</b>' +
           '<span class="clase__paso mono"></span>' +
           '<button class="clase__x" aria-label="Cerrar">✕</button>' +
           '<div class="clase__prog"><i></i></div>' +
@@ -229,7 +274,7 @@ window.ArturoClase = (function () {
     }
 
     function puedeIA(){
-      return !!(window.ArturoIA && (ArturoIA.disponible()) && !lista.some(function (p) { return p.escena.tipo === 'otroangulo'; }));
+      return !!(op.ia && window.ArturoIA && (ArturoIA.disponible()) && !lista.some(function (p) { return p.escena.tipo === 'otroangulo'; }));
     }
 
     function pintar(humorForzado){
@@ -240,11 +285,12 @@ window.ArturoClase = (function () {
       $('.clase__prog i').style.width = Math.round((i + 1) / lista.length * 100) + '%';
       $('.clase__titulo').textContent = p.titulo;
       const esc_ = $('.clase__escena');
-      esc_.innerHTML = escena(q, p.escena);
+      esc_.innerHTML = op.escena(p);
+      if (p.comprueba) engancharComprueba(p);
       esc_.classList.remove('clase__escena--nueva'); void esc_.offsetWidth;
       esc_.classList.add('clase__escena--nueva');
       btnAtras.disabled = i === 0;
-      btnSig.textContent = p.ultimo ? '¡Entendido!' : 'Siguiente →';
+      btnSig.textContent = p.comprueba && !p.respondida ? 'Saltar' : (p.ultimo ? '¡Entendido!' : 'Siguiente →');
       btnOtro.hidden = !(p.ultimo && puedeIA());
       /* Primero se corta la voz anterior: si no, al terminar de golpe
          reescribiria su texto encima del nuevo. */
@@ -253,6 +299,30 @@ window.ArturoClase = (function () {
       voz.classList.remove('clase__voz--nueva'); void voz.offsetWidth;
       voz.classList.add('clase__voz--nueva');
       pararVoz = Arturo.decir(vozP, voz);
+    }
+
+    /* paso de comprobacion: elegir una opcion la corrige ahi mismo */
+    function engancharComprueba(p){
+      const c = p.escena.c;
+      velo.querySelectorAll('[data-cl]').forEach(function (b) {
+        b.onclick = function () {
+          if (p.respondida) return;
+          const k = +b.dataset.cl, bien = k === c.ok;
+          p.respondida = true;
+          velo.querySelectorAll('[data-cl]').forEach(function (x) {
+            const kk = +x.dataset.cl; x.disabled = true;
+            x.classList.add(kk === c.ok ? 'correcta' : (kk === k ? 'incorrecta' : 'apagada'));
+          });
+          $('.clase__escena .cl-comprueba__res').innerHTML = '<div class="cl-comprueba__msg ' + (bien ? 'ok' : 'mal') + '"><b>' +
+            (bien ? '¡Eso es!' : 'Casi. Era la ' + L[c.ok] + '.') + '</b>' + (c.exp ? ' ' + esc(limpio(c.exp)) : '') + '</div>';
+          $('.clase__av').innerHTML = Arturo.cara(bien ? 'feliz' : 'preocupado', false);
+          if (pararVoz) pararVoz();
+          vozP.textContent = bien ? 'Eso es. Lo tienes.' : 'Casi. Mira por qué, y vuelve a intentarlo cuando quieras.';
+          pararVoz = Arturo.decir(vozP, voz);
+          btnSig.textContent = '¡Entendido!';
+          if (bien && op.alAprobar) { try { op.alAprobar(); } catch (e) { console.warn(e); } }
+        };
+      });
     }
 
     function ir(d){
@@ -288,10 +358,10 @@ window.ArturoClase = (function () {
       cargandoIA = true;
       btnOtro.disabled = true;
       $('.clase__titulo').textContent = 'Pensándolo de otra manera…';
-      $('.clase__escena').innerHTML = escena(q, { tipo: 'pensando' });
+      $('.clase__escena').innerHTML = escena(null, { tipo: 'pensando' });
       $('.clase__av').innerHTML = Arturo.cara('atento', false);
       try {
-        const texto = await ArturoIA.reexplicar(q, elegida);
+        const texto = await ArturoIA.reexplicar(op.ia.q, op.ia.elegida);
         agregarOtro(texto);
         i = lista.length - 1;
         pintar();
@@ -311,5 +381,5 @@ window.ArturoClase = (function () {
     btnSig.focus();
   }
 
-  return { abrir: abrir, pasos: pasos, trozos: trozos };
+  return { abrir: abrir, leccion: leccion, pasos: pasos, trozos: trozos, limpio: limpio };
 })();

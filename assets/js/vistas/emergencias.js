@@ -89,11 +89,14 @@ window.Emergencias = (function () {
       '<div class="card" style="margin:16px 0 30px"><span class="eyebrow">Practica: ordena los pasos</span>' +
         '<p style="margin:6px 0 10px">Sin mirar arriba, toca los pasos en el orden correcto.</p>' +
         '<div id="emDrill"></div></div>' +
-      '<div id="jgEstudioEm" style="margin:-14px 0 30px"></div>' +
+      '<div id="arEm" style="margin:-8px 0 14px">' + (window.ArturoBloques ? ArturoBloques.cta('emergencias', 'emergencias', e.id) : '') + '</div>' +
+      '<div id="jgEstudioEm" style="margin:0 0 30px"></div>' +
     '</div>';
     document.getElementById('emLista').onclick = () => App.ir('emergencias');
     nuevoDrill(e);
-    if (window.Juego) Juego.montarEstudio(document.getElementById('jgEstudioEm'), 'emergencias', 'emergencias', e.id);
+    const refrescar = () => { if (window.Juego) Juego.montarEstudio(document.getElementById('jgEstudioEm'), 'emergencias', 'emergencias', e.id); };
+    refrescar();
+    if (window.ArturoBloques) ArturoBloques.enganchar(refrescar);
   }
 
   /* ---------- ejercicio de ordenar ---------- */
@@ -104,7 +107,7 @@ window.Emergencias = (function () {
   }
 
   function nuevoDrill(e){
-    drill = { id: e.id, opciones: mezclar(e.pasos), hechos: [], errores: 0 };
+    drill = { id: e.id, opciones: mezclar(e.pasos), hechos: [], errores: 0, fallo: null };
     pintarDrill(e);
   }
 
@@ -118,13 +121,16 @@ window.Emergencias = (function () {
           '<button class="btn" id="emOtra">Repetir</button>'
         : '<div class="filtros">' + drill.opciones.filter(o => drill.hechos.indexOf(o.i) < 0).map(o =>
             '<button class="chip" data-paso="' + o.i + '" style="text-align:left;white-space:normal">' + esc(e.pasos[o.i]) + '</button>').join('') + '</div>' +
-          (drill.errores ? '<p class="muted" style="margin:10px 0 0;font-size:13px">Errores: ' + drill.errores + '. Piensa qué iría antes.</p>' : ''));
+          (drill.errores ? '<p class="muted" style="margin:10px 0 0;font-size:13px">Errores: ' + drill.errores + '. Piensa qué iría antes.</p>' +
+            (window.ArturoBloques && drill.fallo ? '<button class="btn btn--sm" id="emArturo" style="margin-top:8px">🩺 Aún no lo entiendo: explícame el orden</button>' : '') : ''));
     UI.$$('[data-paso]').forEach(b => b.onclick = () => {
       const i = +b.dataset.paso;
       if (i === drill.hechos.length){ drill.hechos.push(i); }
-      else { drill.errores++; }
+      else { drill.errores++; drill.fallo = { puso: i, debia: drill.hechos.length }; }
       pintarDrill(e);
     });
+    const ea = document.getElementById('emArturo');
+    if (ea) ea.onclick = () => ArturoBloques.abrir('emergencias', 'emergencias', e.id, drill.fallo);
     const otra = document.getElementById('emOtra');
     if (otra) otra.onclick = () => nuevoDrill(e);
   }

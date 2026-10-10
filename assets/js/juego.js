@@ -114,7 +114,7 @@ window.Juego = (function () {
       { id: 'cual', pista: 'calculos', em: '🎯', nombre: '¿Qué cálculo uso?', desc: 'Te digo para qué lo necesitas; tú eliges el cálculo.', tipo: 'quiz', tiempo: 14,
         rondas: (E) => barajar(window.CALCULOS.filter(c => E.has(c.id))).slice(0, RONDAS).map(c => {
           const o = opsCon(c.nombre, window.CALCULOS.map(x => x.nombre), 4);
-          return { q: c.sirve, sub: c.grupo, ops: o.ops, ok: o.ok, exp: c.nombre + ': ' + c.que };
+          return { q: c.sirve, sub: c.grupo, ops: o.ops, ok: o.ok, exp: c.nombre + ': ' + c.que, ref: { bloque: 'calculos', pista: 'calculos', id: c.id } };
         }) },
       { id: 'relampago', pista: 'calculos', em: '⚡', nombre: 'Cálculo relámpago', desc: 'Un paciente al azar: calcula de cabeza y elige el resultado.', tipo: 'quiz', tiempo: 25,
         rondas: (E) => {
@@ -142,7 +142,7 @@ window.Juego = (function () {
               const val = k.tipo === 'sel' ? (k.opciones.find(o => o[0] === v[k.id]) || [0, ''])[1] : k.tipo === 'chk' ? (v[k.id] ? 'sí' : 'no') : String(v[k.id]).replace('.', ',') + (k.u ? ' ' + k.u : '');
               return k.etq + ': ' + val;
             });
-            out.push({ q: c.nombre, lista: datos, ops: ops.map(o => o + ' ' + r.unidad), ok: ops.indexOf(bien),
+            out.push({ q: c.nombre, lista: datos, ops: ops.map(o => o + ' ' + r.unidad), ok: ops.indexOf(bien), ref: { bloque: 'calculos', pista: 'calculos', id: c.id, ctx: { v } },
               exp: (r.pasos && r.pasos.length ? r.pasos.join(' → ') + '. ' : '') + (r.lectura || '') });
           }
           return out;
@@ -165,7 +165,7 @@ window.Juego = (function () {
           const t = window.TUBOS.find(x => x.id === id);
           const otros = barajar(window.TUBOS.filter(x => x.id !== id)).slice(0, 3);
           const ops = barajar(otros.concat([t]));
-          return { q: prueba, sub: '¿En qué tubo va?', ops: ops.map(x => x.nombre.replace(/ \(.*\)/, '')), colores: ops.map(x => x.color), ok: ops.indexOf(t), exp: t.clave };
+          return { q: prueba, sub: '¿En qué tubo va?', ops: ops.map(x => x.nombre.replace(/ \(.*\)/, '')), colores: ops.map(x => x.color), ok: ops.indexOf(t), exp: t.clave, ref: { bloque: 'tubos', pista: 'tubos', id: t.id } };
         }) }
     ] },
 
@@ -173,31 +173,31 @@ window.Juego = (function () {
       { id: 'detective', pista: 'patrones', em: '🕵️', nombre: 'Detective de patrones', desc: 'Lee las pistas del laboratorio y nombra el patrón.', tipo: 'quiz', tiempo: 18,
         rondas: (E) => barajar(window.PATRONES.filter((p, i) => E.has('pat' + i))).slice(0, RONDAS).map(p => {
           const o = opsCon(p.titulo, window.PATRONES.map(x => x.titulo), 4);
-          return { q: 'Pistas', lista: p.pistas, ops: o.ops, ok: o.ok, exp: p.dx + (p.nota ? ' ' + p.nota : '') };
+          return { q: 'Pistas', lista: p.pistas, ops: o.ops, ok: o.ok, exp: p.dx + (p.nota ? ' ' + p.nota : ''), ref: { bloque: 'laboratorio', pista: 'patrones', id: 'pat' + window.PATRONES.indexOf(p) } };
         }) },
       { id: 'prueba', pista: 'pruebas', em: '🧬', nombre: '¿Qué prueba es?', desc: 'Te digo qué mide; tú eliges la prueba.', tipo: 'quiz', tiempo: 14,
         rondas: (E) => barajar(window.PRUEBAS.filter(p => E.has(p.id))).slice(0, RONDAS).map(p => {
           const mismas = window.PRUEBAS.filter(x => x.grupo === p.grupo).map(x => x.nombre);
           const pool = mismas.length >= 4 ? mismas : window.PRUEBAS.map(x => x.nombre);
           const o = opsCon(p.nombre, pool, 4);
-          return { q: corta(p.mide, 170), sub: p.grupo, ops: o.ops, ok: o.ok, exp: p.nombre + ': ' + primera(p.solo) };
+          return { q: corta(p.mide, 170), sub: p.grupo, ops: o.ops, ok: o.ok, exp: p.nombre + ': ' + primera(p.solo), ref: { bloque: 'laboratorio', pista: 'pruebas', id: p.id } };
         }) }
     ] },
 
     emergencias: { nombre: 'Emergencias médicas', em: '🚑', modulo: 'Emergencias', juegos: [
       { id: 'codigo', pista: 'emergencias', em: '🚨', nombre: 'Código rojo', desc: 'Ordena los primeros pasos antes de que se acabe el tiempo.', tipo: 'ordenar', tiempo: 45,
         rondas: (E) => barajar(window.EMERGENCIAS.filter(e => E.has(e.id) && e.pasos && e.pasos.length >= 4)).slice(0, 4).map(e => ({
-          q: e.em + ' ' + e.nombre, items: e.pasos.slice(0, 6).map(t => ({ t })), exp: e.salvar })) },
+          q: e.em + ' ' + e.nombre, items: e.pasos.slice(0, 6).map(t => ({ t })), exp: e.salvar, ref: { bloque: 'emergencias', pista: 'emergencias', id: e.id } })) },
       { id: 'hacer', pista: 'emergencias', em: '👉', nombre: '¿Hacer o NO hacer?', desc: 'Manda cada acción a su lado. Rápido, como en la guardia.', tipo: 'deslizar', tiempo: 12,
         izq: 'NO hacer', der: 'Hacer',
         rondas: (E) => {
           const out = [];
           // de cada emergencia estudiada salen varias acciones de cada lado (sin repetir)
           window.EMERGENCIAS.filter(e => E.has(e.id)).forEach(e => {
-            barajar(e.hacer || []).slice(0, 2).forEach(h => out.push({ t: corta(frase(h).replace(/\.$/, ''), 160), ctx: e.em + ' ' + e.nombre, lado: 'der', exp: e.salvar }));
+            barajar(e.hacer || []).slice(0, 2).forEach(h => out.push({ t: corta(frase(h).replace(/\.$/, ''), 160), ctx: e.em + ' ' + e.nombre, lado: 'der', exp: e.salvar, ref: { bloque: 'emergencias', pista: 'emergencias', id: e.id } }));
             barajar(e.noHacer || []).slice(0, 2).forEach(x => {
               const accion = afirmar(x.split(/:\s/)[0].replace(/[.:]\s*$/, ''));
-              if (accion) out.push({ t: corta(accion, 160), ctx: e.em + ' ' + e.nombre, lado: 'izq', exp: x });
+              if (accion) out.push({ t: corta(accion, 160), ctx: e.em + ' ' + e.nombre, lado: 'izq', exp: x, ref: { bloque: 'emergencias', pista: 'emergencias', id: e.id } });
             });
           });
           return barajar(out).slice(0, 12);
@@ -211,7 +211,7 @@ window.Juego = (function () {
           return barajar(todas.filter(x => E.has(x.c.id))).slice(0, RONDAS).map(({ c, m }) => {
             const pool = todas.filter(x => x.m[1] !== m[1]).map(x => x.m[1]);
             const o = opsCon(m[1], [m[1]].concat(pool), 4);
-            return { q: m[0], sub: c.em + ' ' + c.nombre, ops: o.ops, ok: o.ok, exp: c.nombre + ' · ' + m[0] + ': ' + m[1] + '. Referencia: ' + c.guia + '.' };
+            return { q: m[0], sub: c.em + ' ' + c.nombre, ops: o.ops, ok: o.ok, exp: c.nombre + ' · ' + m[0] + ': ' + m[1] + '. Referencia: ' + c.guia + '.', ref: { bloque: 'cronicas', pista: 'cronicas', id: c.id } };
           });
         } },
       { id: 'caso', pista: 'cronicas', em: '🩻', nombre: 'Caso rápido', desc: 'Casos clínicos de los capítulos, contra reloj.', tipo: 'quiz', tiempo: 35,
@@ -219,7 +219,8 @@ window.Juego = (function () {
           const todas = []; window.CRONICAS.forEach(c => (c.practica || []).forEach(p => todas.push({ c, p })));
           return barajar(todas.filter(x => E.has(x.c.id))).slice(0, 8).map(({ c, p }) => {
             const idx = barajar(p.ops.map((_, i) => i));
-            return { q: p.q, sub: c.em + ' ' + c.nombre, ops: idx.map(i => p.ops[i]), ok: idx.indexOf(p.ok), exp: p.exp };
+            return { q: p.q, sub: c.em + ' ' + c.nombre, ops: idx.map(i => p.ops[i]), ok: idx.indexOf(p.ok), exp: p.exp,
+              pregunta: { id: 'CR-' + c.id + '-' + c.practica.indexOf(p), esp: 'Enfermedades crónicas', caso: '', enunciado: p.q, ops: p.ops, ok: p.ok, exp: p.exp, ref: c.guia } };
           });
         } }
     ] }
@@ -351,8 +352,11 @@ window.Juego = (function () {
     }).join('<i class="jg-nodo__linea"></i>');
     const delActual = items.slice(actual * POR_NIVEL, actual * POR_NIVEL + POR_NIVEL);
     const todo = lleva === items.length;
+    const enNivel = delActualEstudiados(items, E, actual), deNivel = Math.min(POR_NIVEL, items.length - actual * POR_NIVEL);
+    const g = window.ArturoBloques ? ArturoBloques.guia(lleva, items.length, enNivel, deNivel, listo) : null;
     return '<div class="jg-ruta">' +
       ((PISTAS[bloque] || []).length > 1 ? '<p class="jg-ruta__nombre">' + esc(P.nombre) + '</p>' : '') +
+      (g && window.Arturo ? '<div class="jg-guia">' + Arturo.cara(g.humor, false) + '<p>' + esc(g.texto) + '</p></div>' : '') +
       '<div class="jg-ruta__mapa">' + nodos + '</div>' +
       '<div class="jg-ruta__info"><b>' + (todo ? '🏆 Ruta completa' : 'Nivel ' + (actual + 1) + ' de ' + niveles) + '</b><span>' + lleva + ' de ' + items.length + ' estudiados</span></div>' +
       (todo ? '' : '<div class="jg-temas">' + delActual.map(it => {
@@ -371,6 +375,7 @@ window.Juego = (function () {
       }).join('') + '</div>' +
     '</div>';
   }
+  function delActualEstudiados(items, E, actual){ return items.slice(actual * POR_NIVEL, actual * POR_NIVEL + POR_NIVEL).filter(it => E.has(it.id)).length; }
   function enganchar(){
     UI.$$('[data-jg]').forEach(x => x.onclick = () => {
       if (x.classList.contains('cerrado')) { UI.tostada('🔒 Estudia primero los 3 temas del nivel para abrir este juego.'); return; }
@@ -499,6 +504,17 @@ window.Juego = (function () {
     e.appendChild(d);
     const s = document.getElementById('jgSig'); s.focus({ preventScroll: true });
     s.onclick = siguiente;
+    /* si fallas, Arturo desmonta ESE tema encima del juego (luego vuelves a la partida) */
+    const ronda = P.rondas[P.i];
+    if (!bien && ronda && (ronda.ref || ronda.pregunta) && (window.ArturoBloques || window.ArturoClase)) {
+      const b = document.createElement('button');
+      b.className = 'jg-sig jg-sig--claro jg-arturo-btn'; b.textContent = '🩺 Aún no lo entiendo';
+      b.onclick = () => {
+        if (ronda.pregunta && window.ArturoClase) ArturoClase.abrir(ronda.pregunta, ronda.elegidaOriginal);
+        else ArturoBloques.abrir(ronda.ref.bloque, ronda.ref.pista, ronda.ref.id, Object.assign({}, ronda.ref.ctx || {}, P.ultimoFallo || {}));
+      };
+      d.appendChild(b);
+    }
   }
   function siguiente(){
     if (!P) return;
@@ -509,7 +525,7 @@ window.Juego = (function () {
 
   function ronda(){
     const r = P.rondas[P.i];
-    P.bloqueada = false;
+    P.bloqueada = false; P.ultimoFallo = null;
     ({ quiz: rQuiz, ordenar: rOrdenar, deslizar: rDeslizar })[P.j.tipo](r);
   }
 
@@ -535,6 +551,7 @@ window.Juego = (function () {
     P.bloqueada = true;
     const r = P.rondas[P.i], resto = pararReloj(), bien = k === r.ok;
     P.hechas++;
+    if (r.pregunta && k >= 0) r.elegidaOriginal = r.pregunta.ops.indexOf(r.ops[k]);
     UI.$$('.jg-op').forEach(b => { b.disabled = true; const kk = +b.dataset.k; if (kk === r.ok) b.classList.add('ok'); else if (kk === k) b.classList.add('mal'); });
     bien ? acierto(resto) : fallo();
     explicar(bien, r.exp, k < 0 ? '⏱ Se acabó el tiempo.' : 'Era: ' + r.ops[r.ok]);
@@ -565,6 +582,7 @@ window.Juego = (function () {
       if (P.ord.sig >= r.items.length) terminarOrden(P.ord.errores === 0, false);
     } else {
       P.ord.errores++; b.classList.remove('mal'); void b.offsetWidth; b.classList.add('mal');
+      P.ultimoFallo = { puso: k, debia: P.ord.sig };
       tono('mal');
       if (P.ord.errores >= 2) terminarOrden(false, false);
     }
@@ -622,7 +640,7 @@ window.Juego = (function () {
 
   /* teclado: 1-4 responde, flechas deslizan, Enter sigue, Esc sale */
   function teclas(ev){
-    if (!P) return;
+    if (!P || document.querySelector('.clase-velo')) return;
     if (ev.key === 'Escape') return cerrar();
     const sig = document.getElementById('jgSig');
     if (sig && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); return sig.click(); }
