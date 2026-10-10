@@ -143,41 +143,70 @@ window.App = (function () {
     if (mas) mas.classList.toggle('on', !menu().movil.includes(actual));
   }
 
-  /* En el telefono la barra inferior solo cabe con 5 accesos; el resto de
-     pantallas (y Administracion, si el rol lo permite) vive en esta hoja.
-     Se arma al abrirla desde menu(), asi que siempre refleja el programa y
-     el rol confirmados por el servidor, aunque lleguen tarde. */
+  /* En el telefono la barra inferior solo cabe con 5 accesos. El ☰ hace
+     que la propia barra crezca hacia arriba y se convierta en el menu
+     completo, ordenado por grupos. Se arma al abrirse desde menu(), asi que
+     siempre refleja el programa y el rol confirmados por el servidor,
+     aunque lleguen tarde. Las pantallas que no esten en GRUPO_MOVIL caen
+     en "Practica" para que ninguna se quede sin acceso. */
+  const GRUPOS_MOVIL = [
+    ['prepara', 'Prepárate'], ['estudia', 'Estudia'], ['practica', 'Practica'], ['cuenta', 'Tu cuenta']
+  ];
+  const GRUPO_MOVIL = {
+    inicio:'prepara', ruta:'prepara', simulacro:'prepara', preparacion:'prepara', proximos:'prepara',
+    estudiar:'estudia', temario:'estudia', biblioteca:'estudia', flashcards:'estudia', indice:'estudia', material:'estudia',
+    progreso:'cuenta', ajustes:'cuenta', soporte:'cuenta', admin:'cuenta'
+  };
+
   function abrirMas(){
-    cerrarMas();
+    const nav = document.querySelector('.movil');
+    if (!nav || nav.classList.contains('movil--abierto')) return cerrarMas();
     const m = menu();
+    const todas = m.arriba.concat(m.abajo);
     const item = id =>
-      '<button class="hoja-mas__item' + (id === actual ? ' on' : '') + '" data-ir="' + id + '">' +
+      '<button class="movil__fila' + (id === actual ? ' on' : '') + '" data-ir="' + id + '"' + (id === actual ? ' aria-current="page"' : '') + '>' +
         '<span class="em">' + emojiPantalla(id) + '</span><span>' + esc(nombrePantalla(id)) + '</span></button>';
-    const velo = document.createElement('div');
-    velo.className = 'hoja-mas';
-    velo.innerHTML =
-      '<div class="hoja-mas__panel" role="dialog" aria-modal="true" aria-label="Todas las secciones">' +
-        '<div class="hoja-mas__cab"><b>' + marcaPrograma() + '</b>' +
-          '<button class="hoja-mas__cerrar" aria-label="Cerrar">✕</button></div>' +
-        '<div class="hoja-mas__rejilla">' + m.arriba.map(item).join('') + '</div>' +
-        '<div class="hoja-mas__sep"></div>' +
-        '<div class="hoja-mas__rejilla">' + m.abajo.map(item).join('') + '</div>' +
-      '</div>';
-    document.body.appendChild(velo);
+    nav.querySelector('.movil__menu').innerHTML = GRUPOS_MOVIL.map(([g, titulo]) => {
+      const ids = todas.filter(id => (GRUPO_MOVIL[id] || 'practica') === g);
+      return ids.length ? '<div class="movil__grupo"><small>' + titulo + '</small><div class="movil__filas">' + ids.map(item).join('') + '</div></div>' : '';
+    }).join('');
+    nav.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => { cerrarMas(); ir(b.dataset.ir); });
+
+    let velo = document.querySelector('.movil-velo');
+    if (!velo){
+      velo = document.createElement('div');
+      velo.className = 'movil-velo';
+      velo.onclick = cerrarMas;
+      document.body.appendChild(velo);
+    }
+    requestAnimationFrame(() => velo.classList.add('on'));
+    nav.classList.add('movil--abierto');
+    nav.setAttribute('aria-label', 'Todas las secciones');
+    const btn = document.getElementById('btnMas');
+    btn.textContent = '✕';
+    btn.setAttribute('aria-expanded', 'true');
+    btn.setAttribute('aria-label', 'Cerrar menú');
     document.body.classList.add('sin-scroll');
-    velo.onclick = e => { if (e.target === velo) cerrarMas(); };
-    velo.querySelector('.hoja-mas__cerrar').onclick = cerrarMas;
-    velo.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => { cerrarMas(); ir(b.dataset.ir); });
-    velo.onkeydown = e => { if (e.key === 'Escape') cerrarMas(); };
-    const primero = velo.querySelector('.hoja-mas__item.on') || velo.querySelector('.hoja-mas__item');
-    if (primero) primero.focus();
+    document.addEventListener('keydown', escMas);
+    const primero = nav.querySelector('.movil__fila.on') || nav.querySelector('.movil__fila');
+    if (primero) primero.focus({ preventScroll: true });
   }
 
+  function escMas(e){ if (e.key === 'Escape') cerrarMas(); }
+
   function cerrarMas(){
-    const v = document.querySelector('.hoja-mas');
-    if (!v) return;
-    v.remove();
+    const nav = document.querySelector('.movil');
+    if (!nav || !nav.classList.contains('movil--abierto')) return;
+    nav.classList.remove('movil--abierto');
+    nav.removeAttribute('aria-label');
+    const btn = document.getElementById('btnMas');
+    btn.textContent = '☰';
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-label', 'Más secciones');
+    const velo = document.querySelector('.movil-velo');
+    if (velo) velo.classList.remove('on');
     document.body.classList.remove('sin-scroll');
+    document.removeEventListener('keydown', escMas);
   }
 
   function marcaPrograma(){ return Almacen.programa() === 'unirm' ? 'UNIRMIA' : 'ENURMIA'; }
@@ -237,10 +266,13 @@ window.App = (function () {
     '</main>' +
 
     '<nav class="movil">' +
-      menu().movil.map(id =>
-        '<button data-ruta="' + id + '" title="' + esc(nombrePantalla(id)) + '" aria-label="' + esc(nombrePantalla(id)) + '">' + emojiPantalla(id) + '</button>'
-      ).join('') +
-      '<button id="btnMas" class="movil__mas" title="Más secciones" aria-label="Más secciones" aria-haspopup="dialog">☰</button>' +
+      '<div class="movil__menu"></div>' +
+      '<div class="movil__iconos">' +
+        menu().movil.map(id =>
+          '<button data-ruta="' + id + '" title="' + esc(nombrePantalla(id)) + '" aria-label="' + esc(nombrePantalla(id)) + '">' + emojiPantalla(id) + '</button>'
+        ).join('') +
+        '<button id="btnMas" class="movil__mas" title="Más secciones" aria-label="Más secciones" aria-expanded="false">☰</button>' +
+      '</div>' +
     '</nav>';
 
     UI.$$('[data-ruta]').forEach(b => b.onclick = () => ir(b.dataset.ruta));

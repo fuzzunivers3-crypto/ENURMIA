@@ -899,38 +899,41 @@ button.chip.on{background:var(--carbon);color:#fff}
 @media(max-width:640px){ .tubo-det{ grid-template-columns:1fr } }
 @media(prefers-reduced-motion:reduce){ .tubo-anim .tubo-liq,.tubo-inv .tubo-svg,.tubo-gira .tubo-svg{ animation:none } }
 
-/* ---------- hoja "Mas" del telefono (todas las secciones) ----------
-   Mismo fondo vino del juego de Medicina practica (variables --jg-* de juego.css). */
-.hoja-mas{
-  position:fixed;inset:0;z-index:300;display:flex;align-items:flex-end;justify-content:center;
-  background:radial-gradient(90% 70% at 50% 100%,rgba(138,26,62,.45),transparent 60%),rgba(20,4,12,.72);
-  backdrop-filter:blur(4px);animation:veloEntra .2s ease both;
+/* ---------- menu del telefono: la barra crece ----------
+   El ☰ estira la barra inferior hacia arriba y la vuelve el menu completo,
+   con el fondo vino del juego (variables --jg-* de juego.css). */
+@media(max-width:900px){
+  .movil{
+    flex-direction:column;height:58px;overflow:hidden;
+    transition:height .45s var(--salida),border-radius .45s var(--salida),left .45s var(--salida),right .45s var(--salida),bottom .45s var(--salida),background .45s;
+  }
+  .movil__iconos{display:flex;flex:none;height:44px;justify-content:space-around;order:2}
+  .movil__iconos button{transition:opacity .2s,background .2s}
+  .movil__menu{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 6px;color:#fff;opacity:0;visibility:hidden;transition:opacity .2s,visibility 0s .2s}
+  .movil--abierto{
+    height:min(76vh,640px);border-radius:30px;left:8px;right:8px;bottom:8px;
+    background:radial-gradient(120% 60% at 90% 0%,rgba(249,111,137,.4),transparent 55%),
+      linear-gradient(170deg,var(--jg-vino-600,#63102C),var(--jg-vino,#47061C) 55%,var(--jg-vino-900,#14040C));
+  }
+  .movil--abierto .movil__menu{padding:8px 6px 6px;opacity:1;visibility:visible;transition:opacity .25s .18s,visibility 0s}
+  .movil--abierto .movil__iconos button:not(.movil__mas){opacity:0;visibility:hidden}
+  .movil--abierto .movil__mas{color:#fff;background:rgba(20,4,12,.4)}
 }
-.hoja-mas__panel{
-  position:relative;overflow:hidden auto;width:100%;max-width:560px;max-height:82vh;
-  padding:16px 16px calc(20px + env(safe-area-inset-bottom));color:#fff;
-  background:radial-gradient(120% 70% at 85% -10%,rgba(249,111,137,.45),transparent 55%),
-    linear-gradient(160deg,var(--jg-vino-600,#63102C),var(--jg-vino,#47061C) 55%,var(--jg-vino-900,#14040C));
-  border:1px solid rgba(249,111,137,.3);border-bottom:none;border-radius:var(--r-xl) var(--r-xl) 0 0;
-  box-shadow:0 -20px 50px rgba(71,6,28,.45);
-  animation:subeHoja .32s var(--salida) both;
-}
-.hoja-mas__panel::before{content:"";display:block;width:44px;height:5px;border-radius:5px;margin:0 auto 10px;background:rgba(255,179,193,.45)}
-.hoja-mas__cab{display:flex;align-items:center;justify-content:space-between;padding:0 6px 14px;font-family:var(--display);font-size:18px;color:#fff}
-.hoja-mas__cerrar{width:40px;height:40px;border:1px solid rgba(249,111,137,.35);border-radius:50%;background:rgba(20,4,12,.38);color:#fff;font-size:16px;cursor:pointer}
-.hoja-mas__rejilla{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.hoja-mas__item{
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:84px;padding:12px 6px;
-  border:1px solid rgba(249,111,137,.3);border-radius:var(--r-md);background:rgba(20,4,12,.38);
-  font-size:12.5px;font-weight:700;line-height:1.2;text-align:center;color:#fff;cursor:pointer;
+.movil__grupo{margin-bottom:14px}
+.movil__grupo small{display:block;margin:2px 4px 8px;font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--jg-rosa-300,#FFB3C1)}
+.movil__filas{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.movil .movil__fila{
+  display:flex;align-items:center;gap:9px;padding:10px 11px;border-radius:15px;border:none;
+  background:rgba(255,255,255,.08);color:#fff;font:700 13px/1.15 var(--texto);text-align:left;cursor:pointer;
   transition:transform .12s var(--salida),background .2s;
 }
-.hoja-mas__item .em{font-size:24px}
-.hoja-mas__item:active{transform:translateY(2px);background:rgba(249,111,137,.18)}
-.hoja-mas__item.on{background:linear-gradient(135deg,#fff,var(--jg-rosa-300,#FFB3C1));border-color:transparent;color:var(--jg-vino,#47061C);box-shadow:0 8px 20px rgba(0,0,0,.25)}
-.hoja-mas__item:focus-visible,.hoja-mas__cerrar:focus-visible{outline:2.5px solid var(--jg-rosa,#F96F89);outline-offset:2px}
-.hoja-mas__sep{height:1px;background:rgba(249,111,137,.25);margin:14px 4px}
+.movil .movil__fila .em{font-size:19px;flex:none}
+.movil .movil__fila:active{transform:translateY(2px);background:rgba(249,111,137,.2)}
+.movil .movil__fila.on{background:linear-gradient(135deg,#fff,var(--jg-rosa-300,#FFB3C1));color:var(--jg-vino,#47061C);box-shadow:0 6px 16px rgba(0,0,0,.25)}
+.movil .movil__fila:focus-visible{outline:2.5px solid var(--jg-rosa,#F96F89);outline-offset:2px}
+.movil-velo{position:fixed;inset:0;z-index:99;background:rgba(20,4,12,.55);opacity:0;pointer-events:none;transition:opacity .3s}
+.movil-velo.on{opacity:1;pointer-events:auto}
+@media(min-width:901px){.movil-velo{display:none}}
+
 body.sin-scroll{overflow:hidden}
-@keyframes subeHoja{from{transform:translateY(100%)}to{transform:none}}
-@keyframes veloEntra{from{opacity:0}to{opacity:1}}
-@media(prefers-reduced-motion:reduce){.hoja-mas,.hoja-mas__panel{animation:none}}
+@media(prefers-reduced-motion:reduce){.movil,.movil__menu,.movil-velo{transition:none!important}}
