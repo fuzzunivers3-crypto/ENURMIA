@@ -636,8 +636,8 @@ window.Admin = (function () {
           ahora > Math.max(antes, Date.now())){
         try {
           const r = await Nube.invocar('aviso-correo', { tipo:'cortesia', user_id: uid, vence_antes: f.vence || null });
-          if (r && r.ok) UI.tostada('Correo enviado a ' + r.para + ' (' + r.cuanto + ')', 'bien');
-          else UI.tostada('No se pudo enviar el correo: ' + ((r && r.error) || 'error desconocido'));
+          if (r && r.ok) UI.tostada('Correo enviado a ' + esc(r.para) + ' (' + esc(r.cuanto) + ')', 'bien');
+          else UI.tostada('No se pudo enviar el correo: ' + esc((r && r.error) || 'error desconocido'));
         } catch (e) {
           UI.tostada('No se pudo enviar el correo de aviso.');
         }
