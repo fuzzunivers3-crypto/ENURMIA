@@ -184,6 +184,47 @@ Deno.serve(async (req) => {
     return json({ ...r, para: per.correo, cuanto }, r.ok ? 200 : 502);
   }
 
+  /* ---------- 2b. regalo (envio a varios, solo con el secreto) ----------
+     Para campanas puntuales como "1 mes gratis": la membresia ya se
+     extendio antes en la base de datos; aqui solo se lee la fecha real
+     de cada estudiante y se le escribe. Un correo cada 300 ms para no
+     pasar el limite de Brevo. */
+  if (tipo === 'regalo'){
+    if (!conSecreto) return json({ error: 'no-autorizado' }, 401);
+    const ids = Array.isArray(cuerpo.user_ids) ? (cuerpo.user_ids as unknown[]).map(String).slice(0, 200) : [];
+    const res: { correo: string; ok: boolean; error?: string }[] = [];
+    for (const uid of ids){
+      const { data: per } = await admin.from('perfiles').select('correo, nombre, programa').eq('user_id', uid).maybeSingle();
+      const { data: sus } = await admin.from('suscripciones').select('vence').eq('user_id', uid).maybeSingle();
+      if (!per?.correo || !sus?.vence){ res.push({ correo: per?.correo || uid, ok: false, error: 'sin correo o sin fecha' }); continue; }
+      const raiz = raizDe(per.programa || '');
+      const nombre = escHtml(((per.nombre || '').trim().split(/\s+/)[0]) || per.correo.split('@')[0]);
+      const vence = fechaLarga(sus.vence);
+      const incluye = raiz === 'UNIRMIA'
+        ? 'temas explicados, práctica con explicación detallada, flashcards y casos clínicos'
+        : 'simulacros con reloj, preguntas con explicación detallada, casos clínicos, medicina práctica, flashcards y las clases de Arturo, tu profesor dentro de la plataforma';
+      const p = [
+        `Gracias por formar parte de ${raiz}. Queremos acompañarte de cerca en tu preparación y, como muestra de ello, te regalamos <b>un mes de suscripción gratis</b>, que ya está activo en tu cuenta.`,
+        `Durante este mes tienes acceso completo a ${incluye}.`,
+        `Tu acceso está activo hasta el <b>${escHtml(vence)}</b>. No tienes que hacer nada: solo entra con tu correo y tu contraseña de siempre.`,
+        `Si tienes cualquier duda, responde a este correo o escríbenos por WhatsApp al 849-371-2222. Estaremos encantados de ayudarte.`
+      ];
+      const r = await enviar({
+        de: raiz, para: per.correo, responder: Deno.env.get('BREVO_FROM') || undefined,
+        asunto: `Un regalo para ti: 1 mes gratis de ${raiz}`,
+        texto: `Hola, ${nombre}:\n\n` + p.map((x) => x.replace(/<[^>]+>/g, '')).join('\n\n') + `\n\n¡Mucho éxito en tu estudio!\nEl equipo de ${raiz}\n${WEB}`,
+        html: plantilla(`Hola, ${nombre}:`,
+          p.map((x) => '<p>' + x + '</p>').join('') +
+          '<p style="margin:18px 0 0">¡Mucho éxito en tu estudio!<br><b>El equipo de ' + raiz + '</b></p>' +
+          '<p style="margin:22px 0 0;font-size:12px;color:#8a7a80">Te escribimos porque tienes una cuenta en ' + raiz + ' y este aviso es sobre tu membresía.</p>',
+          { texto: 'Entrar a ' + raiz, url: WEB })
+      });
+      res.push({ correo: per.correo, ...r });
+      await new Promise((ok) => setTimeout(ok, 300));
+    }
+    return json({ enviados: res.filter((x) => x.ok).length, fallidos: res.filter((x) => !x.ok), total: res.length });
+  }
+
   /* ---------- 3. estado (diagnostico) ---------- */
   if (tipo === 'estado'){
     if (!conSecreto) return json({ error: 'no-autorizado' }, 401);
