@@ -1087,7 +1087,7 @@ window.Vistas = (function () {
      propósito: quien se quedó a medias vuelve antes si puede seguir
      repasando que si se encuentra una puerta cerrada.
      ============================================================ */
-  const WHATSAPP = '18099991111';
+  const WHATSAPP = '18493712222';
 
   function membresiaVencida(info){
     const plan = (info && info.plan) || '';

@@ -43,11 +43,37 @@ function fechaLarga(iso: string): string {
   } catch { return iso.slice(0, 10); }
 }
 
-/* Devuelve el error de Resend tal cual: el panel lo ensena, y asi se sabe
-   enseguida si falta verificar el dominio (con onboarding@resend.dev solo
-   se puede escribir a la propia cuenta de Resend). */
-async function enviar(c: { de: string; para: string; asunto: string; texto: string; html: string; responder?: string }):
-  Promise<{ ok: boolean; error?: string }> {
+/* Dos proveedores. Brevo va primero si tiene clave: deja enviar a
+   cualquier estudiante con solo verificar el correo remitente (Resend
+   exige un dominio propio y no acepta dpdns.org por ser publico).
+   Resend queda de respaldo, y con onboarding@resend.dev solo entrega
+   a la propia cuenta de Resend. El error se devuelve tal cual: el panel
+   lo ensena. */
+type Correo = { de: string; para: string; asunto: string; texto: string; html: string; responder?: string };
+
+async function enviarBrevo(c: Correo, clave: string): Promise<{ ok: boolean; error?: string }> {
+  const remitente = Deno.env.get('BREVO_FROM') || 'enurmia.rd@gmail.com';
+  try {
+    const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'accept': 'application/json', 'api-key': clave },
+      body: JSON.stringify({
+        sender: { name: c.de, email: remitente }, to: [{ email: c.para }],
+        replyTo: c.responder ? { email: c.responder } : undefined,
+        subject: c.asunto, textContent: c.texto, htmlContent: c.html
+      })
+    });
+    if (r.ok) return { ok: true };
+    const t = await r.json().catch(() => ({}));
+    return { ok: false, error: (t && (t.message || t.code)) || ('Brevo ' + r.status) };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
+async function enviar(c: Correo): Promise<{ ok: boolean; error?: string }> {
+  const brevo = Deno.env.get('BREVO_API_KEY');
+  if (brevo) return enviarBrevo(c, brevo);
   const clave = Deno.env.get('RESEND_API_KEY');
   if (!clave) return { ok: false, error: 'Falta RESEND_API_KEY en el servidor.' };
   const remitente = Deno.env.get('RESEND_FROM') || 'onboarding@resend.dev';
@@ -165,6 +191,7 @@ Deno.serve(async (req) => {
     const r = await fetch('https://api.resend.com/domains', { headers: { 'Authorization': `Bearer ${clave}` } });
     const t = await r.json().catch(() => ({}));
     return json({ remitente: Deno.env.get('RESEND_FROM') || 'onboarding@resend.dev', http: r.status,
+      proveedor: Deno.env.get('BREVO_API_KEY') ? 'brevo' : 'resend', remitenteBrevo: Deno.env.get('BREVO_FROM') || 'enurmia.rd@gmail.com',
       dominios: ((t && t.data) || []).map((d: { name: string; status: string }) => ({ name: d.name, status: d.status })),
       mensaje: t && t.message });
   }
