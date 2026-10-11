@@ -3,7 +3,7 @@
    La primera vez que el estudiante entra a una seccion, Arturo (R2D2
    en UNIRMIA) ilumina sus partes una por una y explica para que sirve
    cada una. El boton "?" de la barra de arriba lo vuelve a abrir
-   cuando quiera, y en Ajustes se apaga o se reinicia.
+   cuando quiera. Cada guia sale una sola vez; en Ajustes se puede apagar.
 
    Cada paso dice QUE iluminar con un selector (dentro de #vista, o en
    toda la pagina si empieza por "doc:") y, si hace falta, un trozo de
@@ -360,10 +360,26 @@ window.Recorrido = (function () {
     if (a.antes && a.antes.focus) try { a.antes.focus({ preventScroll: true }); } catch (e) {}
   }
 
+  /* Cada guia sale UNA sola vez por cuenta; despues solo con el "?".
+     La marca va en los ajustes (viajan a la nube) y, de respaldo, en
+     una llave propia de este aparato por si la nube trae una copia
+     anterior. */
+  function llaveRespaldo(){
+    const s = Almacen.sesion && Almacen.sesion();
+    return 'enurm.guiasVistas.' + (s ? s.usuario : 'anon');
+  }
+  function respaldo(){
+    try { return JSON.parse(localStorage.getItem(llaveRespaldo()) || '{}') || {}; } catch (e) { return {}; }
+  }
+  function yaVista(seccion){
+    const a = ajustes();
+    return !!(((a && a.guiasVistas) || {})[seccion] || respaldo()[seccion]);
+  }
   function marcarVista(seccion){
     const a = ajustes(); if (!a) return;
     a.guiasVistas = Object.assign({}, a.guiasVistas, { [seccion]: Date.now() });
     Almacen.guardar();
+    try { localStorage.setItem(llaveRespaldo(), JSON.stringify(Object.assign(respaldo(), { [seccion]: Date.now() }))); } catch (e) {}
   }
 
   /* ---------- puertas de entrada ---------- */
@@ -378,7 +394,7 @@ window.Recorrido = (function () {
     if (actual) cerrar();
     const a = ajustes();
     if (!a || a.guias === false || !pasosDe(seccion)) return;
-    if ((a.guiasVistas || {})[seccion]) return;
+    if (yaVista(seccion)) return;
     let intentos = 0;
     const mirar = () => {
       espera = null;
@@ -407,11 +423,5 @@ window.Recorrido = (function () {
     abrir(pasos, s);
   }
 
-  function reiniciar(){
-    const a = ajustes(); if (!a) return;
-    a.guiasVistas = {};
-    Almacen.guardar();
-  }
-
-  return { alEntrar, ahora, cerrar, reiniciar, PASOS };
+  return { alEntrar, ahora, cerrar, PASOS };
 })();

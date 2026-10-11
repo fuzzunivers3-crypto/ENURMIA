@@ -127,6 +127,11 @@ window.Almacen = (function () {
     const base = datosNuevos(s.nombre);
     for (const k in base) if (!(k in datosNube)) datosNube[k] = base[k];
     for (const k in base.ajustes) if (!(k in (datosNube.ajustes || {}))) datosNube.ajustes[k] = base.ajustes[k];
+    // las guias de cada seccion se ven una sola vez: lo ya visto en este
+    // aparato se suma a lo que traiga la nube, nunca se pierde
+    const antes = leer(LLAVE_DATOS(s.usuario), null);
+    if (antes && antes.ajustes && antes.ajustes.guiasVistas)
+      datosNube.ajustes.guiasVistas = Object.assign({}, antes.ajustes.guiasVistas, datosNube.ajustes.guiasVistas);
     cache = datosNube; cache.__u = s.usuario;
     guardar({ sinSubir: true });
     return true;
