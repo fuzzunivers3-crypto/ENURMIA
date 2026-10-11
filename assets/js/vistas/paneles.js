@@ -951,6 +951,10 @@ window.Vistas = (function () {
           'Cuando falles una pregunta y la explicación no te entre, puedes pedirle a ' + Arturo.nombre() +
           ' que te la cuente de otra forma, partiendo solo de lo que ya está escrito para esa pregunta. Necesita internet y cuenta en la nube.',
           a.reexplicar !== false) +
+        conmutador('guias', 'Guías de cada sección',
+          'La primera vez que entras a una sección, ' + Arturo.nombre() + ' te enseña para qué sirve cada cosa. ' +
+          'Siempre puedes volver a verla con el botón ? de arriba.', a.guias !== false) +
+        '<button class="btn btn--sm btn--fantasma" id="btnGuiasOtraVez" style="margin-top:14px">Volver a ver todas las guías</button>' +
       '</div>' +
 
       '<div class="card" style="margin-bottom:16px" id="tarjetaSuscripcion"><span class="eyebrow">Tu suscripción</span>' +
@@ -977,6 +981,13 @@ window.Vistas = (function () {
 
     const btnMaterias = document.getElementById('btnCambiarMaterias');
     if (btnMaterias) btnMaterias.onclick = () => abrirSelectorMaterias(ajustes);
+
+    document.getElementById('btnGuiasOtraVez').onclick = () => {
+      if (window.Recorrido) Recorrido.reiniciar();
+      d.ajustes.guias = true; Almacen.guardar();
+      UI.tostada('Listo: las guías volverán a salir al entrar a cada sección.', 'bien');
+      ajustes();
+    };
 
     UI.$$('[data-ajuste]').forEach(b => b.onclick = () => {
       const k = b.dataset.ajuste;

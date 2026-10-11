@@ -134,6 +134,8 @@ window.App = (function () {
     ruta.ver(param);
     window.scrollTo({ top:0, behavior:'instant' in window ? 'instant' : 'auto' });
     try { history.replaceState(null, '', '#' + ruta.id); } catch (e) {}
+    // la guia de "para que sirve cada cosa", la primera vez que se entra
+    if (window.Recorrido) Recorrido.alEntrar(ruta.id);
   }
 
   function marcar(){
@@ -256,6 +258,7 @@ window.App = (function () {
         '<div class="buscador"><span>🔍</span>' +
           '<input id="buscarGlobal" placeholder="Buscar un tema: dengue, preeclampsia, hiperpotasemia…"></div>' +
         '<span class="grow"></span>' +
+        '<button class="icono icono--guia" id="btnGuia" title="¿Para qué sirve esta pantalla?" aria-label="Guía de esta pantalla">?</button>' +
         '<button class="icono" id="btnRachaTop" title="Racha">🔥</button>' +
         '<div class="perfil" id="perfilTop">' +
           '<span class="avatar">' + esc(d.perfil.nombre.charAt(0).toUpperCase()) + '</span>' +
@@ -279,6 +282,7 @@ window.App = (function () {
     document.getElementById('btnMas').onclick = abrirMas;
 
     document.getElementById('perfilTop').onclick = () => ir('ajustes');
+    document.getElementById('btnGuia').onclick = () => { if (window.Recorrido) Recorrido.ahora(); };
     document.getElementById('btnRachaTop').onclick = () => {
       UI.tostada('🔥 ' + r.racha + (r.racha === 1 ? ' día seguido' : ' días seguidos') + ' entrenando');
     };
