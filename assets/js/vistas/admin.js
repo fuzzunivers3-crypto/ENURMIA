@@ -575,6 +575,8 @@ window.Admin = (function () {
         '<button class="btn btn--sm btn--fantasma" data-sumar="180">+6 meses</button>' +
         '<button class="btn btn--sm btn--fantasma" data-sumar="365">+1 año</button>' +
       '</div>' +
+      '<label class="row" style="gap:8px;align-items:center;font-size:13.5px;margin:-4px 0 14px;cursor:pointer">' +
+        '<input id="mAvisar" type="checkbox" checked> Avisarle por correo si le doy más tiempo</label>' +
 
       '<div class="campo"><label>Notas internas</label>' +
         '<input id="mNotas" value="' + esc(f.notas || '') + '" placeholder="pagó por transferencia, beca, etc."></div>' +
@@ -609,6 +611,7 @@ window.Admin = (function () {
         vence: venceTxt ? new Date(venceTxt + 'T23:59:59').toISOString() : null,
         notas: document.getElementById('mNotas').value || null
       };
+      const avisar = document.getElementById('mAvisar').checked;
       const r1 = await Nube.guardarSuscripcion(uid, cambios);
       const rolNuevo = document.getElementById('mRol').value;
       const r2 = (rolNuevo !== f.rol) ? await Nube.cambiarRol(uid, rolNuevo) : { ok:true };
@@ -622,6 +625,23 @@ window.Admin = (function () {
       UI.tostada('Suscripción actualizada', 'bien');
       document.querySelector('.velo, .modal__velo, [data-velo]')?.remove();
       cargar();
+
+      /* Si se le dio mas tiempo (vence mas tarde que antes y que hoy), la
+         Edge Function aviso-correo le escribe al estudiante. Va despues de
+         guardar y sin bloquear: si el correo falla, la suscripcion ya
+         quedo bien y solo se avisa aqui del motivo. */
+      const antes = f.vence ? new Date(f.vence).getTime() : 0;
+      const ahora = cambios.vence ? new Date(cambios.vence).getTime() : 0;
+      if (avisar && cambios.estado === 'activa' &&
+          ahora > Math.max(antes, Date.now())){
+        try {
+          const r = await Nube.invocar('aviso-correo', { tipo:'cortesia', user_id: uid, vence_antes: f.vence || null });
+          if (r && r.ok) UI.tostada('Correo enviado a ' + r.para + ' (' + r.cuanto + ')', 'bien');
+          else UI.tostada('No se pudo enviar el correo: ' + ((r && r.error) || 'error desconocido'));
+        } catch (e) {
+          UI.tostada('No se pudo enviar el correo de aviso.');
+        }
+      }
     };
   }
 

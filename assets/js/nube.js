@@ -53,7 +53,7 @@ window.Nube = (function () {
   }
 
   /* ---------- cuenta ---------- */
-  async function registrar(correo, clave, nombre, programa){
+  async function registrar(correo, clave, nombre, programa, aceptaCorreos){
     if (!iniciar()) return { ok:false, error:'La sincronización no está disponible sin conexión.' };
     /* El programa (ENURMIA o UNIRMIA) viaja en los metadatos del registro.
        Un disparador del servidor lo copia a `perfiles.programa` y valida
@@ -61,7 +61,8 @@ window.Nube = (function () {
     const { data, error } = await cliente.auth.signUp({
       email: correo, password: clave,
       options: { data: { nombre: nombre || correo.split('@')[0],
-                         programa: (programa === 'unirm' ? 'unirm' : 'enurm') } }
+                         programa: (programa === 'unirm' ? 'unirm' : 'enurm'),
+                         acepta_correos: !!aceptaCorreos } }
     });
     if (error) return { ok:false, error: legible(error) };
     // Si el proyecto exige confirmar el correo, aun no hay sesion abierta.
