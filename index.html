@@ -14,8 +14,12 @@
 <meta property="og:title" content="ENURMIA — Simulacro ENURM República Dominicana">
 <meta property="og:description" content="Prepara el ENURM con simulacros, casos clínicos explicados, flashcards y temario completo.">
 <meta property="og:url" content="https://www.enurmia.dpdns.org/">
+<meta property="og:image" content="https://www.enurmia.dpdns.org/assets/img/logo-enurmia.png">
+<meta property="og:image:alt" content="Logo de ENURMIA, tu ruta en medicina">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://www.enurmia.dpdns.org/assets/img/logo-enurmia.png">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"ENURMIA","alternateName":["ENURM IA","UNIRMIA"],"url":"https://www.enurmia.dpdns.org/","inLanguage":"es","description":"Plataforma de preparación para el ENURM y la carrera de medicina en República Dominicana."}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"EducationalOrganization","name":"ENURMIA","url":"https://www.enurmia.dpdns.org/","logo":"https://www.enurmia.dpdns.org/assets/img/logo-enurmia.png","slogan":"Tu ruta en medicina","areaServed":{"@type":"Country","name":"República Dominicana"},"email":"enurmia.rd@gmail.com"}</script>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%236E0F1F'/><path d='M12 55h16l7-18 10 34 8-22 6 12h29' stroke='white' stroke-width='7' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
 <link rel="stylesheet" href="assets/css/app.css">
 <style>
@@ -118,6 +122,20 @@
     .pago{ grid-template-columns:1fr; gap:22px; }
     .pago__qr{ max-width:190px; }
   }
+
+  /* Que es ENURMIA. Texto de verdad debajo del acceso: el buscador no
+     puede leer un formulario, y quien llega desde Google quiere saber que
+     es esto antes de crear una cuenta. */
+  .acerca{ max-width:980px; margin:0 auto; padding:56px 24px 64px; color:var(--tinta, #2a1a20); }
+  .acerca h2{ font-size:26px; font-weight:800; line-height:1.2; margin:0 0 12px; }
+  .acerca > p{ font-size:15px; line-height:1.65; color:var(--tinta-60); max-width:720px; margin:0 0 28px; }
+  .acerca__grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px; list-style:none; padding:0; margin:0 0 28px; }
+  .acerca__grid li{ border:1.5px solid var(--linea, rgba(0,0,0,.12)); border-radius:14px; padding:16px 18px; }
+  .acerca__grid b{ display:block; font-size:15px; margin-bottom:4px; }
+  .acerca__grid span{ font-size:13.5px; line-height:1.5; color:var(--tinta-60); }
+  .acerca__pie{ font-size:12.5px; color:var(--tinta-60); }
+  .acerca__pie a{ color:var(--sangria-vivo); }
+  @media (max-width:520px){ .acerca{ padding:40px 16px 48px; } .acerca h2{ font-size:22px; } }
 </style>
 </head>
 <body>
@@ -231,6 +249,23 @@
     </div>
   </section>
 </main>
+
+<section class="acerca" aria-labelledby="acercaTitulo">
+  <h2 id="acercaTitulo">Simulacro del ENURM con explicación de cada pregunta</h2>
+  <p>ENURMIA es una plataforma para preparar el ENURM, el examen de residencias médicas de República Dominicana.
+     El simulacro sigue el formato real: 100 preguntas en 120 minutos, un punto por acierto y sin penalización por error.
+     Cada pregunta explica el dato clave, por qué fallan las otras opciones y de qué bibliografía sale la conducta correcta.</p>
+  <ul class="acerca__grid">
+    <li><b>Simulacros con reloj</b><span>Reparto por especialidad calibrado al ENURM: medicina interna primero, farmacología y ciencias básicas siempre presentes.</span></li>
+    <li><b>Temario completo para leer</b><span>Los temas del programa explicados como un libro, pensados para diagnosticar y tratar al paciente que tienes delante.</span></li>
+    <li><b>Casos clínicos</b><span>Pacientes virtuales con árbol de decisiones: pides pruebas, decides la conducta y ves qué cambió.</span></li>
+    <li><b>Flashcards con repetición espaciada</b><span>Repaso del día, sesiones relámpago y tarjetas hechas de tus propios fallos.</span></li>
+    <li><b>Arturo, tu profesor</b><span>Te guía tema a tema por el temario y te lo vuelve a explicar cuando algo no queda claro.</span></li>
+    <li><b>Medicina práctica</b><span>Emergencias, cálculos médicos, analíticas e imágenes, tubos de laboratorio y enfermedades crónicas.</span></li>
+  </ul>
+  <p class="acerca__pie">¿Estudias la carrera? <b>UNIRMIA</b> acompaña cada cuatrimestre de medicina con temas, práctica y casos.
+     · <a href="privacidad.html">Política de privacidad</a></p>
+</section>
 
 <!-- ============================================================
      PANEL DE MEMBRESIA
