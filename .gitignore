@@ -24,3 +24,6 @@ lote_*.txt
 
 # archivos de trabajo de la CLI de Supabase
 supabase/.temp/
+
+# Lista de correos de estudiantes (datos personales, nunca a la web)
+correos/

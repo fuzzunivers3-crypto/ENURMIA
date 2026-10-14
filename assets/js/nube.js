@@ -283,6 +283,17 @@ window.Nube = (function () {
     return { ok:true, mapa };
   }
 
+  /* Quien acepto promociones al registrarse. Lo usa el redactor de
+     correos de "Te escuchamos": las promociones solo pueden ir a ellos. */
+  async function listarConsentimientos(){
+    if (!iniciar()) return { ok:false, error:'Sin conexión.', mapa:{} };
+    const { data, error } = await cliente.from('perfiles').select('user_id, acepta_correos');
+    if (error) return { ok:false, error: legible(error), mapa:{} };
+    const mapa = {};
+    (data || []).forEach(f => { mapa[f.user_id] = !!f.acepta_correos; });
+    return { ok:true, mapa };
+  }
+
   async function guardarSuscripcion(userId, cambios){
     if (!iniciar()) return { ok:false, error:'Sin conexión.' };
     const fila = Object.assign({ user_id:userId }, cambios);
@@ -428,7 +439,7 @@ window.Nube = (function () {
   return { disponible, registrar, entrar, salir, usuario, recuperar, bajar, subir,
            perfil, miSuscripcion, abrirPrueba, canjearCodigo, generarCodigos, invocar,
            registrarDesafio, configurarRanking, miRanking, clasificacion, mesActual,
-           listarUsuarios, listarProgramas, guardarSuscripcion, cambiarRol, progresoDe,
+           listarUsuarios, listarProgramas, listarConsentimientos, guardarSuscripcion, cambiarRol, progresoDe,
            misExamenes, guardarIntentoExamen, borrarExamen, canal,
            crearTicket, misTickets, listarTickets, responderTicket,
            eventosUnirm, guardarEventoUnirm, borrarEventoUnirm,
