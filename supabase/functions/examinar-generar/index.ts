@@ -286,7 +286,7 @@ Deno.serve(async (req) => {
 
   const preguntas = normalizar(crudas, titulo, 'Generado · ' + titulo);
   if (!preguntas.length){
-    console.error('examinar-generar: ninguna pregunta valida', JSON.stringify(crudas).slice(0, 600));
+    console.error('examinar-generar: ninguna pregunta valida', { recibidas: crudas.length, textoLen: texto.length });
     return json({ error: 'sin-preguntas' }, 502);
   }
 

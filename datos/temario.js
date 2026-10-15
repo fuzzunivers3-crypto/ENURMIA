@@ -71,13 +71,13 @@ window.TEMARIO = [
     {t:'Hemorragias del primer trimestre', claves:['aborto','ectópico','mola','primer trimestre','gonadotropina']},
     {t:'Hemorragias del segundo y tercer trimestre', claves:['placenta previa','desprendimiento','vasa previa','rotura uterina','hemorragia obstétrica']},
     {t:'Preeclampsia y eclampsia', claves:['preeclampsia','eclampsia','sulfato de magnesio','proteinuria','signos de severidad']},
-    {t:'Trastornos hipotensivos del embarazo', claves:['hipotensión','síndrome de vena cava','decúbito lateral izquierdo','shock obstétrico']},
+    {t:'Trastornos hipotensivos del embarazo', claves:['trastornos hipotensivos','hipotensión supina','síndrome de vena cava','decúbito lateral izquierdo','shock obstétrico']},
     {t:'Síndrome HELLP', claves:['HELLP','hemólisis','plaquetas bajas','transaminasas elevadas']},
     {t:'Diabetes gestacional', claves:['diabetes gestacional','curva de tolerancia','24 y 28 semanas','macrosomía']},
     {t:'Ruptura prematura de membranas', claves:['rotura prematura de membranas','RPM','corioamnionitis','cristalografía','test de nitrazina']},
     {t:'Métodos anticonceptivos', claves:['anticoncep','DIU','implante','criterios de elegibilidad','estrógeno']},
     {t:'Infecciones de transmisión sexual', claves:['transmisión sexual','sífilis','gonorrea','clamidia','VPH','herpes genital','tricomon']},
-    {t:'Ciclo ovárico y ciclo menstrual', claves:['ciclo menstrual','ovulación','fase lútea','estradiol','LH','FSH']},
+    {t:'Ciclo ovárico y ciclo menstrual', claves:['ciclo menstrual','ovulación','fase lútea']},
     {t:'Síndrome de ovario poliquístico', claves:['ovario poliquístico','Rotterdam','hiperandrogenismo','oligoovulación']},
     {t:'Endometriosis', claves:['endometriosis','dismenorrea','dispareunia','laparoscopia diagnóstica']},
     {t:'Amenorrea primaria y secundaria', claves:['amenorrea','menarquia','prolactina','Turner','Asherman']},
@@ -128,7 +128,7 @@ window.TEMARIO = [
     {t:'Colangitis', claves:['colangitis','Charcot','Reynolds','CPRE','drenaje biliar']},
     {t:'Coledocolitiasis', claves:['coledocolitiasis','colédoco','colestasis','dilatación de vía biliar']},
     {t:'Abdomen agudo', claves:['abdomen agudo','irritación peritoneal','neumoperitoneo','perforación','defensa']},
-    {t:'Trauma de abdomen', claves:['trauma abdominal','FAST','laparotomía','lesión esplénica','hepática']},
+    {t:'Trauma de abdomen', claves:['trauma abdominal','FAST','laparotomía','lesión esplénica']},
     {t:'Trauma de tórax', claves:['trauma torácico','tórax inestable','contusión pulmonar','taponamiento']},
     {t:'Neumotórax y hemotórax', claves:['neumotórax','hemotórax','tubo de tórax','timpanismo','matidez','descompresión']},
     {t:'ATLS', claves:['ATLS','ABCDE','vía aérea','politraumatizado','triage','control cervical']},
@@ -137,7 +137,7 @@ window.TEMARIO = [
     {t:'Hemorragias digestivas', claves:['hemorragia digestiva','melena','hematemesis','hematoquecia','Forrest','endoscopia']},
     {t:'Gastritis', claves:['gastritis','Helicobacter','erradicación','inhibidor de bomba']},
     {t:'Reflujo gastroesofágico', claves:['reflujo','pirosis','Barrett','pHmetría','omeprazol']},
-    {t:'Acalasia', claves:['acalasia','manometría','disfagia','esfínter esofágico inferior','pico de pájaro']}
+    {t:'Acalasia', claves:['acalasia','manometría','pico de pájaro']}
   ]
 }
 
