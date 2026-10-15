@@ -414,10 +414,14 @@ window.VistaRuta = (function () {
       return Apuntes.abrir(k);
     }
     if (paso === 'preg'){
-      const qs = Ruta.preguntasDe(tema);
-      if (!qs.length) return UI.tostada('Este tema todavía no tiene preguntas', 'mal');
-      const orden = qs.slice().sort(function (a, b) { return (b.exp ? 1 : 0) - (a.exp ? 1 : 0); }).slice(0, 10);
-      return Sesion.iniciar({ modo:'aprender', titulo:tema,
+      const d = Ruta.preguntasDelPaso(tema);
+      if (d.faltan > 0) return UI.tostada('Este tema tiene pocas preguntas propias: lee ' + d.faltan +
+        (d.faltan === 1 ? ' tema más' : ' temas más') + ' de la tanda y te pregunto de todos juntos.');
+      if (!d.preguntas.length) return UI.tostada('Este tema todavía no tiene preguntas', 'mal');
+      const junto = d.grupo.length > 1;
+      const orden = junto ? d.preguntas.slice(0, 12)
+        : d.preguntas.slice().sort(function (a, b) { return (b.exp ? 1 : 0) - (a.exp ? 1 : 0); }).slice(0, 10);
+      return Sesion.iniciar({ modo:'aprender', titulo: junto ? d.grupo.join(' · ') : tema,
         preguntas: orden.sort(function () { return Math.random() - 0.5; }) });
     }
     const cs = Ruta.tarjetasDe(tema);

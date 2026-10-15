@@ -18,6 +18,8 @@ window.Ruta = (function () {
 
   const META_PREG = 10;      // preguntas que pide un tema, si las tiene
   const META_TARJ = 12;      // tarjetas que pide un tema, si las tiene
+  const MIN_PROPIAS = 5;     // explicadas propias para preguntar un tema solo
+  const LEIDOS_GRUPO = 3;    // temas leidos para preguntar juntos los temas cortos
   const CORTE_PREG = 70;     // % para dar por hecho el paso de preguntas
   const CORTE_FLOJO = 60;    // % por debajo del cual un tema queda flojo
   const MIN_RESCATE = 3;     // preguntas minimas para sacar un tema de la cola
@@ -144,6 +146,14 @@ window.Ruta = (function () {
      invalidar(), igual que el indice. */
   let cPorTema = {}, cTarjTema = {};
 
+  /* Las preguntas de un tema son SOLO las que tratan de el: su tema, su
+     subtema o sus etiquetas casan con las claves. Antes se rellenaba con
+     las que nombraban una clave en el enunciado, y eso metia en
+     "Cuadrantes del abdomen" preguntas de mama (cuadrante superior
+     externo, BI-RADS), de colecistitis o de shock: preguntas que piden
+     haber estudiado esas enfermedades, no el tema que se acaba de leer.
+     Un tema con pocas preguntas propias no se rellena: se pregunta junto
+     con otros temas leidos (ver preguntasDelPaso). */
   function preguntasDe(nombre){
     /* indice() PRIMERO, y solo despues se mira el memo: es indice() quien
        detecta que el banco cambio de tamano y tira el memo. Al reves, el
@@ -155,13 +165,56 @@ window.Ruta = (function () {
     if (!t) return [];
     const ks = t.claves.map(norm).filter(Boolean);
     if (!ks.length) return [];
-    const n1 = [], n2 = [];
+    const propias = [];
     idx.forEach(function (x) {
-      if (ks.some(function (k) { return casa(x.deQue, k); })) n1.push(x.q);
-      else if (ks.some(function (k) { return casa(x.roza, k); })) n2.push(x.q);
+      if (ks.some(function (k) { return casa(x.deQue, k); })) propias.push(x.q);
     });
-    cPorTema[nombre] = n1.concat(n2);
+    cPorTema[nombre] = propias;
     return cPorTema[nombre];
+  }
+
+  /* ---------- temas cortos: se preguntan de tres en tres ---------- */
+  /* Un tema con menos de MIN_PROPIAS preguntas explicadas propias da para
+     muy poco: dos o tres preguntas no miden nada y antes se completaban
+     con preguntas ajenas. Ahora espera a que haya LEIDOS_GRUPO temas
+     leidos en la tanda y Arturo pregunta de esos temas juntos. */
+  function esCorto(nombre){
+    const n = preguntasDe(nombre).filter(function (q) { return !!q.exp; }).length;
+    return n > 0 && n < MIN_PROPIAS;
+  }
+
+  /* Lo que Arturo pregunta en el paso de preguntas de `nombre`.
+     Devuelve { preguntas, grupo, faltan }: si faltan > 0, el tema es
+     corto y todavia no hay suficientes temas leidos para preguntarlo. */
+  function preguntasDelPaso(nombre, ta){
+    if (!esCorto(nombre)) return { preguntas: preguntasDe(nombre), grupo: [nombre], faltan: 0 };
+    ta = ta || tandaActual();
+    const fichas = ta ? ta.temas : [];
+    const leidos = fichas.filter(function (f) { return f.leer.hecho; }).map(function (f) { return f.tema; });
+    if (leidos.indexOf(nombre) < 0) leidos.push(nombre);
+    const necesarios = Math.min(LEIDOS_GRUPO, Math.max(1, fichas.length));
+    if (leidos.length < necesarios) return { preguntas: [], grupo: leidos, faltan: necesarios - leidos.length };
+    /* El grupo: este tema, luego los otros cortos leidos que aun deben
+       sus preguntas, y si no llegan a tres, otros temas leidos. */
+    const pend = function (t) { const f = fichas.filter(function (x) { return x.tema === t; })[0]; return f && !f.preg.hecho; };
+    const otros = leidos.filter(function (t) { return t !== nombre; });
+    const cortos = otros.filter(function (t) { return esCorto(t) && pend(t); });
+    const resto = otros.filter(function (t) { return cortos.indexOf(t) < 0; });
+    const grupo = [nombre].concat(cortos, resto).slice(0, Math.max(necesarios, 1 + cortos.length));
+    /* Se intercalan por tema (explicadas delante) para que la sesion
+       pregunte de todos y no solo del primero. */
+    const listas = grupo.map(function (t) {
+      const qs = preguntasDe(t);
+      return qs.filter(function (q) { return !!q.exp; }).concat(qs.filter(function (q) { return !q.exp; }));
+    });
+    const vistos = {}, preguntas = [];
+    for (let i = 0; listas.some(function (l) { return i < l.length; }); i++){
+      listas.forEach(function (l) {
+        const q = l[i];
+        if (q && !vistos[q.id]){ vistos[q.id] = 1; preguntas.push(q); }
+      });
+    }
+    return { preguntas: preguntas, grupo: grupo, faltan: 0 };
   }
 
   function tarjetasDe(nombre){
@@ -1108,6 +1161,18 @@ window.Ruta = (function () {
     return { tipo:'tarj', tema:f.tema, meta:f.tarj.meta, hechas:f.tarj.hechas };
   }
 
+  /* El paso que toca en un tema, o null si es el de preguntas de un tema
+     corto que aun espera a tener tres temas leidos: entonces se sigue
+     leyendo el siguiente. */
+  function pasoListo(f, ta){
+    const p = pasoDeTema(f);
+    if (p.tipo !== 'preg') return p;
+    const d = preguntasDelPaso(f.tema, ta);
+    if (d.faltan > 0) return null;
+    p.grupo = d.grupo;
+    return p;
+  }
+
   function proximoPaso(){
     const r = activa();
     if (!r) return { tipo:'sinruta' };
@@ -1116,15 +1181,25 @@ window.Ruta = (function () {
     if (!ta || !ta.temas.length) return { tipo:'fin' };
 
     /* Un tema empezado no se suelta a medias por empezar otro: si hay
-       hilo abierto y ese tema sigue sin cerrar, se sigue por ahi. */
+       hilo abierto y ese tema sigue sin cerrar, se sigue por ahi. La
+       excepcion es el tema corto que espera a otros dos leidos. */
     if (r.hilo && r.hilo.tema){
       for (let i = 0; i < ta.temas.length; i++){
-        if (ta.temas[i].tema === r.hilo.tema && !ta.temas[i].completo)
-          return pasoDeTema(ta.temas[i]);
+        if (ta.temas[i].tema === r.hilo.tema && !ta.temas[i].completo){
+          const p = pasoListo(ta.temas[i], ta);
+          if (p) return p;
+        }
       }
     }
     for (let j = 0; j < ta.temas.length; j++){
-      if (!ta.temas[j].completo) return pasoDeTema(ta.temas[j]);
+      if (ta.temas[j].completo) continue;
+      const p = pasoListo(ta.temas[j], ta);
+      if (p) return p;
+    }
+    /* No deberia pasar (con todos leidos ya hay grupo), pero si todo lo
+       pendiente estuviera en espera, no se encalla: se pregunta igual. */
+    for (let k = 0; k < ta.temas.length; k++){
+      if (!ta.temas[k].completo) return pasoDeTema(ta.temas[k]);
     }
     return { tipo:'simulacro', tanda:r.tanda, n:ta.temas.length };
   }
@@ -1149,6 +1224,7 @@ window.Ruta = (function () {
     estadoBloque: estadoBloque, examenDeBloque: examenDeBloque,
     minutosDeBloque: minutosDeBloque, tamExamenDeBloque: tamExamenDeBloque, cerrarExamenDeBloque: cerrarExamenDeBloque,
     preguntasDe: preguntasDe, tarjetasDe: tarjetasDe, claveApunte: claveApunte,
+    esCorto: esCorto, preguntasDelPaso: preguntasDelPaso,
     _orden: ordenIntercalado, _tandas: repartirTandas
   };
 })();

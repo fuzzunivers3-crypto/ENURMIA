@@ -362,6 +362,12 @@ window.Arturo = (function () {
       const k = Ruta.claveApunte(h.tema);
       if (k) Apuntes.marcarLeido(k);
     }
+    /* Un tema corto no se pregunta solo: se avisa y se sigue leyendo. */
+    if (h && Ruta.esCorto(h.tema)){
+      const d = Ruta.preguntasDelPaso(h.tema);
+      if (d.faltan > 0) UI.tostada('«' + h.tema + '» tiene pocas preguntas propias. Lee ' + d.faltan +
+        (d.faltan === 1 ? ' tema más' : ' temas más') + ' y te pregunto de los ' + (d.grupo.length + d.faltan) + ' juntos.');
+    }
     seguir();
   }
 
@@ -391,13 +397,16 @@ window.Arturo = (function () {
     }
 
     if (p.tipo === 'preg'){
-      const qs = Ruta.preguntasDe(p.tema);
-      if (!qs.length) return UI.tostada('Este tema todavía no tiene preguntas', 'mal');
-      const orden = qs.slice().sort(function (a, b) {
+      /* Solo preguntas propias del tema. Un tema corto se pregunta junto
+         con otros temas leidos (Ruta.preguntasDelPaso ya las intercala). */
+      const d = Ruta.preguntasDelPaso(p.tema);
+      if (!d.preguntas.length) return UI.tostada('Este tema todavía no tiene preguntas', 'mal');
+      const junto = d.grupo.length > 1;
+      const orden = junto ? d.preguntas.slice(0, 12) : d.preguntas.slice().sort(function (a, b) {
         return (b.exp ? 1 : 0) - (a.exp ? 1 : 0);
       }).slice(0, Math.max(10, p.meta || 10));
       return Sesion.iniciar({
-        modo: 'aprender', titulo: p.tema,
+        modo: 'aprender', titulo: junto ? d.grupo.join(' · ') : p.tema,
         preguntas: orden.sort(function () { return Math.random() - 0.5; })
       });
     }

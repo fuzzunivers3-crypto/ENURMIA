@@ -58,6 +58,9 @@ window.Apuntes = (function () {
     return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   }
   function preguntasDe(ap){
+    /* Si el tema esta en el Temario, las mismas que usa Arturo: solo las
+       propias del tema, sin las que solo lo mencionan de pasada. */
+    if (window.Ruta && Ruta.temaPorNombre(ap.tema)) return Ruta.preguntasDe(ap.tema);
     const ks = (ap.claves || []).map(norm).filter(Boolean);
     if (!ks.length) return [];
     return Motor.bancoActivo().filter(q => {

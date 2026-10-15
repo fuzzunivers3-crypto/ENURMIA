@@ -119,7 +119,7 @@ window.TEMARIO = [
   bloque:'Cirugía', em:'🔪', color:'yodo',
   nota:'Pesa menos que Medicina Interna, pero el abdomen agudo y el trauma se preguntan siempre.',
   temas:[
-    {t:'Cuadrantes del abdomen', claves:['cuadrante','fosa ilíaca','hipocondrio','epigastrio','topografía abdominal']},
+    {t:'Cuadrantes del abdomen', claves:['cuadrantes del abdomen','topografía abdominal','fosa ilíaca','hipocondrio','epigastrio']},
     {t:'Órganos intraperitoneales y retroperitoneales', claves:['intraperitoneal','retroperitoneal','peritoneo','mesenterio']},
     {t:'Apendicitis', claves:['apendicitis','McBurney','Blumberg','migración del dolor','apendicectomía']},
     {t:'Pancreatitis', claves:['pancreatitis','lipasa','amilasa','Atlanta','hidratación']},
