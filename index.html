@@ -59,6 +59,19 @@
     color:var(--tinta-60); margin:2px 0 16px; cursor:pointer; }
   .acepta-correos input{ flex:none; width:18px; height:18px; margin-top:1px; accent-color:var(--sangria-vivo); }
   .acepta-correos b{ color:var(--tinta, inherit); font-weight:700; }
+  /* Entrar con Google. Va encima de los dos formularios porque es el mismo
+     boton para entrar y para crear cuenta. Blanco con la G de colores: es
+     el aspecto que pide Google y el que la gente reconoce. */
+  .btn-google{ display:flex; align-items:center; justify-content:center; gap:10px; width:100%;
+    padding:13px 18px; border-radius:var(--r-md, 12px); border:1.5px solid var(--linea);
+    background:#fff; color:#1f1f1f; font:inherit; font-size:15px; font-weight:700; cursor:pointer;
+    transition:border-color .15s, box-shadow .15s; }
+  .btn-google:hover{ border-color:#c7c7c7; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+  .btn-google[disabled]{ opacity:.55; pointer-events:none; }
+  .btn-google svg{ width:20px; height:20px; flex:none; }
+  .separador-o{ display:flex; align-items:center; gap:12px; margin:16px 0; font-size:12px;
+    color:var(--tinta-60); text-transform:uppercase; letter-spacing:.08em; }
+  .separador-o::before, .separador-o::after{ content:""; flex:1; height:1px; background:var(--linea); }
   .plan__nom{ display:flex; flex-direction:column; gap:2px; font-size:14.5px; font-weight:800; }
   .plan__nom small{ font-size:11.5px; font-weight:600; opacity:.62; letter-spacing:0; }
   .plan__nom b{
@@ -184,6 +197,15 @@
         <button id="tabEntrar" class="on" role="tab">Entrar</button>
         <button id="tabCrear" role="tab">Crear cuenta</button>
       </div>
+
+      <!-- Un solo boton para entrar y para crear cuenta: si el correo de
+           Google ya tiene cuenta entra en ella; si no, la crea. -->
+      <button type="button" class="btn-google" id="btnGoogle">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
+        Continuar con Google
+      </button>
+      <div id="avisoGoogle"></div>
+      <div class="separador-o">o con tu correo</div>
 
       <!-- ENTRAR -->
       <form id="formEntrar" autocomplete="on">
@@ -349,6 +371,13 @@
      el mismo. Sin esto, el enlace devolvia aqui en silencio, sin decir
      nada, y era facil de confundir con que el registro no sirvio. */
   const veniaDeConfirmarCorreo = /type=signup/.test(location.hash) || /type=signup/.test(location.search);
+  /* Igual con Google: al salir hacia Google se deja una marca con el
+     programa elegido, y al volver se lee aqui. Si Google devolvio un error
+     (el estudiante cancelo, por ejemplo) viene en la URL como error=... */
+  let volviaDeGoogle = null;
+  try { volviaDeGoogle = JSON.parse(sessionStorage.getItem('enurm.google') || 'null'); } catch (e) {}
+  try { sessionStorage.removeItem('enurm.google'); } catch (e) {}
+  const errorGoogle = /error_description=([^&]*)/.exec(location.hash + '&' + location.search);
 
   const $ = s => document.querySelector(s);
   /* El correo lo escribe quien se registra y luego se pinta con innerHTML.
@@ -560,8 +589,11 @@
     document.body.style.overflow = 'hidden';
   }
 
+  /* Quien entra con Google no escribe su correo en ningun campo; se guarda
+     aqui para que el mensaje de WhatsApp lo lleve igual. */
+  let correoGoogle = '';
   function correoEnUso(){
-    return ($('#u2').value.trim() || $('#u1').value.trim()).toLowerCase();
+    return ($('#u2').value.trim() || $('#u1').value.trim() || correoGoogle).toLowerCase();
   }
 
   function textoWhatsApp(plan, precio){
@@ -690,6 +722,51 @@
     pasar($('#avisoEntrar'), msg);
   };
 
+  /* ---------- entrar o crear cuenta con Google ---------- */
+  $('#btnGoogle').onclick = async () => {
+    if (!hayNube) return aviso($('#avisoGoogle'), 'Necesitas conexión para entrar con Google.');
+    const b = $('#btnGoogle');
+    b.disabled = true;
+    try { sessionStorage.setItem('enurm.google', JSON.stringify({ programa: programa, t: Date.now() })); } catch (e) {}
+    const r = await Nube.entrarConGoogle(location.origin + location.pathname);
+    // Si todo va bien el navegador ya se esta yendo a Google.
+    if (!r.ok){ b.disabled = false; aviso($('#avisoGoogle'), r.error); }
+  };
+
+  async function terminarGoogle(){
+    if (errorGoogle){
+      history.replaceState(null, '', location.pathname);
+      const m = decodeURIComponent(errorGoogle[1].replace(/\+/g, ' '));
+      return aviso($('#avisoGoogle'), /not enabled|Unsupported provider/i.test(m)
+        ? 'El acceso con Google todavía no está activado. Usa tu correo y contraseña.'
+        : 'No se pudo entrar con Google. Inténtalo otra vez.');
+    }
+    if (!hayNube) return;
+    aviso($('#avisoGoogle'), 'Entrando con Google…', true);
+    /* Primero se deja al SDK leer el #access_token (getSession espera a que
+       termine de iniciarse) y solo despues se limpia la URL. */
+    const u = await Nube.usuario();
+    history.replaceState(null, '', location.pathname);
+    if (!u) return aviso($('#avisoGoogle'), 'No se pudo entrar con Google. Inténtalo otra vez.');
+
+    correoGoogle = u.email || '';
+    const meta = u.user_metadata || {};
+    const nombre = meta.nombre || meta.full_name || meta.name || (u.email || '').split('@')[0];
+    /* Cuenta recien creada con Google: fijar el programa que tenia elegido.
+       El servidor lo rechaza solo si la cuenta no es nueva, y en ese caso
+       manda lo que ya diga su perfil, como al entrar con contrasena. */
+    const nueva = u.created_at && (Date.now() - new Date(u.created_at).getTime()) < 10 * 60 * 1000;
+    if (nueva && volviaDeGoogle){
+      try { await Nube.fijarProgramaInicial(volviaDeGoogle.programa, nombre); } catch (e) {}
+    }
+    u.user_metadata = Object.assign({}, meta, { nombre: nombre });
+    const msg = await sincronizarAlEntrar(u, u.email);
+    const sus = await Nube.miSuscripcion();
+    if (!sus) return verPlanes();
+    pasar($('#avisoGoogle'), msg);
+  }
+  if (volviaDeGoogle || errorGoogle) terminarGoogle();
+
   /* ---------- recuperar contrasena ---------- */
   $('#olvide').onclick = async ev => {
     ev.preventDefault();
@@ -745,7 +822,7 @@
   }
 
   // si ya hay sesion abierta, pasar directo
-  if (Almacen.sesion()) location.replace('app.html');
+  if (Almacen.sesion() && !volviaDeGoogle) location.replace('app.html');
 })();
 </script>
 </body>

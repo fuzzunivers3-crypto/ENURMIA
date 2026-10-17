@@ -47,7 +47,8 @@ window.Nube = (function () {
     if (/Email not confirmed/i.test(m))      return 'Falta confirmar el correo. Abre el enlace que te enviamos y vuelve a entrar.';
     if (/User already registered/i.test(m))  return 'Ese correo ya tiene cuenta. Entra en lugar de crearla.';
     if (/Password should be at least/i.test(m)) return 'La contraseña es demasiado corta: usa al menos 6 caracteres.';
-    if (/rate limit|too many/i.test(m))      return 'Demasiados intentos seguidos. Espera un minuto.';
+    if (/provider is not enabled|Unsupported provider/i.test(m)) return 'El acceso con Google todavía no está activado. Usa tu correo y contraseña.';
+    if (/rate limit|too many/i.test(m))     return 'Demasiados intentos seguidos. Espera un minuto.';
     if (/fetch|network|Failed to fetch/i.test(m)) return 'No hay conexión con el servidor. Puedes seguir estudiando sin conexión.';
     return m || 'No se pudo completar la operación.';
   }
@@ -75,6 +76,32 @@ window.Nube = (function () {
     const { data, error } = await cliente.auth.signInWithPassword({ email: correo, password: clave });
     if (error) return { ok:false, error: legible(error) };
     return { ok:true, usuario:data.user };
+  }
+
+  /* Entrar (o crear la cuenta, es el mismo boton) con Google. El navegador
+     sale hacia Google y vuelve a `destino` con la sesion en el fragmento
+     (#access_token=...); el SDK la lee solo al crear el cliente. La
+     direccion de vuelta debe estar en Authentication > URL Configuration
+     de Supabase; si no esta, Supabase devuelve a la Site URL. */
+  async function entrarConGoogle(destino){
+    if (!iniciar()) return { ok:false, error:'Sin conexión con el servidor.' };
+    const { error } = await cliente.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: destino, queryParams: { prompt: 'select_account' } }
+    });
+    if (error) return { ok:false, error: legible(error) };
+    return { ok:true };
+  }
+
+  /* Google no deja mandar el programa al crear la cuenta, asi que se fija
+     justo despues. El servidor solo lo acepta en cuentas recien nacidas y
+     sin suscripcion (ver MIGRACION_GOOGLE.sql). */
+  async function fijarProgramaInicial(programa, nombre){
+    if (!iniciar()) return { ok:false };
+    const { data, error } = await cliente.rpc('fijar_programa_inicial',
+      { p_programa: programa === 'unirm' ? 'unirm' : 'enurm', p_nombre: nombre || null });
+    if (error) return { ok:false, error: legible(error) };
+    return data || { ok:false };
   }
 
   async function salir(){
@@ -436,7 +463,7 @@ window.Nube = (function () {
     return data;
   }
 
-  return { disponible, registrar, entrar, salir, usuario, recuperar, bajar, subir,
+  return { disponible, registrar, entrar, entrarConGoogle, fijarProgramaInicial, salir, usuario, recuperar, bajar, subir,
            perfil, miSuscripcion, abrirPrueba, canjearCodigo, generarCodigos, invocar,
            registrarDesafio, configurarRanking, miRanking, clasificacion, mesActual,
            listarUsuarios, listarProgramas, listarConsentimientos, guardarSuscripcion, cambiarRol, progresoDe,
